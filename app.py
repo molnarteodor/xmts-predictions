@@ -7,7 +7,7 @@ import socket
 import socketserver
 import urllib.request
 import webbrowser
-
+import os
 
 def get_free_port():
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -599,16 +599,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-  PORT = get_free_port()
-  socketserver.TCPServer.allow_reuse_address = True
+    # Render va furniza automat portul prin variabila PORT
+    PORT = int(os.environ.get("PORT", 10000))
+    socketserver.TCPServer.allow_reuse_address = True
 
-  with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    url = f"http://localhost:{PORT}"
-    print(f"\n==========================================")
-    print(f" Aplicația XMTS cu Chat AI Scanner rulează pe: {url}")
-    print(f"==========================================\n")
-    webbrowser.open(url)
-    try:
-      httpd.serve_forever()
-    except KeyboardInterrupt:
-      print("\nServer oprit.")
+with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as httpd:
+        print(f"Server pornit pe portul: {PORT}")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nServer oprit.")
