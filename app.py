@@ -77,7 +77,9 @@ def fetch_football_data(date_str):
             {"id": 102, "name": "Manchester City vs Liverpool", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
             {"id": 103, "name": "Inter vs AC Milan", "league": "Italy: Serie A", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Inter", "away_team": "AC Milan"},
             {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Universitatea Craiova", "away_team": "FCSB"},
-            {"id": 105, "name": "Arsenal vs Chelsea", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea"}
+            {"id": 105, "name": "Arsenal vs Chelsea", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea"},
+            {"id": 106, "name": "Bayern Munchen vs Dortmund", "league": "Germany: Bundesliga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Bayern Munchen", "away_team": "Dortmund"},
+            {"id": 107, "name": "PSG vs Marseille", "league": "France: Ligue 1", "status": "NS", "score": "VS", "is_popular": True, "home_team": "PSG", "away_team": "Marseille"}
         ]
     return matches
 
@@ -107,7 +109,6 @@ def generate_algorithmic_prediction(match, seed_offset=0):
     selected = random.choice(markets)
     calculated_confidence = selected["weight"] + random.randint(-2, 3)
     
-    # Generare opțiuni BetBuilder
     bb_options = [
         {
             "label": "🛡️ BetBuilder Sigur (Cotă ~1.85)",
@@ -191,7 +192,6 @@ HTML_TEMPLATE = """
         .date-input { flex: 1; min-width: 130px; }
         
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         
         .match-title { font-weight: bold; font-size: 1.05rem; color: #f1f5f9; }
         .match-league { font-size: 0.8rem; color: #38bdf8; margin-bottom: 4px; }
@@ -213,11 +213,9 @@ HTML_TEMPLATE = """
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem; line-height: 1.4; white-space: pre-wrap; }
         .chat-user { background: #0284c7; color: white; align-self: flex-end; }
         .chat-ai { background: #334155; color: #f1f5f9; align-self: flex-start; }
-        .chat-img-preview { max-width: 100px; max-height: 100px; border-radius: 6px; border: 1px solid #38bdf8; }
-        .chat-input-area { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         
-        .ticket-box { background: #1e293b; border-left: 4px solid #22c55e; padding: 14px; margin-bottom: 12px; border-radius: 6px; }
-        .ticket-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px; }
+        .ticket-box { background: #1e293b; border-left: 4px solid #22c55e; padding: 14px; margin-bottom: 14px; border-radius: 6px; }
+        .ticket-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -241,7 +239,10 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="tab-tickets" style="display:none;">
-            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete Generat Automat Din Cele Mai Sigure Meciuri</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2 style="color:#38bdf8; font-size:1.1rem; margin:0;">Bilete Exclusiv Din Top Ligi</h2>
+                <button class="btn-action btn-regen" onclick="loadTickets(true)">🔄 Regenerază Toate Biletele</button>
+            </div>
             <div id="tickets-list"></div>
         </div>
 
@@ -249,14 +250,14 @@ HTML_TEMPLATE = """
             <div class="chat-box" id="chat-messages">
                 <div class="chat-msg chat-ai">Salut! Trimite-mi imagini sau poze cu meciuri și bilete pentru a le analiza automat.</div>
             </div>
-            <div class="chat-input-area">
+            <div class="chat-input-area" style="margin-top:10px;">
                 <div style="display:flex; gap:8px;">
                     <input type="file" id="img-input" accept="image/*" multiple style="display:none;" onchange="updateFileNames()">
                     <button class="btn-action" style="background:#475569;" onclick="document.getElementById('img-input').click()">📷 Poze</button>
                     <input type="text" id="chat-text" class="search-input" style="flex:1;" placeholder="Scrie un mesaj..." onkeypress="if(event.key==='Enter') sendChatMessage()">
                     <button class="btn-action" style="background:#16a34a; color:white;" onclick="sendChatMessage()">Trimite</button>
                 </div>
-                <div id="file-names" style="font-size:0.8rem; color:#38bdf8;"></div>
+                <div id="file-names" style="font-size:0.8rem; color:#38bdf8; margin-top:4px;"></div>
             </div>
         </div>
     </div>
@@ -265,6 +266,7 @@ HTML_TEMPLATE = """
         let allMatches = [];
         let activeTab = 'matches';
         let regenOffsets = {};
+        let ticketSeeds = { 3: 0, 5: 0, 7: 0 };
 
         const dateInput = document.getElementById('date-picker');
         const today = new Date();
@@ -336,7 +338,7 @@ HTML_TEMPLATE = """
                     <div>
                         <div class="match-league">${m.league} ${m.is_popular ? '<span style="color:#eab308;">🔥 Top Liga</span>' : ''}</div>
                         <div class="match-title">${m.name}</div>
-                        <div style="margin-top:6px;" id="pred-area-${m.id}">
+                        <div style="margin-top:6px;">
                             ${m.status === 'FT' ? `<span class="score-badge">Final: ${m.score}</span>` : `<span class="pred-tag">${m.prediction.prediction}</span> <span class="confidence">Încredere: ${m.prediction.confidence}</span>`}
                         </div>
                     </div>
@@ -354,9 +356,7 @@ HTML_TEMPLATE = """
 
         function toggleBetBuilder(matchId) {
             const box = document.getElementById('bb-box-' + matchId);
-            if (box) {
-                box.style.display = box.style.display === 'block' ? 'none' : 'block';
-            }
+            if (box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
         }
 
         function regeneratePrediction(matchId) {
@@ -374,16 +374,22 @@ HTML_TEMPLATE = """
                 });
         }
 
-        function loadTickets() {
+        function loadTickets(isRegen = false) {
             const container = document.getElementById('tickets-list');
-            container.innerHTML = '<p style="text-align:center;">Se generează biletele...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se generează biletele din meciuri de Top Ligi...</p>';
 
-            fetch('/api/tickets?date=' + dateInput.value)
+            if (isRegen) {
+                ticketSeeds[3] += 1;
+                ticketSeeds[5] += 1;
+                ticketSeeds[7] += 1;
+            }
+
+            fetch(`/api/tickets?date=${dateInput.value}&seed3=${ticketSeeds[3]}&seed5=${ticketSeeds[5]}&seed7=${ticketSeeds[7]}`)
                 .then(r => r.json())
                 .then(data => {
                     container.innerHTML = '';
                     if (data.length === 0 || data[0].matches.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există meciuri disponibile.</p>';
+                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există suficiente meciuri din Top Ligi pentru această dată.</p>';
                         return;
                     }
                     data.forEach(t => {
@@ -391,18 +397,26 @@ HTML_TEMPLATE = """
                         box.className = 'ticket-box';
                         let matchesHtml = '';
                         t.matches.forEach(m => {
-                            matchesHtml += `<div style="font-size:0.88rem; margin-top:4px; color:#cbd5e1;">• <strong>${m.match}</strong> (${m.league}): <span style="color:#38bdf8;">${m.prediction}</span> - <span style="color:#22c55e; font-weight:bold;">Încredere: ${m.confidence}</span></div>`;
+                            matchesHtml += `<div style="font-size:0.88rem; margin-top:5px; color:#cbd5e1;">• <strong>${m.match}</strong> (<span style="color:#38bdf8;">${m.league}</span>): <span style="color:#e0f2fe; font-weight:bold;">${m.prediction}</span> - <span style="color:#22c55e; font-weight:bold;">Încredere: ${m.confidence}</span></div>`;
                         });
                         box.innerHTML = `
                             <div class="ticket-header">
-                                <span>${t.name}</span>
-                                <span style="color:#22c55e;">Selecție: ${t.matches.length} Meciuri</span>
+                                <div>
+                                    <span style="font-size:1.05rem; color:#f1f5f9;">${t.name}</span>
+                                    <span style="color:#22c55e; font-size:0.85rem; margin-left:8px;">(${t.matches.length} Meciuri)</span>
+                                </div>
+                                <button class="btn-action btn-regen" onclick="regenSingleTicket(${t.size})">🔄 Regenerază Bilet</button>
                             </div>
                             ${matchesHtml}
                         `;
                         container.appendChild(box);
                     });
                 });
+        }
+
+        function regenSingleTicket(size) {
+            ticketSeeds[size] = (ticketSeeds[size] || 0) + 1;
+            loadTickets();
         }
 
         function updateFileNames() {
@@ -517,31 +531,42 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         elif parsed.path == "/api/tickets":
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
+            seed3 = int(query.get("seed3", [0])[0])
+            seed5 = int(query.get("seed5", [0])[0])
+            seed7 = int(query.get("seed7", [0])[0])
+
             all_matches = fetch_football_data(date_str)
-            upcoming = [m for m in all_matches if m["status"] in ["NS", "TBD"]]
-            if not upcoming:
-                upcoming = all_matches
             
-            for m in upcoming:
-                m["prediction"] = generate_algorithmic_prediction(m)
-                
-            top_trusted = sorted(upcoming, key=lambda x: x["prediction"]["confidence_val"], reverse=True)
-            ticket_types = [
-                {"name": "Bilet Top Siguranță (3 Meciuri)", "size": 3},
-                {"name": "Bilet Mărime Medie (5 Meciuri)", "size": 5},
-                {"name": "Bilet Ansa Zilnică (7 Meciuri)", "size": 7}
+            # FILTRARE STRICTA: Doar meciuri de Top Ligi neincepute
+            top_matches = [m for m in all_matches if m["is_popular"] and m["status"] in ["NS", "TBD"]]
+            if not top_matches:
+                top_matches = [m for m in all_matches if m["is_popular"]]
+            if not top_matches:
+                top_matches = all_matches
+
+            ticket_configs = [
+                {"name": "Bilet Top Siguranță (3 Meciuri)", "size": 3, "seed": seed3},
+                {"name": "Bilet Mărime Medie (5 Meciuri)", "size": 5, "seed": seed5},
+                {"name": "Bilet Șansa Zilnică (7 Meciuri)", "size": 7, "seed": seed7}
             ]
             
             tickets = []
-            for tt in ticket_types:
-                selected_matches = top_trusted[:tt["size"]]
-                ticket_matches = [{
-                    "match": m["name"],
-                    "league": m["league"],
-                    "prediction": m["prediction"]["prediction"],
-                    "confidence": m["prediction"]["confidence"]
-                } for m in selected_matches]
-                tickets.append({"name": tt["name"], "matches": ticket_matches})
+            for cfg in ticket_configs:
+                pool = list(top_matches)
+                random.seed(sum(ord(c) for c in date_str) + cfg["seed"] + cfg["size"])
+                random.shuffle(pool)
+                
+                selected = pool[:cfg["size"]]
+                ticket_matches = []
+                for m in selected:
+                    pred = generate_algorithmic_prediction(m, seed_offset=cfg["seed"])
+                    ticket_matches.append({
+                        "match": m["name"],
+                        "league": m["league"],
+                        "prediction": pred["prediction"],
+                        "confidence": pred["confidence"]
+                    })
+                tickets.append({"name": cfg["name"], "size": cfg["size"], "matches": ticket_matches})
                 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
