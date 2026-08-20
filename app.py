@@ -5,20 +5,11 @@ import random
 import socketserver
 import urllib.parse
 import urllib.request
-import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-
-# Stocare în memorie (Sesiuni și Coduri de acces)
-VALID_CODES = {
-    "demo": {"expires": datetime.now() + timedelta(days=1), "type": "1 Zi (Demo)"},
-    "luna": {"expires": datetime.now() + timedelta(days=30), "type": "1 Lună VIP"},
-    "permanent": {"expires": None, "type": "Permanent VIP"}
-}
-ACTIVE_SESSIONS = {}
 
 TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
@@ -148,14 +139,7 @@ HTML_TEMPLATE = """
         
         .header-bar { display: flex; justify-content: space-between; align-items: center; background: #131d38; padding: 12px 16px; border-radius: 10px; border: 1px solid #1e2d54; margin-bottom: 12px; }
         .brand { font-size: 1.3rem; font-weight: bold; color: #38bdf8; }
-        .user-badge { background: #0284c7; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-        .btn-logout { background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-left: 8px; }
-
-        .admin-panel { background: #131d38; border: 1px solid #eab308; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-        .admin-title { font-weight: bold; color: #eab308; margin-bottom: 8px; font-size: 0.95rem; }
-        .admin-controls { display: flex; gap: 8px; flex-wrap: wrap; }
-        .admin-select { background: #0b1329; color: white; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; }
-        .btn-gen { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .user-badge { background: #0284c7; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
 
         .controls-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
         .search-input, .date-input { background: #131d38; color: #fff; border: 1px solid #1e2d54; padding: 10px; border-radius: 8px; font-size: 0.88rem; }
@@ -175,45 +159,13 @@ HTML_TEMPLATE = """
         .bb-box { background: #0b1329; border: 1px dashed #0284c7; border-radius: 8px; padding: 10px; margin-top: 10px; }
         .bb-item { font-size: 0.82rem; margin-bottom: 4px; color: #cbd5e1; }
         .bb-label { color: #eab308; font-weight: bold; }
-
-        .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b1329; display: flex; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
-        .login-box { background: #131d38; border: 1px solid #1e2d54; border-radius: 12px; padding: 24px; max-width: 360px; width: 100%; text-align: center; }
-        .login-input { width: 100%; padding: 12px; background: #0b1329; border: 1px solid #334155; color: white; border-radius: 6px; margin: 12px 0; font-size: 1rem; box-sizing: border-box; text-align: center; }
-        .btn-login { width: 100%; padding: 12px; background: #0284c7; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="login-screen" class="login-overlay" style="display: none;">
-        <div class="login-box">
-            <h2 style="color: #38bdf8; margin-top: 0;">XMTS Access VIP</h2>
-            <p style="color: #94a3b8; font-size: 0.85rem;">Introdu codul de acces pentru a debloca predicțiile.</p>
-            <input type="text" id="access-code" class="login-input" placeholder="Cod Access (ex: demo, luna, permanent)">
-            <button class="btn-login" onclick="submitLogin()">Autentificare</button>
-            <div id="login-error" style="color: #ef4444; font-size: 0.8rem; margin-top: 10px;"></div>
-        </div>
-    </div>
-
-    <div class="container" id="main-app">
+    <div class="container">
         <div class="header-bar">
             <div class="brand">XMTS PREDICTIONS</div>
-            <div class="user-badge">
-                👋 <span id="user-type">VIP</span>
-                <button class="btn-logout" onclick="logout()">Ieșire</button>
-            </div>
-        </div>
-
-        <div class="admin-panel" id="admin-panel">
-            <div class="admin-title">👑 Admin Panel (XMTS)</div>
-            <div class="admin-controls">
-                <span style="font-size:0.85rem; align-self:center;">Generează alt cod:</span>
-                <select id="code-days" class="admin-select">
-                    <option value="1">24 Ore</option>
-                    <option value="30">30 Zile</option>
-                    <option value="999">Permanent</option>
-                </select>
-                <button class="btn-gen" onclick="generateCode()">Generează Cod</button>
-            </div>
-            <div id="gen-result" style="margin-top:8px; font-size:0.85rem; color:#22c55e; font-weight:bold;"></div>
+            <div class="user-badge">⚡ Acces Gratuit</div>
         </div>
 
         <div class="controls-bar">
@@ -242,55 +194,6 @@ HTML_TEMPLATE = """
 
         const dateInput = document.getElementById('date-picker');
         dateInput.value = new Date().toISOString().split('T')[0];
-
-        function checkAuth() {
-            fetch('/api/auth_check')
-                .then(r => r.json())
-                .then(res => {
-                    if (!res.authenticated) {
-                        document.getElementById('login-screen').style.display = 'flex';
-                    } else {
-                        document.getElementById('login-screen').style.display = 'none';
-                        document.getElementById('user-type').innerText = res.type;
-                        loadMatchesForDate();
-                    }
-                });
-        }
-
-        function submitLogin() {
-            const code = document.getElementById('access-code').value.trim();
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code })
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    checkAuth();
-                } else {
-                    document.getElementById('login-error').innerText = res.message;
-                }
-            });
-        }
-
-        function logout() {
-            document.cookie = "xmts_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            location.reload();
-        }
-
-        function generateCode() {
-            const days = document.getElementById('code-days').value;
-            fetch('/api/admin/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ days: parseInt(days) })
-            })
-            .then(r => r.json())
-            .then(res => {
-                document.getElementById('gen-result').innerText = `Cod Generat: ${res.code} (${res.type})`;
-            });
-        }
 
         function switchTab(tab) {
             activeTab = tab;
@@ -385,22 +288,13 @@ HTML_TEMPLATE = """
                 });
         }
 
-        checkAuth();
+        loadMatchesForDate();
     </script>
 </body>
 </html>
 """
 
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
-    def get_cookie_session(self):
-        cookie_header = self.headers.get('Cookie')
-        if cookie_header:
-            cookies = urllib.parse.parse_qs(cookie_header.replace(' ', ''))
-            session_id = cookies.get('xmts_session', [None])[0]
-            if session_id in ACTIVE_SESSIONS:
-                return ACTIVE_SESSIONS[session_id]
-        return None
-
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
@@ -410,24 +304,8 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
-            
-        elif parsed.path == "/api/auth_check":
-            session = self.get_cookie_session()
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            if session:
-                self.wfile.write(json.dumps({"authenticated": True, "type": session["type"]}).encode("utf-8"))
-            else:
-                self.wfile.write(json.dumps({"authenticated": False}).encode("utf-8"))
 
         elif parsed.path == "/api/matches":
-            session = self.get_cookie_session()
-            if not session:
-                self.send_response(401)
-                self.end_headers()
-                return
-
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
             raw_matches = fetch_football_data(date_str)
             for m in raw_matches:
@@ -439,12 +317,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(raw_matches).encode("utf-8"))
 
         elif parsed.path == "/api/tickets":
-            session = self.get_cookie_session()
-            if not session:
-                self.send_response(401)
-                self.end_headers()
-                return
-
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
             all_matches = fetch_football_data(date_str)
             top_matches = [m for m in all_matches if m["is_popular"]] or all_matches
@@ -472,58 +344,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(res_tickets).encode("utf-8"))
 
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = json.loads(post_data.decode('utf-8'))
-
-        if self.path == "/api/login":
-            code = data.get("code", "").strip().lower()
-            
-            # Verificăm codul exact din VALID_CODES
-            if code in VALID_CODES:
-                code_data = VALID_CODES[code]
-                
-                # Verificăm dacă nu cumva a expirat
-                if code_data["expires"] and datetime.now() > code_data["expires"]:
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"success": False, "message": "Codul a expirat!"}).encode("utf-8"))
-                    return
-
-                session_id = str(uuid.uuid4())
-                ACTIVE_SESSIONS[session_id] = code_data
-                
-                self.send_response(200)
-                self.send_header("Set-Cookie", f"xmts_session={session_id}; Path=/; SameSite=Lax")
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
-            else:
-                self.send_response(200)
-                self.send_header("Content-type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "message": "Cod de acces invalid!"}).encode("utf-8"))
-
-        elif self.path == "/api/admin/generate":
-            days = data.get("days", 7)
-            new_code = f"xmts-{random.randint(1000, 9999)}"
-            
-            if days == 999:
-                VALID_CODES[new_code] = {"expires": None, "type": "Permanent VIP"}
-            else:
-                VALID_CODES[new_code] = {"expires": datetime.now() + timedelta(days=days), "type": f"{days} Zile"}
-                
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"code": new_code, "type": VALID_CODES[new_code]["type"]}).encode("utf-8"))
-
 if __name__ == "__main__":
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("0.0.0.0", PORT), SimpleHTTPRequestHandler) as httpd:
-        print(f"Server XMTS VIP activ pe portul: {PORT}")
+        print(f"Server XMTS activ pe portul: {PORT}")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
