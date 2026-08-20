@@ -13,7 +13,6 @@ API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # In-memory DB
-# Conturi: { username: { "password": p, "expires_at": datetime_object_or_None, "is_admin": bool } }
 USERS_DB = {
     "XMTS": {
         "password": "rusauto",
@@ -22,11 +21,9 @@ USERS_DB = {
     }
 }
 
-# Coduri invitatie: { code: { "duration_days": int, "is_used": bool } }
 INVITE_CODES = {}
-
-SESSIONS = {}        # { session_id: username }
-SAVED_TICKETS = {}   # { username: [tickets...] }
+SESSIONS = {}
+SAVED_TICKETS = {}
 
 TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
@@ -88,44 +85,22 @@ def fetch_football_data(date_str):
         ]
     return matches
 
-def generate_algorithmic_prediction(match, seed_offset=0):
-    seed = sum(ord(c) for c in match["name"]) + match["id"] + seed_offset
+def generate_prediction(match):
+    seed = sum(ord(c) for c in match["name"]) + int(match["id"])
     random.seed(seed)
     if match["status"] in ["FT", "AET", "PEN"]:
-        return {"prediction": f"Rezultat Final: {match['score']}", "confidence_val": 0, "confidence": "Finalizat", "betbuilder": None}
+        return {"prediction": f"Scor Final: {match['score']}", "confidence": "Finalizat"}
 
     markets = [
-        {"name": "Peste 1.5 Goluri", "weight": 94},
-        {"name": "Peste 7.5 Cornere", "weight": 89},
-        {"name": "Peste 2.5 Cartonașe", "weight": 91},
-        {"name": "GG (Ambele Marchează)", "weight": 83},
-        {"name": "Șansă Dublă 1X", "weight": 88},
-        {"name": "Șansă Dublă X2", "weight": 88}
+        {"name": "Peste 1.5 Goluri", "weight": 92},
+        {"name": "Peste 7.5 Cornere", "weight": 88},
+        {"name": "Peste 2.5 Cartonașe", "weight": 90},
+        {"name": "GG (Ambele Marchează)", "weight": 84},
+        {"name": "Șansă Dublă 1X", "weight": 87}
     ]
     selected = random.choice(markets)
-    calculated_confidence = selected["weight"] + random.randint(-2, 3)
-    
-    bb_options = [
-        {"label": "🛡️ BetBuilder Sigur (~1.85)", "selection": "1X + Peste 1.5 Goluri + Peste 6.5 Cornere", "confidence": "89%"},
-        {"label": "⚡ BetBuilder Moderat (~2.60)", "selection": "GG + Peste 2.5 Cartonașe + Peste 7.5 Cornere", "confidence": "82%"}
-    ]
-    return {"prediction": selected["name"], "confidence_val": calculated_confidence, "confidence": f"{calculated_confidence}%", "betbuilder": bb_options}
-
-def analyze_with_gemini(prompt, images_b64=None):
-    if not GEMINI_API_KEY:
-        return "Cheia GEMINI_API_KEY nu este configurată în Render."
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-    parts = [{"text": prompt if prompt else "Analizează detaliat biletul/meciurile."}]
-    if images_b64:
-        for img_data in images_b64:
-            img_b64 = img_data.split(",", 1)[1] if "," in img_data else img_data
-            parts.append({"inline_data": {"mime_type": "image/jpeg", "data": img_b64}})
-    try:
-        req = urllib.request.Request(url, data=json.dumps({"contents": [{"parts": parts}]}).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req) as res:
-            return json.loads(res.read().decode())['candidates'][0]['content']['parts'][0]['text']
-    except Exception as e:
-        return f"Eroare: {e}"
+    conf = selected["weight"] + random.randint(-2, 3)
+    return {"prediction": selected["name"], "confidence": f"{conf}%"}
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -136,19 +111,21 @@ HTML_TEMPLATE = """
     <title>XMTS AI Predictions</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 12px; }
-        h1 { text-align: center; color: #38bdf8; font-size: 1.5rem; }
+        h1 { text-align: center; color: #38bdf8; font-size: 1.5rem; margin-bottom: 15px; }
         .container { max-width: 850px; margin: 0 auto; }
         .user-bar { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 12px; }
         .auth-inputs { display: flex; gap: 6px; flex-wrap: wrap; }
-        .auth-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 6px; border-radius: 6px; font-size: 0.85rem; width: 100px; }
-        .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; overflow-x: auto; }
-        .tab-btn { flex: 1; min-width: 90px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; text-align: center; }
+        .auth-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 6px; border-radius: 6px; font-size: 0.85rem; width: 95px; }
+        .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-align: center; }
         .tab-btn.active { background: #0284c7; color: #fff; }
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .match-card { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px; }
         .btn-action { background: #334155; color: #38bdf8; border: 1px solid #0284c7; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
         .btn-green { background: #16a34a; color: white; border: none; }
         .btn-red { background: #dc2626; color: white; border: none; }
-        .admin-box { background: #1e293b; border: 1px solid #eab308; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .admin-box { background: #1e293b; border: 1px solid #eab308; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .badge { background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
     </style>
 </head>
 <body>
@@ -160,7 +137,7 @@ HTML_TEMPLATE = """
             <div id="auth-controls" class="auth-inputs">
                 <input type="text" id="username" class="auth-input" placeholder="User">
                 <input type="password" id="password" class="auth-input" placeholder="Parolă">
-                <input type="text" id="invite_code" class="auth-input" placeholder="Cod (Reg.)">
+                <input type="text" id="invite_code" class="auth-input" placeholder="Cod">
                 <button class="btn-action" onclick="login()">Login</button>
                 <button class="btn-action btn-green" onclick="register()">Register</button>
             </div>
@@ -168,10 +145,10 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="admin-panel" class="admin-box" style="display:none;">
-            <h3 style="margin-top:0; color:#eab308;">👑 Admin Panel (XMTS)</h3>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <label>Valabilitate cont nou:</label>
-                <select id="code-duration" class="auth-input" style="width:120px;">
+            <h3 style="margin:0 0 10px 0; color:#eab308; font-size:1rem;">👑 Admin Panel (XMTS)</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <label style="font-size:0.85rem;">Valabilitate cont:</label>
+                <select id="code-duration" class="auth-input" style="width:110px;">
                     <option value="7">7 Zile</option>
                     <option value="30">30 Zile</option>
                     <option value="90">3 Luni</option>
@@ -180,17 +157,16 @@ HTML_TEMPLATE = """
                 </select>
                 <button class="btn-action btn-green" onclick="generateCode()">Generează Cod</button>
             </div>
-            <div id="generated-code-result" style="margin-top:10px; font-weight:bold; color:#22c55e;"></div>
+            <div id="generated-code-result" style="margin-top:8px; font-weight:bold; color:#22c55e; font-size:0.85rem;"></div>
         </div>
 
         <div class="nav-tabs">
             <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri</button>
             <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top</button>
-            <button class="tab-btn" id="btn-saved" onclick="switchTab('saved')">💾 Biletele Mele</button>
         </div>
 
-        <div id="tab-content" class="card">
-            <p style="text-align:center;">Se încarcă...</p>
+        <div id="tab-content">
+            <p style="text-align:center;">Se încarcă meciurile...</p>
         </div>
     </div>
 
@@ -203,7 +179,7 @@ HTML_TEMPLATE = """
                 if (data.user) {
                     currentUser = data.user;
                     isAdmin = data.is_admin;
-                    let expText = data.expires_at ? ` (Expiră: ${data.expires_at})` : ' (Permanent)';
+                    let expText = data.expires_at ? ` (${data.expires_at})` : ' (Permanent)';
                     document.getElementById('user-display').innerText = '👋 ' + currentUser + expText;
                     document.getElementById('auth-controls').style.display = 'none';
                     document.getElementById('logout-btn').style.display = 'block';
@@ -257,23 +233,53 @@ HTML_TEMPLATE = """
                 body: JSON.stringify({duration_days: parseInt(duration)})
             }).then(r => r.json()).then(data => {
                 if (data.success) {
-                    document.getElementById('generated-code-result').innerText = `Cod Generat: ${data.code} (${data.days === 0 ? 'Permanent' : data.days + ' Zile'})`;
+                    document.getElementById('generated-code-result').innerText = `Cod: ${data.code} (${data.days === 0 ? 'Permanent' : data.days + ' Zile'})`;
                 } else {
                     alert(data.message);
                 }
             });
         }
 
+        function loadMatches() {
+            const container = document.getElementById('tab-content');
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile zilei...</p>';
+            
+            fetch('/api/matches').then(r => r.json()).then(matches => {
+                if (!matches.length) {
+                    container.innerHTML = '<p style="text-align:center;">Nu există meciuri disponibile azi.</p>';
+                    return;
+                }
+                let html = '';
+                matches.forEach(m => {
+                    html += `
+                        <div class="card">
+                            <div class="match-card">
+                                <div>
+                                    <span class="badge">${m.league}</span>
+                                    <div style="font-weight:bold; font-size:1rem; margin-top:4px;">${m.name}</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span style="font-weight:bold; color:#e2e8f0;">${m.score}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
+                                <div>🎯 Predicție: <strong style="color:#38bdf8;">${m.pred.prediction}</strong> (${m.pred.confidence})</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            });
+        }
+
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn-' + tab).classList.add('active');
-            const content = document.getElementById('tab-content');
+            
             if (tab === 'matches') {
-                content.innerHTML = '<p>Meciurile zilei sunt active și actualizate.</p>';
+                loadMatches();
             } else if (tab === 'tickets') {
-                content.innerHTML = '<p>Biletele din Top Ligi generate automat.</p>';
-            } else if (tab === 'saved') {
-                content.innerHTML = currentUser ? '<p>Biletele tale salvate în cont.</p>' : '<p>Conectează-te pentru a vedea biletele.</p>';
+                document.getElementById('tab-content').innerHTML = '<div class="card"><p style="text-align:center;">Bilete Top generate pe baza meciurilor din ligile principale.</p></div>';
             }
         }
 
@@ -293,8 +299,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             if session_id in SESSIONS:
                 username = SESSIONS[session_id]
                 user_info = USERS_DB.get(username)
-                
-                # Verificare expirare
                 if user_info and user_info["expires_at"]:
                     if datetime.now() > user_info["expires_at"]:
                         del SESSIONS[session_id]
@@ -313,10 +317,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif parsed.path == "/api/me":
             user = self.get_session_user()
             user_data = USERS_DB.get(user) if user else None
-            
-            exp_str = None
-            if user_data and user_data["expires_at"]:
-                exp_str = user_data["expires_at"].strftime("%d-%m-%Y")
+            exp_str = user_data["expires_at"].strftime("%d-%m-%Y") if user_data and user_data["expires_at"] else None
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -326,6 +327,17 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 "is_admin": user_data["is_admin"] if user_data else False,
                 "expires_at": exp_str
             }).encode("utf-8"))
+
+        elif parsed.path == "/api/matches":
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            raw_matches = fetch_football_data(today_str)
+            for m in raw_matches:
+                m["pred"] = generate_prediction(m)
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(raw_matches).encode("utf-8"))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -338,22 +350,15 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             code = data.get("code", "").strip()
 
             if not username or not password or not code:
-                res = {"success": False, "message": "Numele, parola și codul sunt obligatorii!"}
+                res = {"success": False, "message": "Toate câmpurile sunt obligatorii!"}
             elif username in USERS_DB:
                 res = {"success": False, "message": "Numele de utilizator există deja."}
             elif code not in INVITE_CODES or INVITE_CODES[code]["is_used"]:
-                res = {"success": False, "message": "Cod de înregistrare invalid sau deja utilizat!"}
+                res = {"success": False, "message": "Cod invalid sau deja utilizat!"}
             else:
                 code_info = INVITE_CODES[code]
-                expires_at = None
-                if code_info["duration_days"] > 0:
-                    expires_at = datetime.now() + timedelta(days=code_info["duration_days"])
-
-                USERS_DB[username] = {
-                    "password": password,
-                    "expires_at": expires_at,
-                    "is_admin": False
-                }
+                expires_at = datetime.now() + timedelta(days=code_info["duration_days"]) if code_info["duration_days"] > 0 else None
+                USERS_DB[username] = {"password": password, "expires_at": expires_at, "is_admin": False}
                 code_info["is_used"] = True
                 res = {"success": True, "message": "Cont creat cu succes!"}
 
@@ -369,7 +374,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
             if user_info and user_info["password"] == password:
                 if user_info["expires_at"] and datetime.now() > user_info["expires_at"]:
-                    res = {"success": False, "message": "Acest cont a expirat!"}
+                    res = {"success": False, "message": "Contul a expirat!"}
                 else:
                     session_id = str(uuid.uuid4())
                     SESSIONS[session_id] = username
@@ -380,7 +385,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
                     return
             else:
-                res = {"success": False, "message": "Date de conectare incorecte."}
+                res = {"success": False, "message": "Date incorecte."}
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -421,5 +426,5 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 if __name__ == "__main__":
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("0.0.0.0", PORT), SimpleHTTPRequestHandler) as httpd:
-        print(f"Server XMTS activ pe portul: {PORT}")
+        print(f"Server XMTS pe portul: {PORT}")
         httpd.serve_forever()
