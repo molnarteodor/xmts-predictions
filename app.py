@@ -14,8 +14,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # Stocare în memorie (Sesiuni și Coduri de acces)
 VALID_CODES = {
-    "XMTS-PERMANENT": {"expires": None, "type": "Permanent"},
-    "XMTS-DEMO": {"expires": datetime.now() + timedelta(days=7), "type": "7 Zile"}
+    "demo": {"expires": datetime.now() + timedelta(days=1), "type": "1 Zi (Demo)"},
+    "luna": {"expires": datetime.now() + timedelta(days=30), "type": "1 Lună VIP"},
+    "permanent": {"expires": None, "type": "Permanent VIP"}
 }
 ACTIVE_SESSIONS = {}
 
@@ -134,39 +135,6 @@ def generate_algorithmic_prediction(match, seed_offset=0):
         "betbuilder": bb_options
     }
 
-def analyze_with_gemini(prompt, images_b64=None):
-    if not GEMINI_API_KEY:
-        return "Notă: Cheia GEMINI_API_KEY nu este configurată."
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-    parts = []
-    if prompt:
-        parts.append({"text": prompt})
-    else:
-        parts.append({"text": "Analizează pozele atașate."})
-        
-    if images_b64 and isinstance(images_b64, list):
-        for img_data in images_b64:
-            if "," in img_data:
-                header, img_b64 = img_data.split(",", 1)
-                mime_type = header.split(";")[0].split(":")[1]
-            else:
-                img_b64 = img_data
-                mime_type = "image/jpeg"
-                
-            parts.append({
-                "inline_data": {"mime_type": mime_type, "data": img_b64}
-            })
-        
-    payload = {"contents": [{"parts": parts}]}
-    try:
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req) as response:
-            res = json.loads(response.read().decode())
-            return res['candidates'][0]['content']['parts'][0]['text']
-    except Exception as e:
-        return f"Eroare AI: {e}"
-
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ro">
@@ -219,7 +187,7 @@ HTML_TEMPLATE = """
         <div class="login-box">
             <h2 style="color: #38bdf8; margin-top: 0;">XMTS Access VIP</h2>
             <p style="color: #94a3b8; font-size: 0.85rem;">Introdu codul de acces pentru a debloca predicțiile.</p>
-            <input type="text" id="access-code" class="login-input" placeholder="Cod Access (ex: XMTS-PERMANENT)">
+            <input type="text" id="access-code" class="login-input" placeholder="Cod Access (ex: demo, luna, permanent)">
             <button class="btn-login" onclick="submitLogin()">Autentificare</button>
             <div id="login-error" style="color: #ef4444; font-size: 0.8rem; margin-top: 10px;"></div>
         </div>
@@ -237,10 +205,9 @@ HTML_TEMPLATE = """
         <div class="admin-panel" id="admin-panel">
             <div class="admin-title">👑 Admin Panel (XMTS)</div>
             <div class="admin-controls">
-                <span style="font-size:0.85rem; align-self:center;">Valabilitate cont:</span>
+                <span style="font-size:0.85rem; align-self:center;">Generează alt cod:</span>
                 <select id="code-days" class="admin-select">
                     <option value="1">24 Ore</option>
-                    <option value="7" selected>7 Zile</option>
                     <option value="30">30 Zile</option>
                     <option value="999">Permanent</option>
                 </select>
@@ -511,13 +478,25 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         data = json.loads(post_data.decode('utf-8'))
 
         if self.path == "/api/login":
-            code = data.get("code", "").upper()
+            code = data.get("code", "").strip().lower()
+            
+            # Verificăm codul exact din VALID_CODES
             if code in VALID_CODES:
+                code_data = VALID_CODES[code]
+                
+                # Verificăm dacă nu cumva a expirat
+                if code_data["expires"] and datetime.now() > code_data["expires"]:
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "message": "Codul a expirat!"}).encode("utf-8"))
+                    return
+
                 session_id = str(uuid.uuid4())
-                ACTIVE_SESSIONS[session_id] = VALID_CODES[code]
+                ACTIVE_SESSIONS[session_id] = code_data
                 
                 self.send_response(200)
-                self.send_header("Set-Cookie", f"xmts_session={session_id}; Path=/; HttpOnly")
+                self.send_header("Set-Cookie", f"xmts_session={session_id}; Path=/; SameSite=Lax")
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
@@ -529,10 +508,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         elif self.path == "/api/admin/generate":
             days = data.get("days", 7)
-            new_code = f"XMTS-{random.randint(1000, 9999)}"
+            new_code = f"xmts-{random.randint(1000, 9999)}"
             
             if days == 999:
-                VALID_CODES[new_code] = {"expires": None, "type": "Permanent"}
+                VALID_CODES[new_code] = {"expires": None, "type": "Permanent VIP"}
             else:
                 VALID_CODES[new_code] = {"expires": datetime.now() + timedelta(days=days), "type": f"{days} Zile"}
                 
