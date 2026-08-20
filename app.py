@@ -5,11 +5,17 @@ import random
 import socketserver
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime
 
 PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+# In-memory storage pentru simplitate pe Render (demo)
+USERS_DB = {}       # { username: password }
+SESSIONS = {}       # { session_id: username }
+SAVED_TICKETS = {}   # { username: [tickets...] }
 
 TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
@@ -182,8 +188,13 @@ HTML_TEMPLATE = """
         h1 { text-align: center; color: #38bdf8; font-size: 1.5rem; margin: 10px 0 15px; }
         .container { max-width: 850px; margin: 0 auto; }
         
+        .user-bar { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #334155; }
+        .user-info { font-weight: bold; color: #38bdf8; }
+        .auth-inputs { display: flex; gap: 6px; }
+        .auth-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; width: 110px; }
+
         .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { flex: 1; min-width: 110px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.82rem; text-align: center; white-space: nowrap; }
+        .tab-btn { flex: 1; min-width: 100px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.82rem; text-align: center; white-space: nowrap; }
         .tab-btn.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
         
         .controls-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
@@ -203,6 +214,7 @@ HTML_TEMPLATE = """
         .btn-action { background: #334155; color: #38bdf8; border: 1px solid #0284c7; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
         .btn-action:hover { background: #0284c7; color: white; }
         .btn-regen { background: #d97706; color: white; border: none; }
+        .btn-save { background: #16a34a; color: white; border: none; }
         
         .bb-box { background: #0f172a; border: 1px dashed #0284c7; border-radius: 8px; padding: 10px; margin-top: 8px; display: none; }
         .bb-item { font-size: 0.83rem; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #1e293b; }
@@ -222,10 +234,22 @@ HTML_TEMPLATE = """
     <div class="container">
         <h1>XMTS AI Predictions & BetBuilder</h1>
         
+        <div class="user-bar">
+            <div id="user-display" class="user-info">Neconectat</div>
+            <div id="auth-controls" class="auth-inputs">
+                <input type="text" id="username" class="auth-input" placeholder="Utilizator">
+                <input type="password" id="password" class="auth-input" placeholder="Parolă">
+                <button class="btn-action" style="background:#0284c7; color:white;" onclick="login()">Login</button>
+                <button class="btn-action" style="background:#334155; color:white;" onclick="register()">Register</button>
+            </div>
+            <button id="logout-btn" class="btn-action" style="background:#dc2626; color:white; display:none;" onclick="logout()">Logout</button>
+        </div>
+
         <div class="nav-tabs">
             <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri Superbet</button>
             <button class="tab-btn" id="btn-popular" onclick="switchTab('popular')">🔥 Top Ligi</button>
             <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top Încredere</button>
+            <button class="tab-btn" id="btn-saved" onclick="switchTab('saved')">💾 Biletele Mele</button>
             <button class="tab-btn" id="btn-chat" onclick="switchTab('chat')">💬 AI Chat & Poze</button>
         </div>
 
@@ -246,6 +270,11 @@ HTML_TEMPLATE = """
             <div id="tickets-list"></div>
         </div>
 
+        <div id="tab-saved" style="display:none;">
+            <h2 style="color:#38bdf8; font-size:1.1rem; margin-bottom:12px;">Bilete Salvate în Cont</h2>
+            <div id="saved-tickets-list"></div>
+        </div>
+
         <div id="tab-chat" style="display:none;">
             <div class="chat-box" id="chat-messages">
                 <div class="chat-msg chat-ai">Salut! Trimite-mi imagini sau poze cu meciuri și bilete pentru a le analiza automat.</div>
@@ -263,6 +292,7 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        let currentUser = null;
         let allMatches = [];
         let activeTab = 'matches';
         let regenOffsets = {};
@@ -277,10 +307,65 @@ HTML_TEMPLATE = """
         dateInput.max = today.toISOString().split('T')[0];
         dateInput.min = minDate.toISOString().split('T')[0];
 
+        function checkAuth() {
+            fetch('/api/me')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.user) {
+                        currentUser = data.user;
+                        document.getElementById('user-display').innerText = '👋 Salut, ' + currentUser;
+                        document.getElementById('auth-controls').style.display = 'none';
+                        document.getElementById('logout-btn').style.display = 'block';
+                    } else {
+                        currentUser = null;
+                        document.getElementById('user-display').innerText = 'Neconectat';
+                        document.getElementById('auth-controls').style.display = 'flex';
+                        document.getElementById('logout-btn').style.display = 'none';
+                    }
+                });
+        }
+
+        function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    checkAuth();
+                } else {
+                    alert(data.message || 'Eroare la autentificare');
+                }
+            });
+        }
+
+        function register() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            }).then(r => r.json()).then(data => {
+                alert(data.message);
+                if (data.success) login();
+            });
+        }
+
+        function logout() {
+            fetch('/api/logout', {method: 'POST'}).then(() => {
+                checkAuth();
+                if (activeTab === 'saved') switchTab('matches');
+            });
+        }
+
         function switchTab(tab) {
             activeTab = tab;
             document.getElementById('tab-matches').style.display = (tab === 'matches' || tab === 'popular') ? 'block' : 'none';
             document.getElementById('tab-tickets').style.display = tab === 'tickets' ? 'block' : 'none';
+            document.getElementById('tab-saved').style.display = tab === 'saved' ? 'block' : 'none';
             document.getElementById('tab-chat').style.display = tab === 'chat' ? 'block' : 'none';
             document.getElementById('controls-bar').style.display = (tab === 'matches' || tab === 'popular') ? 'flex' : 'none';
 
@@ -288,6 +373,7 @@ HTML_TEMPLATE = """
             document.getElementById('btn-' + tab).classList.add('active');
 
             if (tab === 'tickets') loadTickets();
+            else if (tab === 'saved') loadSavedTickets();
             else if (tab === 'matches' || tab === 'popular') filterMatches();
         }
 
@@ -392,7 +478,65 @@ HTML_TEMPLATE = """
                         container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există suficiente meciuri din Top Ligi pentru această dată.</p>';
                         return;
                     }
-                    data.forEach(t => {
+                    data.forEach((t, idx) => {
+                        const box = document.createElement('div');
+                        box.className = 'ticket-box';
+                        let matchesHtml = '';
+                        t.matches.forEach(m => {
+                            matchesHtml += `<div style="font-size:0.88rem; margin-top:5px; color:#cbd5e1;">• <strong>${m.match}</strong> (<span style="color:#38bdf8;">${m.league}</span>): <span style="color:#e0f2fe; font-weight:bold;">${m.prediction}</span> - <span style="color:#22c55e; font-weight:bold;">Încredere: ${m.confidence}</span></div>`;
+                        });
+                        
+                        const ticketJson = encodeURIComponent(JSON.stringify(t));
+                        box.innerHTML = `
+                            <div class="ticket-header">
+                                <div>
+                                    <span style="font-size:1.05rem; color:#f1f5f9;">${t.name}</span>
+                                    <span style="color:#22c55e; font-size:0.85rem; margin-left:8px;">(${t.matches.length} Meciuri)</span>
+                                </div>
+                                <div>
+                                    <button class="btn-action btn-save" onclick="saveTicket('${ticketJson}')">💾 Salvează Bilet</button>
+                                    <button class="btn-action btn-regen" onclick="regenSingleTicket(${t.size})">🔄 Regenerază</button>
+                                </div>
+                            </div>
+                            ${matchesHtml}
+                        `;
+                        container.appendChild(box);
+                    });
+                });
+        }
+
+        function saveTicket(ticketJsonStr) {
+            if (!currentUser) {
+                alert('Trebuie să fii conectat pentru a salva bilete!');
+                return;
+            }
+            const ticketData = JSON.parse(decodeURIComponent(ticketJsonStr));
+            fetch('/api/save_ticket', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ticket: ticketData})
+            }).then(r => r.json()).then(res => {
+                alert(res.message);
+            });
+        }
+
+        function loadSavedTickets() {
+            const container = document.getElementById('saved-tickets-list');
+            if (!currentUser) {
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Conectează-te pentru a vedea biletele salvate.</p>';
+                return;
+            }
+            
+            container.innerHTML = '<p style="text-align:center;">Se încarcă biletele salvate...</p>';
+            fetch('/api/saved_tickets')
+                .then(r => r.json())
+                .then(tickets => {
+                    container.innerHTML = '';
+                    if (tickets.length === 0) {
+                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu ai niciun bilet salvat momentan.</p>';
+                        return;
+                    }
+                    tickets.forEach(t => {
                         const box = document.createElement('div');
                         box.className = 'ticket-box';
                         let matchesHtml = '';
@@ -403,9 +547,8 @@ HTML_TEMPLATE = """
                             <div class="ticket-header">
                                 <div>
                                     <span style="font-size:1.05rem; color:#f1f5f9;">${t.name}</span>
-                                    <span style="color:#22c55e; font-size:0.85rem; margin-left:8px;">(${t.matches.length} Meciuri)</span>
+                                    <span style="color:#94a3b8; font-size:0.75rem; margin-left:8px;">Salvat la ${t.saved_at || 'recent'}</span>
                                 </div>
-                                <button class="btn-action btn-regen" onclick="regenSingleTicket(${t.size})">🔄 Regenerază Bilet</button>
                             </div>
                             ${matchesHtml}
                         `;
@@ -484,6 +627,7 @@ HTML_TEMPLATE = """
             });
         }
 
+        checkAuth();
         loadMatchesForDate();
     </script>
 </body>
@@ -491,6 +635,15 @@ HTML_TEMPLATE = """
 """
 
 class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+    def get_session_user(self):
+        cookie_header = self.headers.get('Cookie')
+        if cookie_header:
+            cookies = urllib.parse.parse_qs(cookie_header.replace('; ', '&'))
+            session_id = cookies.get('session_id', [None])[0]
+            if session_id in SESSIONS:
+                return SESSIONS[session_id]
+        return None
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
@@ -500,7 +653,22 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
-            
+
+        elif parsed.path == "/api/me":
+            user = self.get_session_user()
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"user": user}).encode("utf-8"))
+
+        elif parsed.path == "/api/saved_tickets":
+            user = self.get_session_user()
+            tickets = SAVED_TICKETS.get(user, []) if user else []
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(tickets).encode("utf-8"))
+
         elif parsed.path == "/api/matches":
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
             raw_matches = fetch_football_data(date_str)
@@ -536,8 +704,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             seed7 = int(query.get("seed7", [0])[0])
 
             all_matches = fetch_football_data(date_str)
-            
-            # FILTRARE STRICTA: Doar meciuri de Top Ligi neincepute
             top_matches = [m for m in all_matches if m["is_popular"] and m["status"] in ["NS", "TBD"]]
             if not top_matches:
                 top_matches = [m for m in all_matches if m["is_popular"]]
@@ -578,11 +744,78 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
-        if self.path == "/api/chat":
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data.decode('utf-8'))
+
+        if self.path == "/api/register":
+            username = data.get("username", "").strip()
+            password = data.get("password", "").strip()
             
+            if not username or not password:
+                response = {"success": False, "message": "Numele și parola sunt obligatorii."}
+            elif username in USERS_DB:
+                response = {"success": False, "message": "Utilizatorul există deja."}
+            else:
+                USERS_DB[username] = password
+                SAVED_TICKETS[username] = []
+                response = {"success": True, "message": "Cont creat cu succes! Te poți conecta."}
+            
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode("utf-8"))
+
+        elif self.path == "/api/login":
+            username = data.get("username", "").strip()
+            password = data.get("password", "").strip()
+            
+            if USERS_DB.get(username) == password and username != "":
+                session_id = str(uuid.uuid4())
+                SESSIONS[session_id] = username
+                
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Set-Cookie", f"session_id={session_id}; Path=/; HttpOnly")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
+            else:
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "message": "Date incorecte."}).encode("utf-8"))
+
+        elif self.path == "/api/logout":
+            cookie_header = self.headers.get('Cookie')
+            if cookie_header:
+                cookies = urllib.parse.parse_qs(cookie_header.replace('; ', '&'))
+                session_id = cookies.get('session_id', [None])[0]
+                if session_id in SESSIONS:
+                    del SESSIONS[session_id]
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.send_header("Set-Cookie", "session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT")
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
+
+        elif self.path == "/api/save_ticket":
+            user = self.get_session_user()
+            if not user:
+                self.send_response(401)
+                self.end_headers()
+                return
+
+            ticket = data.get("ticket")
+            ticket["saved_at"] = datetime.now().strftime("%d-%m-%Y %H:%M")
+            SAVED_TICKETS.setdefault(user, []).append(ticket)
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Bilet salvat în cont!"}).encode("utf-8"))
+
+        elif self.path == "/api/chat":
             prompt = data.get("prompt", "")
             images_b64 = data.get("images", None)
             
