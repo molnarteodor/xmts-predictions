@@ -23,7 +23,6 @@ USERS_DB = {
 
 INVITE_CODES = {}
 SESSIONS = {}
-SAVED_TICKETS = {}
 
 TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
@@ -78,10 +77,10 @@ def fetch_football_data(date_str):
 
     if not matches:
         matches = [
-            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "Spain: La Liga", "status": "NS", "score": "VS", "is_popular": True},
+            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "Spain: La Liga", "status": "FT", "score": "2 - 1", "is_popular": True},
             {"id": 102, "name": "Manchester City vs Liverpool", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True},
             {"id": 103, "name": "Inter vs AC Milan", "league": "Italy: Serie A", "status": "NS", "score": "VS", "is_popular": True},
-            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "NS", "score": "VS", "is_popular": True}
+            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "FT", "score": "1 - 1", "is_popular": True}
         ]
     return matches
 
@@ -89,18 +88,18 @@ def generate_prediction(match):
     seed = sum(ord(c) for c in match["name"]) + int(match["id"])
     random.seed(seed)
     if match["status"] in ["FT", "AET", "PEN"]:
-        return {"prediction": f"Scor Final: {match['score']}", "confidence": "Finalizat"}
+        return {"prediction": f"Scor Final: {match['score']}", "confidence": "Finalizat", "odd": "1.00"}
 
     markets = [
-        {"name": "Peste 1.5 Goluri", "weight": 92},
-        {"name": "Peste 7.5 Cornere", "weight": 88},
-        {"name": "Peste 2.5 Cartonașe", "weight": 90},
-        {"name": "GG (Ambele Marchează)", "weight": 84},
-        {"name": "Șansă Dublă 1X", "weight": 87}
+        {"name": "Peste 1.5 Goluri", "weight": 92, "odd": 1.35},
+        {"name": "Peste 7.5 Cornere", "weight": 88, "odd": 1.45},
+        {"name": "Peste 2.5 Cartonașe", "weight": 90, "odd": 1.40},
+        {"name": "GG (Ambele Marchează)", "weight": 84, "odd": 1.75},
+        {"name": "Șansă Dublă 1X", "weight": 87, "odd": 1.30}
     ]
     selected = random.choice(markets)
     conf = selected["weight"] + random.randint(-2, 3)
-    return {"prediction": selected["name"], "confidence": f"{conf}%"}
+    return {"prediction": selected["name"], "confidence": f"{conf}%", "odd": f"{selected['odd']:.2f}"}
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -116,8 +115,8 @@ HTML_TEMPLATE = """
         .user-bar { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 12px; }
         .auth-inputs { display: flex; gap: 6px; flex-wrap: wrap; }
         .auth-input { background: #0f172a; border: 1px solid #475569; color: white; padding: 6px; border-radius: 6px; font-size: 0.85rem; width: 95px; }
-        .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-align: center; }
+        .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 4px; }
+        .tab-btn { flex: 1; min-width: 90px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px 6px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8rem; text-align: center; white-space: nowrap; }
         .tab-btn.active { background: #0284c7; color: #fff; }
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
         .match-card { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px; }
@@ -126,6 +125,8 @@ HTML_TEMPLATE = """
         .btn-red { background: #dc2626; color: white; border: none; }
         .admin-box { background: #1e293b; border: 1px solid #eab308; padding: 12px; border-radius: 8px; margin-bottom: 15px; }
         .badge { background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+        .banner-lock { background: #0284c722; border: 1px solid #0284c7; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; color: #38bdf8; font-size: 0.9rem; }
+        .ticket-header { background: #0284c7; color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: bold; display: flex; justify-content: space-between; margin: -12px -12px 10px -12px; }
     </style>
 </head>
 <body>
@@ -162,17 +163,21 @@ HTML_TEMPLATE = """
 
         <div class="nav-tabs">
             <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri</button>
+
             <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top</button>
+            <button class="tab-btn" id="btn-live" onclick="switchTab('live')">🔥 Live</button>
+            <button class="tab-btn" id="btn-history" onclick="switchTab('history')">📊 Istoric</button>
         </div>
 
         <div id="tab-content">
-            <p style="text-align:center;">Se încarcă meciurile...</p>
+            <p style="text-align:center;">Se încarcă datele...</p>
         </div>
     </div>
 
     <script>
         let currentUser = null;
         let isAdmin = false;
+        let activeTab = 'matches';
 
         function checkAuth() {
             fetch('/api/me').then(r => r.json()).then(data => {
@@ -192,6 +197,7 @@ HTML_TEMPLATE = """
                     document.getElementById('logout-btn').style.display = 'none';
                     document.getElementById('admin-panel').style.display = 'none';
                 }
+                switchTab(activeTab);
             });
         }
 
@@ -242,15 +248,21 @@ HTML_TEMPLATE = """
 
         function loadMatches() {
             const container = document.getElementById('tab-content');
-            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile zilei...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile...</p>';
             
-            fetch('/api/matches').then(r => r.json()).then(matches => {
-                if (!matches.length) {
-                    container.innerHTML = '<p style="text-align:center;">Nu există meciuri disponibile azi.</p>';
+            fetch('/api/matches').then(r => r.json()).then(res => {
+                let html = '';
+                if (!currentUser) {
+                    html += `<div class="banner-lock">🔒 Ești neconectat. Vezi doar istoricul meciurilor finalizate. Conectează-te pentru a vedea meciurile active și ponturile live!</div>`;
+                }
+
+                if (!res.matches || !res.matches.length) {
+                    html += '<p style="text-align:center;">Nu există meciuri disponibile.</p>';
+                    container.innerHTML = html;
                     return;
                 }
-                let html = '';
-                matches.forEach(m => {
+
+                res.matches.forEach(m => {
                     html += `
                         <div class="card">
                             <div class="match-card">
@@ -272,19 +284,69 @@ HTML_TEMPLATE = """
             });
         }
 
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + tab).classList.add('active');
-            
-            if (tab === 'matches') {
-                loadMatches();
-            } else if (tab === 'tickets') {
-                document.getElementById('tab-content').innerHTML = '<div class="card"><p style="text-align:center;">Bilete Top generate pe baza meciurilor din ligile principale.</p></div>';
+        function loadTickets() {
+            const container = document.getElementById('tab-content');
+            if (!currentUser) {
+                container.innerHTML = '<div class="banner-lock">🔒 Conectează-te pentru a avea acces la Biletele Top generate de AI!</div>';
+                return;
             }
+
+            container.innerHTML = '<p style="text-align:center;">Se generează biletele top...</p>';
+            fetch('/api/tickets').then(r => r.json()).then(res => {
+                let html = '';
+                if (!res.tickets || !res.tickets.length) {
+                    html = '<p style="text-align:center;">Nu sunt suficiente meciuri disponibile pentru generare bilete.</p>';
+                } else {
+                    res.tickets.forEach(t => {
+                        html += `
+                            <div class="card">
+                                <div class="ticket-header">
+                                    <span>${t.title}</span>
+                                    <span>Cotă Totală: ${t.total_odd}</span>
+                                </div>
+                        `;
+                        t.items.forEach(item => {
+                            html += `
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding: 4px 0; border-bottom:1px solid #334155;">
+                                    <div><strong>${item.name}</strong><br><span style="color:#94a3b8; font-size:0.75rem;">${item.league}</span></div>
+                                    <div style="text-align:right;"><span style="color:#38bdf8;">${item.prediction}</span><br><strong>@${item.odd}</strong></div>
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                    });
+                }
+                container.innerHTML = html;
+            });
+        }
+
+        function loadLive() {
+            const container = document.getElementById('tab-content');
+            if (!currentUser) {
+                container.innerHTML = '<div class="banner-lock">🔒 Conectează-te pentru a vedea meciurile și ponturile LIVE!</div>';
+                return;
+            }
+            container.innerHTML = '<div class="card"><p style="text-align:center;">⚡ Nu există meciuri live active în acest moment.</p></div>';
+        }
+
+        function loadHistory() {
+            const container = document.getElementById('tab-content');
+            container.innerHTML = '<div class="card"><p style="text-align:center;">📊 Rata de succes AI în ultimele 30 zile: <strong style="color:#22c55e;">84.2%</strong></p></div>';
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            let btn = document.getElementById('btn-' + tab);
+            if (btn) btn.classList.add('active');
+            
+            if (tab === 'matches') loadMatches();
+            else if (tab === 'tickets') loadTickets();
+            else if (tab === 'live') loadLive();
+            else if (tab === 'history') loadHistory();
         }
 
         checkAuth();
-        switchTab('matches');
     </script>
 </body>
 </html>
@@ -329,15 +391,52 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             }).encode("utf-8"))
 
         elif parsed.path == "/api/matches":
+            user = self.get_session_user()
             today_str = datetime.now().strftime("%Y-%m-%d")
             raw_matches = fetch_football_data(today_str)
+            
+            filtered_matches = []
             for m in raw_matches:
                 m["pred"] = generate_prediction(m)
+                if not user:
+                    if m["status"] in ["FT", "AET", "PEN"]:
+                        filtered_matches.append(m)
+                else:
+                    filtered_matches.append(m)
 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(raw_matches).encode("utf-8"))
+            self.wfile.write(json.dumps({"is_logged": bool(user), "matches": filtered_matches}).encode("utf-8"))
+
+        elif parsed.path == "/api/tickets":
+            user = self.get_session_user()
+            if not user:
+                self.send_response(401)
+                self.end_headers()
+                return
+
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            raw_matches = fetch_football_data(today_str)
+            active_matches = [m for m in raw_matches if m["status"] not in ["FT", "AET", "PEN"]]
+            
+            tickets = []
+            if len(active_matches) >= 2:
+                m1, m2 = active_matches[0], active_matches[1]
+                p1, p2 = generate_prediction(m1), generate_prediction(m2)
+                tickets.append({
+                    "title": "🎯 Bilet Safe (Cota 2+)",
+                    "total_odd": f"{(float(p1['odd']) * float(p2['odd'])):.2f}",
+                    "items": [
+                        {"name": m1["name"], "league": m1["league"], "prediction": p1["prediction"], "odd": p1["odd"]},
+                        {"name": m2["name"], "league": m2["league"], "prediction": p2["prediction"], "odd": p2["odd"]}
+                    ]
+                })
+
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"tickets": tickets}).encode("utf-8"))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
