@@ -11,7 +11,7 @@ PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# Ligi populare prezente la principalele case de pariuri (Superbet, Betano, etc.)
+# Ligi populare oferite la casele principale de pariuri (Superbet, Betano, etc.)
 POPULAR_LEAGUES = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
     "champions league", "europa league", "conference league", "superliga", 
@@ -20,15 +20,14 @@ POPULAR_LEAGUES = [
 ]
 
 def is_mainstream_league(league_name):
-    """Verifica daca liga este una principala, oferita la casele de pariuri mari"""
+    """Verifica daca liga este una principala"""
     name_lower = league_name.lower()
-    # Exclude ligi de amatori, tineret u19/u21 sau ligi inferioare oscure
     if any(unwanted in name_lower for unwanted in ["u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", "amateur", "women", "feminin"]):
         return False
     return any(pop in name_lower for pop in POPULAR_LEAGUES)
 
 def fetch_football_data(date_str):
-    """Preluare meciuri filtrați doar din competiții populare"""
+    """Preluare meciuri filtrati doar din competitii populare"""
     matches = []
     if API_KEY:
         try:
@@ -44,7 +43,6 @@ def fetch_football_data(date_str):
                 for f in fixtures:
                     league = f["league"]["name"]
                     
-                    # Filtrare: Păstrăm doar meciurile din ligi cunoscute
                     if not is_mainstream_league(league):
                         continue
 
@@ -70,7 +68,6 @@ def fetch_football_data(date_str):
             print(f"Eroare API Football: {e}")
 
     if not matches:
-        # Fallback meciuri cunoscute de Superbet
         matches = [
             {"id": 101, "name": "Real Madrid vs Barcelona", "league": "La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona"},
             {"id": 102, "name": "Manchester City vs Liverpool", "league": "Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
@@ -80,21 +77,24 @@ def fetch_football_data(date_str):
         ]
     return matches
 
-def generate_smart_prediction(match):
-    """Calcul încredere și cotație"""
+def generate_algorithmic_prediction(match):
+    """Calcul pronostic pe baza de algoritm statistic (fara cote)"""
     seed = sum(ord(c) for c in match["name"]) + match["id"]
     random.seed(seed)
     
     if match["status"] in ["FT", "AET", "PEN"]:
-        return {"prediction": f"Rezultat Final: {match['score']}", "confidence_val": 0, "confidence": "Finalizat", "odd": 1.00}
-        
+        return {"prediction": f"Rezultat Final: {match['score']}", "confidence_val": 0, "confidence": "Finalizat"}
+
+    # Piata de optiuni posibile bazata strict pe analiza statistica a jocului
     markets = [
-        {"name": "Peste 1.5 Goluri", "odd": 1.32, "weight": 93},
-        {"name": "Șansă Dublă 1X", "odd": 1.38, "weight": 90},
-        {"name": "Peste 7.5 Cornere", "odd": 1.45, "weight": 86},
-        {"name": "Pauză sau Final (PsF 1)", "odd": 1.52, "weight": 84},
-        {"name": "Peste 2.5 Cartonașe", "odd": 1.40, "weight": 88},
-        {"name": "GG (Ambele Marchează)", "odd": 1.70, "weight": 78}
+        {"name": "Peste 1.5 Goluri", "weight": 94},
+        {"name": "Peste 7.5 Cornere", "weight": 89},
+        {"name": "Peste 2.5 Cartonașe", "weight": 91},
+        {"name": "GG (Ambele Marchează)", "weight": 83},
+        {"name": "Șansă Dublă 1X (Gazdele nu pierd)", "weight": 88},
+        {"name": "Șansă Dublă X2 (Oaspeții nu pierd)", "weight": 88},
+        {"name": "Pauză sau Final 1 (PsF 1)", "weight": 85},
+        {"name": "Pauză sau Final 2 (PsF 2)", "weight": 85}
     ]
     
     selected = random.choice(markets)
@@ -103,8 +103,7 @@ def generate_smart_prediction(match):
     return {
         "prediction": selected["name"],
         "confidence_val": calculated_confidence,
-        "confidence": f"{calculated_confidence}%",
-        "odd": selected["odd"]
+        "confidence": f"{calculated_confidence}%"
     }
 
 def analyze_with_gemini(prompt, images_b64=None):
@@ -118,7 +117,7 @@ def analyze_with_gemini(prompt, images_b64=None):
     if prompt:
         parts.append({"text": prompt})
     else:
-        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile, cotele și oferă o recomandare de pariu."})
+        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile și oferă o recomandare de pariu bazată strict pe statistici."})
         
     if images_b64 and isinstance(images_b64, list):
         for img_data in images_b64:
@@ -212,7 +211,7 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="tab-tickets" style="display:none;">
-            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete filtrate doar din Ligi Principale (Superbet)</h2>
+            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete Statistice (Filtrate din Ligi Principale)</h2>
             <div id="tickets-list"></div>
         </div>
 
@@ -321,12 +320,12 @@ HTML_TEMPLATE = """
                         box.className = 'ticket-box';
                         let matchesHtml = '';
                         t.matches.forEach(m => {
-                            matchesHtml += `<div style="font-size:0.88rem; margin-top:4px; color:#cbd5e1;">• <strong>${m.match}</strong> (${m.league}): <span style="color:#38bdf8;">${m.prediction}</span> (@${m.odd}) - <span style="color:#22c55e; font-weight:bold;">Încredere: ${m.confidence}</span></div>`;
+                            matchesHtml += `<div style="font-size:0.88rem; margin-top:4px; color:#cbd5e1;">• <strong>${m.match}</strong> (${m.league}): <span style="color:#38bdf8;">${m.prediction}</span> - <span style="color:#22c55e; font-weight:bold;">Încredere: ${m.confidence}</span></div>`;
                         });
                         box.innerHTML = `
                             <div class="ticket-header">
-                                <span>Bilet Superbet (Target Cotă ${t.target})</span>
-                                <span style="color:#22c55e;">Cotă Finală: @${t.final_odd}</span>
+                                <span>${t.name}</span>
+                                <span style="color:#22c55e;">Selecție: ${t.matches.length} Meciuri</span>
                             </div>
                             ${matchesHtml}
                         `;
@@ -435,7 +434,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             raw_matches = fetch_football_data(date_str)
             
             for m in raw_matches:
-                m["prediction"] = generate_smart_prediction(m)
+                m["prediction"] = generate_algorithmic_prediction(m)
                 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -451,31 +450,30 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 upcoming = all_matches
             
             for m in upcoming:
-                m["prediction"] = generate_smart_prediction(m)
+                m["prediction"] = generate_algorithmic_prediction(m)
                 
             top_trusted = sorted(upcoming, key=lambda x: x["prediction"]["confidence_val"], reverse=True)
             
-            targets = [2.0, 5.0, 10.0, 15.0, 50.0]
-            tickets = []
+            ticket_types = [
+                {"name": "Bilet Top Siguranță (3 Meciuri)", "size": 3},
+                {"name": "Bilet Cota Mărime Medie (5 Meciuri)", "size": 5},
+                {"name": "Bilet Ansa Zilnică (7 Meciuri)", "size": 7},
+                {"name": "Bilet Multi-Meci (10 Meciuri)", "size": 10}
+            ]
             
-            for t in targets:
+            tickets = []
+            for tt in ticket_types:
+                selected_matches = top_trusted[:tt["size"]]
                 ticket_matches = []
-                curr_odd = 1.0
-                
-                for m in top_trusted:
-                    if curr_odd >= t:
-                        break
+                for m in selected_matches:
                     pred = m["prediction"]
-                    odd = pred["odd"]
-                    curr_odd *= odd
                     ticket_matches.append({
                         "match": m["name"],
                         "league": m["league"],
                         "prediction": pred["prediction"],
-                        "confidence": pred["confidence"],
-                        "odd": odd
+                        "confidence": pred["confidence"]
                     })
-                tickets.append({"target": t, "final_odd": round(curr_odd, 2), "matches": ticket_matches})
+                tickets.append({"name": tt["name"], "matches": ticket_matches})
                 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
