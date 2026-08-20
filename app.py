@@ -1,7 +1,7 @@
 import http.server
 import json
 import os
-import random
+import re
 import socketserver
 import urllib.parse
 import urllib.request
@@ -22,6 +22,13 @@ EXCLUDED_KEYWORDS = [
     "u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", 
     "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional"
 ]
+
+def clean_html(text):
+    if not text:
+        return ""
+    text = re.sub(r'<[^>]+>', '', text)
+    text = text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&quot;', '"')
+    return text.strip()
 
 def check_is_popular(league_name, country_name=""):
     full_name = f"{country_name} {league_name}".lower()
@@ -80,15 +87,62 @@ def fetch_football_data(date_str):
         ]
     return matches
 
+def generate_gemini_analysis(match):
+    if not GEMINI_API_KEY:
+        return None
+
+    prompt = f"""
+    Ești un analist sportiv expert. Analizează meciul de fotbal: {match['name']} din competiția {match['league']}.
+    Generează un răspuns JSON VALID fără alt text împrejur (fără markdown codeblocks) cu următoarea structură:
+    {{
+        "prediction": "Predicția principală (ex: Peste 2.5 Goluri / Șansă Dublă 1X / GG)",
+        "confidence": "Procentaj de încredere (ex: 85%)",
+        "analysis": "Scurtă analiză tactică de 2-3 propoziții în română.",
+        "betbuilder": [
+            {{
+                "label": "🛡️ BetBuilder Sigur (Cotă ~1.80)",
+                "selection": "Selecție detaliată",
+                "confidence": "88%"
+            }},
+            {{
+                "label": "⚡ BetBuilder Moderat (Cotă ~2.50)",
+                "selection": "Selecție detaliată",
+                "confidence": "75%"
+            }}
+        ]
+    }}
+    """
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=body, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=8) as response:
+            res_data = json.loads(response.read().decode())
+            text_response = res_data['candidates'][0]['content']['parts'][0]['text']
+            text_response = text_response.replace('```json', '').replace('```', '').strip()
+            return json.loads(text_response)
+    except Exception as e:
+        print(f"Eroare Gemini AI pentru {match['name']}: {e}")
+        return None
+
 def generate_algorithmic_prediction(match, seed_offset=0):
     if match["status"] in ["FT", "AET", "PEN"]:
         return {
             "prediction": f"Scor Final: {match['score']}", 
             "confidence_val": 0, 
             "confidence": "Finalizat",
+            "analysis": "Meciul s-a încheiat.",
             "betbuilder": None
         }
 
+    # Încercăm generarea cu Gemini AI
+    ai_res = generate_gemini_analysis(match)
+    if ai_res:
+        return ai_res
+
+    # Fallback Algoritmic
     hash_home = sum(ord(c) * (idx + 1) for idx, c in enumerate(match["home_team"]))
     hash_away = sum(ord(c) * (idx + 1) for idx, c in enumerate(match["away_team"]))
     match_hash = (hash_home * 31 + hash_away * 17 + match["id"] + seed_offset) % 1000
@@ -123,6 +177,7 @@ def generate_algorithmic_prediction(match, seed_offset=0):
         "prediction": main_pred,
         "confidence_val": conf,
         "confidence": f"{conf}%",
+        "analysis": f"Forma recentă și stilul de joc indică o probabilitate ridicată pentru {main_pred}.",
         "betbuilder": bb_options
     }
 
@@ -155,6 +210,7 @@ HTML_TEMPLATE = """
         .match-title { font-weight: bold; font-size: 1.05rem; }
         .pred-tag { background: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: inline-block; margin-top: 6px; }
         .confidence { color: #22c55e; font-weight: bold; font-size: 0.85rem; margin-left: 6px; }
+        .analysis-text { font-size: 0.83rem; color: #94a3b8; margin-top: 8px; line-height: 1.4; }
 
         .bb-box { background: #0b1329; border: 1px dashed #0284c7; border-radius: 8px; padding: 10px; margin-top: 10px; }
         .bb-item { font-size: 0.82rem; margin-bottom: 4px; color: #cbd5e1; }
@@ -165,7 +221,7 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="header-bar">
             <div class="brand">XMTS PREDICTIONS</div>
-            <div class="user-badge">⚡ Acces Gratuit</div>
+            <div class="user-badge">⚡ Live Predictions</div>
         </div>
 
         <div class="controls-bar">
@@ -209,7 +265,7 @@ HTML_TEMPLATE = """
 
         function loadMatchesForDate() {
             const container = document.getElementById('matches-list');
-            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile și analizele AI...</p>';
 
             fetch('/api/matches?date=' + dateInput.value)
                 .then(r => r.json())
@@ -248,6 +304,8 @@ HTML_TEMPLATE = """
                     bbHtml += '</div>';
                 }
 
+                let analysisHtml = m.prediction.analysis ? `<div class="analysis-text">💡 <strong>Analiză:</strong> ${m.prediction.analysis}</div>` : '';
+
                 card.innerHTML = `
                     <div class="match-league">${m.league} ${m.is_popular ? '<span style="color:#eab308;">🔥 Top Liga</span>' : ''}</div>
                     <div class="match-title">${m.name}</div>
@@ -255,6 +313,7 @@ HTML_TEMPLATE = """
                         <span class="pred-tag">${m.prediction.prediction}</span>
                         <span class="confidence">Încredere: ${m.prediction.confidence}</span>
                     </div>
+                    ${analysisHtml}
                     ${bbHtml}
                 `;
                 container.appendChild(card);
