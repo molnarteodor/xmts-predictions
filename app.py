@@ -11,10 +11,24 @@ PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-LEAGUES_TOP = ["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1", "UEFA Champions League", "SuperLiga", "Europa League"]
+# Ligi populare prezente la principalele case de pariuri (Superbet, Betano, etc.)
+POPULAR_LEAGUES = [
+    "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
+    "champions league", "europa league", "conference league", "superliga", 
+    "liga 1", "liga 2", "eredivisie", "primeira liga", "jupiler pro league", 
+    "championship", "copa libertadores", "copa sudamericana", "mls", "saudi pro league"
+]
+
+def is_mainstream_league(league_name):
+    """Verifica daca liga este una principala, oferita la casele de pariuri mari"""
+    name_lower = league_name.lower()
+    # Exclude ligi de amatori, tineret u19/u21 sau ligi inferioare oscure
+    if any(unwanted in name_lower for unwanted in ["u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", "amateur", "women", "feminin"]):
+        return False
+    return any(pop in name_lower for pop in POPULAR_LEAGUES)
 
 def fetch_football_data(date_str):
-    """Preluare meciuri și rezultate pentru o dată specifică prin API-Football"""
+    """Preluare meciuri filtrați doar din competiții populare"""
     matches = []
     if API_KEY:
         try:
@@ -28,16 +42,19 @@ def fetch_football_data(date_str):
                 fixtures = data.get("response", [])
                 
                 for f in fixtures:
+                    league = f["league"]["name"]
+                    
+                    # Filtrare: Păstrăm doar meciurile din ligi cunoscute
+                    if not is_mainstream_league(league):
+                        continue
+
                     home = f["teams"]["home"]["name"]
                     away = f["teams"]["away"]["name"]
-                    league = f["league"]["name"]
                     status = f["fixture"]["status"]["short"]
                     
                     goals_home = f["goals"]["home"]
                     goals_away = f["goals"]["away"]
                     score_str = f"{goals_home} - {goals_away}" if goals_home is not None else "VS"
-                    
-                    is_popular = any(top.lower() in league.lower() for top in LEAGUES_TOP)
                     
                     matches.append({
                         "id": f["fixture"]["id"],
@@ -45,7 +62,7 @@ def fetch_football_data(date_str):
                         "league": league,
                         "status": status,
                         "score": score_str,
-                        "is_popular": is_popular,
+                        "is_popular": True,
                         "home_team": home,
                         "away_team": away
                     })
@@ -53,7 +70,7 @@ def fetch_football_data(date_str):
             print(f"Eroare API Football: {e}")
 
     if not matches:
-        # Fallback de siguranță pentru data curentă
+        # Fallback meciuri cunoscute de Superbet
         matches = [
             {"id": 101, "name": "Real Madrid vs Barcelona", "league": "La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona"},
             {"id": 102, "name": "Manchester City vs Liverpool", "league": "Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
@@ -64,7 +81,7 @@ def fetch_football_data(date_str):
     return matches
 
 def generate_smart_prediction(match):
-    """Algoritm de analiza si atribuire a coeficientului de incredere"""
+    """Calcul încredere și cotație"""
     seed = sum(ord(c) for c in match["name"]) + match["id"]
     random.seed(seed)
     
@@ -72,12 +89,12 @@ def generate_smart_prediction(match):
         return {"prediction": f"Rezultat Final: {match['score']}", "confidence_val": 0, "confidence": "Finalizat", "odd": 1.00}
         
     markets = [
-        {"name": "Peste 1.5 Goluri", "odd": 1.32, "weight": 92},
-        {"name": "Șansă Dublă 1X", "odd": 1.38, "weight": 89},
+        {"name": "Peste 1.5 Goluri", "odd": 1.32, "weight": 93},
+        {"name": "Șansă Dublă 1X", "odd": 1.38, "weight": 90},
         {"name": "Peste 7.5 Cornere", "odd": 1.45, "weight": 86},
-        {"name": "Pauză sau Final (PsF 1)", "odd": 1.52, "weight": 83},
-        {"name": "Peste 2.5 Cartonașe", "odd": 1.40, "weight": 87},
-        {"name": "GG (Ambele Marchează)", "odd": 1.70, "weight": 76}
+        {"name": "Pauză sau Final (PsF 1)", "odd": 1.52, "weight": 84},
+        {"name": "Peste 2.5 Cartonașe", "odd": 1.40, "weight": 88},
+        {"name": "GG (Ambele Marchează)", "odd": 1.70, "weight": 78}
     ]
     
     selected = random.choice(markets)
@@ -90,10 +107,10 @@ def generate_smart_prediction(match):
         "odd": selected["odd"]
     }
 
-def analyze_with_gemini(prompt, image_b64=None):
-    """Trimitere text și poză către Google Gemini Vision API"""
+def analyze_with_gemini(prompt, images_b64=None):
+    """Trimite text și poze multiple către Google Gemini Vision API"""
     if not GEMINI_API_KEY:
-        return "Notă: Cheia GEMINI_API_KEY nu este configurată în Render Environment Variables. Adăugați cheia GEMINI_API_KEY pentru analiza vizuală."
+        return "Notă: Cheia GEMINI_API_KEY nu este configurată în Render Environment Variables. Adăugați cheia GEMINI_API_KEY în setările Render."
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     
@@ -101,21 +118,23 @@ def analyze_with_gemini(prompt, image_b64=None):
     if prompt:
         parts.append({"text": prompt})
     else:
-        parts.append({"text": "Analizează detaliat acest bilet de pariuri sau meci din imagine. Identifică echipele, cotele și oferă o recomandare de pariu."})
+        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile, cotele și oferă o recomandare de pariu."})
         
-    if image_b64:
-        if "," in image_b64:
-            header, image_b64 = image_b64.split(",", 1)
-            mime_type = header.split(";")[0].split(":")[1]
-        else:
-            mime_type = "image/jpeg"
-            
-        parts.append({
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": image_b64
-            }
-        })
+    if images_b64 and isinstance(images_b64, list):
+        for img_data in images_b64:
+            if "," in img_data:
+                header, img_b64 = img_data.split(",", 1)
+                mime_type = header.split(";")[0].split(":")[1]
+            else:
+                img_b64 = img_data
+                mime_type = "image/jpeg"
+                
+            parts.append({
+                "inline_data": {
+                    "mime_type": mime_type,
+                    "data": img_b64
+                }
+            })
         
     payload = {"contents": [{"parts": parts}]}
     
@@ -125,7 +144,7 @@ def analyze_with_gemini(prompt, image_b64=None):
             res = json.loads(response.read().decode())
             return res['candidates'][0]['content']['parts'][0]['text']
     except Exception as e:
-        return f"Eroare la procesarea imaginii/mesajului: {e}"
+        return f"Eroare la procesarea cererii: {e}"
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -133,7 +152,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XMTS AI Predictions & Chat</title>
+    <title>XMTS AI Predictions & AI Assistant</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 12px; }
         h1 { text-align: center; color: #38bdf8; font-size: 1.5rem; margin: 10px 0 15px; }
@@ -163,7 +182,8 @@ HTML_TEMPLATE = """
         .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem; line-height: 1.4; white-space: pre-wrap; }
         .chat-user { background: #0284c7; color: white; align-self: flex-end; }
         .chat-ai { background: #334155; color: #f1f5f9; align-self: flex-start; }
-        .chat-img-preview { max-width: 140px; max-height: 140px; border-radius: 6px; margin-top: 5px; display: block; }
+        .chat-img-container { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+        .chat-img-preview { max-width: 100px; max-height: 100px; border-radius: 6px; border: 1px solid #38bdf8; }
         .chat-input-area { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .file-list { display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.8rem; color: #38bdf8; }
         
@@ -176,9 +196,9 @@ HTML_TEMPLATE = """
         <h1>XMTS AI Predictions & AI Assistant</h1>
         
         <div class="nav-tabs">
-            <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri All</button>
-            <button class="tab-btn" id="btn-popular" onclick="switchTab('popular')">🔥 Favorite / Populare</button>
-            <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Cota Maximă Încredere</button>
+            <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri Superbet</button>
+            <button class="tab-btn" id="btn-popular" onclick="switchTab('popular')">🔥 Top Ligi</button>
+            <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top Încredere</button>
             <button class="tab-btn" id="btn-chat" onclick="switchTab('chat')">💬 AI Chat & Poze</button>
         </div>
 
@@ -192,20 +212,20 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="tab-tickets" style="display:none;">
-            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete Selectate Strict Dupa Procentul de Încredere</h2>
+            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete filtrate doar din Ligi Principale (Superbet)</h2>
             <div id="tickets-list"></div>
         </div>
 
         <div id="tab-chat" style="display:none;">
             <div class="chat-box" id="chat-messages">
-                <div class="chat-msg chat-ai">Salut! Sunt asistentul tău AI. Atașează o poză cu un bilet sau un meci și o voi analiza automat!</div>
+                <div class="chat-msg chat-ai">Salut! Sunt asistentul tău AI. Atașează poze cu bilete sau meciuri și le voi analiza pe toate!</div>
             </div>
             <div class="chat-input-area">
                 <div class="file-list" id="file-names"></div>
                 <div style="display:flex; gap:8px;">
-                    <input type="file" id="img-input" accept="image/*" style="display:none;" onchange="updateFileNames()">
-                    <button class="btn-bb" style="background:#475569;" onclick="document.getElementById('img-input').click()">📷 Poze</button>
-                    <input type="text" id="chat-text" class="search-input" style="flex:1;" placeholder="Scrie un mesaj sau o întrebare..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <input type="file" id="img-input" accept="image/*" multiple style="display:none;" onchange="updateFileNames()">
+                    <button class="btn-bb" style="background:#475569;" onclick="document.getElementById('img-input').click()">📷 Poze (Multiple)</button>
+                    <input type="text" id="chat-text" class="search-input" style="flex:1;" placeholder="Scrie un mesaj..." onkeypress="if(event.key==='Enter') sendChatMessage()">
                     <button class="btn-bb" style="background:#16a34a;" id="btn-send" onclick="sendChatMessage()">Trimite</button>
                 </div>
             </div>
@@ -242,7 +262,7 @@ HTML_TEMPLATE = """
         function loadMatchesForDate() {
             const selectedDate = dateInput.value;
             const container = document.getElementById('matches-list');
-            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile din ligile principale...</p>';
 
             fetch('/api/matches?date=' + selectedDate)
                 .then(r => r.json())
@@ -264,7 +284,7 @@ HTML_TEMPLATE = """
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu s-au găsit meciuri pentru selecția făcută.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu s-au găsit meciuri în ligile principale pentru data selectată.</p>';
                 return;
             }
 
@@ -286,14 +306,14 @@ HTML_TEMPLATE = """
 
         function loadTickets() {
             const container = document.getElementById('tickets-list');
-            container.innerHTML = '<p style="text-align:center;">Se filtrează și se selectează meciurile cu cea mai mare încredere...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se generează biletele din meciuri Superbet cu încredere maximă...</p>';
 
             fetch('/api/tickets?date=' + dateInput.value)
                 .then(r => r.json())
                 .then(data => {
                     container.innerHTML = '';
                     if (data.length === 0 || data[0].matches.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există meciuri neîncepute cu un procentaj de încredere suficient de mare pentru această dată.</p>';
+                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există meciuri neîncepute în ligile principale pentru această dată.</p>';
                         return;
                     }
                     data.forEach(t => {
@@ -305,7 +325,7 @@ HTML_TEMPLATE = """
                         });
                         box.innerHTML = `
                             <div class="ticket-header">
-                                <span>Bilet Top Siguranță (Target Cotă ${t.target})</span>
+                                <span>Bilet Superbet (Target Cotă ${t.target})</span>
                                 <span style="color:#22c55e;">Cotă Finală: @${t.final_odd}</span>
                             </div>
                             ${matchesHtml}
@@ -318,7 +338,7 @@ HTML_TEMPLATE = """
         function updateFileNames() {
             const input = document.getElementById('img-input');
             const list = document.getElementById('file-names');
-            list.innerHTML = input.files.length > 0 ? `📷 ${input.files[0].name}` : '';
+            list.innerHTML = input.files.length > 0 ? `📷 ${input.files.length} poze selectate` : '';
         }
 
         function sendChatMessage() {
@@ -327,28 +347,38 @@ HTML_TEMPLATE = """
             const chatBox = document.getElementById('chat-messages');
 
             const text = txtInput.value.trim();
-            const file = fileInput.files[0];
+            const files = fileInput.files;
 
-            if (!text && !file) return;
+            if (!text && files.length === 0) return;
 
             const userMsgDiv = document.createElement('div');
             userMsgDiv.className = 'chat-msg chat-user';
             userMsgDiv.innerText = text;
 
-            let base64Image = null;
+            const imagesB64 = [];
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'chat-img-container';
 
-            if (file) {
-                const img = document.createElement('img');
-                img.className = 'chat-img-preview';
-                img.src = URL.createObjectURL(file);
-                userMsgDiv.appendChild(img);
+            if (files.length > 0) {
+                let loadedCount = 0;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const img = document.createElement('img');
+                    img.className = 'chat-img-preview';
+                    img.src = URL.createObjectURL(file);
+                    imgContainer.appendChild(img);
 
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                    base64Image = reader.result;
-                    processChatRequest(text, base64Image);
-                };
-                reader.readAsDataURL(file);
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        imagesB64.push(reader.result);
+                        loadedCount++;
+                        if (loadedCount === files.length) {
+                            processChatRequest(text, imagesB64);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+                userMsgDiv.appendChild(imgContainer);
             } else {
                 processChatRequest(text, null);
             }
@@ -360,18 +390,18 @@ HTML_TEMPLATE = """
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function processChatRequest(text, imageB64) {
+        function processChatRequest(text, imagesB64) {
             const chatBox = document.getElementById('chat-messages');
             const loadingMsg = document.createElement('div');
             loadingMsg.className = 'chat-msg chat-ai';
-            loadingMsg.innerText = 'Analyzing... Se analizează imaginea/mesajul...';
+            loadingMsg.innerText = 'Analyzing... Se analizează imaginile/mesajul...';
             chatBox.appendChild(loadingMsg);
             chatBox.scrollTop = chatBox.scrollHeight;
 
             fetch('/api/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'json' },
-                body: JSON.stringify({ prompt: text, image: imageB64 })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: text, images: imagesB64 })
             })
             .then(r => r.json())
             .then(res => {
@@ -416,16 +446,13 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
             all_matches = fetch_football_data(date_str)
             
-            # 1. Filtrare: Doar meciuri neîncepute (NS / TBD)
             upcoming = [m for m in all_matches if m["status"] in ["NS", "TBD"]]
             if not upcoming:
                 upcoming = all_matches
             
-            # 2. Generare pronosticuri și adăugare nivel de încredere
             for m in upcoming:
                 m["prediction"] = generate_smart_prediction(m)
                 
-            # 3. Sortare strictă: Meciurile cu cea mai MARE încredere primele (ex: 94%, 91%, 88%...)
             top_trusted = sorted(upcoming, key=lambda x: x["prediction"]["confidence_val"], reverse=True)
             
             targets = [2.0, 5.0, 10.0, 15.0, 50.0]
@@ -435,7 +462,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 ticket_matches = []
                 curr_odd = 1.0
                 
-                # Preluare secvențială a meciurilor cu cea mai mare încredere
                 for m in top_trusted:
                     if curr_odd >= t:
                         break
@@ -467,9 +493,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             
             prompt = data.get("prompt", "")
-            image_b64 = data.get("image", None)
+            images_b64 = data.get("images", None)
             
-            ai_response = analyze_with_gemini(prompt, image_b64)
+            ai_response = analyze_with_gemini(prompt, images_b64)
             
             self.send_response(200)
             self.send_header("Content-type", "application/json")
