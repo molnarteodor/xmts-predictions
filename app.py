@@ -11,23 +11,37 @@ PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# Ligi populare oferite la casele principale de pariuri (Superbet, Betano, etc.)
-POPULAR_LEAGUES = [
+# Lista stricta a ligilor de TOP (Nume de ligi + Tara/Competitie oficiala)
+TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
-    "champions league", "europa league", "conference league", "superliga", 
-    "liga 1", "liga 2", "eredivisie", "primeira liga", "jupiler pro league", 
-    "championship", "copa libertadores", "copa sudamericana", "mls", "saudi pro league"
+    "ucl", "champions league", "europa league", "conference league", 
+    "superliga", "liga 1", "eredivisie", "primeira liga", "jupiler pro league", 
+    "championship", "copa libertadores", "copa sudamericana", "mls"
 ]
 
-def is_mainstream_league(league_name):
-    """Verifica daca liga este una principala"""
-    name_lower = league_name.lower()
-    if any(unwanted in name_lower for unwanted in ["u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", "amateur", "women", "feminin"]):
+# Excluderi stricte pentru ligi secundare, rezervisti, tineret sau ligi obscure
+EXCLUDED_KEYWORDS = [
+    "u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", 
+    "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional"
+]
+
+def check_is_popular(league_name, country_name=""):
+    """Determina daca un meci apartine unei ligi de top veritabile"""
+    full_name = f"{country_name} {league_name}".lower()
+    
+    # Daca contine vreun termen de excludere, nu este top liga
+    if any(ex in full_name for ex in EXCLUDED_KEYWORDS):
         return False
-    return any(pop in name_lower for pop in POPULAR_LEAGUES)
+        
+    # Tratament special pentru Premier League (doar Anglia)
+    if "premier league" in full_name:
+        return "england" in full_name or country_name.lower() == "england"
+        
+    # Verificare daca se potriveste cu ligile importante
+    return any(pop in full_name for pop in TOP_LEAGUES_MATCH)
 
 def fetch_football_data(date_str):
-    """Preluare meciuri filtrati doar din competitii populare"""
+    """Preluare meciuri - pastreaza toate meciurile dar marcheaza doar top ligile"""
     matches = []
     if API_KEY:
         try:
@@ -41,11 +55,9 @@ def fetch_football_data(date_str):
                 fixtures = data.get("response", [])
                 
                 for f in fixtures:
-                    league = f["league"]["name"]
+                    league_name = f["league"]["name"]
+                    country_name = f["league"].get("country", "")
                     
-                    if not is_mainstream_league(league):
-                        continue
-
                     home = f["teams"]["home"]["name"]
                     away = f["teams"]["away"]["name"]
                     status = f["fixture"]["status"]["short"]
@@ -54,13 +66,18 @@ def fetch_football_data(date_str):
                     goals_away = f["goals"]["away"]
                     score_str = f"{goals_home} - {goals_away}" if goals_home is not None else "VS"
                     
+                    is_popular = check_is_popular(league_name, country_name)
+                    
+                    # Afisam tara langa liga pentru claritate
+                    display_league = f"{country_name}: {league_name}" if country_name else league_name
+                    
                     matches.append({
                         "id": f["fixture"]["id"],
                         "name": f"{home} vs {away}",
-                        "league": league,
+                        "league": display_league,
                         "status": status,
                         "score": score_str,
-                        "is_popular": True,
+                        "is_popular": is_popular,
                         "home_team": home,
                         "away_team": away
                     })
@@ -69,23 +86,22 @@ def fetch_football_data(date_str):
 
     if not matches:
         matches = [
-            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona"},
-            {"id": 102, "name": "Manchester City vs Liverpool", "league": "Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
-            {"id": 103, "name": "Inter vs AC Milan", "league": "Serie A", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Inter", "away_team": "AC Milan"},
-            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "SuperLiga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Universitatea Craiova", "away_team": "FCSB"},
-            {"id": 105, "name": "Arsenal vs Chelsea", "league": "Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea"}
+            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "Spain: La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona"},
+            {"id": 102, "name": "Manchester City vs Liverpool", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
+            {"id": 103, "name": "Inter vs AC Milan", "league": "Italy: Serie A", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Inter", "away_team": "AC Milan"},
+            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Universitatea Craiova", "away_team": "FCSB"},
+            {"id": 105, "name": "Arsenal vs Chelsea", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea"}
         ]
     return matches
 
 def generate_algorithmic_prediction(match):
-    """Calcul pronostic pe baza de algoritm statistic (fara cote)"""
+    """Calcul pronostic pe baza de algoritm statistic"""
     seed = sum(ord(c) for c in match["name"]) + match["id"]
     random.seed(seed)
     
     if match["status"] in ["FT", "AET", "PEN"]:
         return {"prediction": f"Rezultat Final: {match['score']}", "confidence_val": 0, "confidence": "Finalizat"}
 
-    # Piata de optiuni posibile bazata strict pe analiza statistica a jocului
     markets = [
         {"name": "Peste 1.5 Goluri", "weight": 94},
         {"name": "Peste 7.5 Cornere", "weight": 89},
@@ -107,9 +123,9 @@ def generate_algorithmic_prediction(match):
     }
 
 def analyze_with_gemini(prompt, images_b64=None):
-    """Trimite text și poze multiple către Google Gemini Vision API"""
+    """Trimite text și poze către Google Gemini Vision API"""
     if not GEMINI_API_KEY:
-        return "Notă: Cheia GEMINI_API_KEY nu este configurată în Render Environment Variables. Adăugați cheia GEMINI_API_KEY în setările Render."
+        return "Notă: Cheia GEMINI_API_KEY nu este configurată în Render Environment Variables."
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     
@@ -117,7 +133,7 @@ def analyze_with_gemini(prompt, images_b64=None):
     if prompt:
         parts.append({"text": prompt})
     else:
-        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile și oferă o recomandare de pariu bazată strict pe statistici."})
+        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile și oferă o recomandare de pariu bazată pe statistici."})
         
     if images_b64 and isinstance(images_b64, list):
         for img_data in images_b64:
@@ -211,7 +227,7 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="tab-tickets" style="display:none;">
-            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete Statistice (Filtrate din Ligi Principale)</h2>
+            <h2 style="text-align:center; color:#38bdf8; font-size:1.1rem;">Bilete Statistice Generat Din Meciuri Verificate</h2>
             <div id="tickets-list"></div>
         </div>
 
@@ -261,7 +277,7 @@ HTML_TEMPLATE = """
         function loadMatchesForDate() {
             const selectedDate = dateInput.value;
             const container = document.getElementById('matches-list');
-            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile din ligile principale...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile...</p>';
 
             fetch('/api/matches?date=' + selectedDate)
                 .then(r => r.json())
@@ -278,12 +294,16 @@ HTML_TEMPLATE = """
 
             const filtered = allMatches.filter(m => {
                 const matchesSearch = m.name.toLowerCase().includes(query) || m.league.toLowerCase().includes(query);
-                if (activeTab === 'popular') return matchesSearch && m.is_popular;
+                if (activeTab === 'popular') {
+                    return matchesSearch && m.is_popular;
+                }
                 return matchesSearch;
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu s-au găsit meciuri în ligile principale pentru data selectată.</p>';
+                container.innerHTML = activeTab === 'popular' 
+                    ? '<p style="text-align:center; color:#94a3b8;">Nu există meciuri din Top Ligi pentru data selectată. Vezi "Meciuri Superbet" pentru toate meciurile zilei.</p>'
+                    : '<p style="text-align:center; color:#94a3b8;">Nu s-au găsit meciuri pentru căutarea sau data selectată.</p>';
                 return;
             }
 
@@ -292,7 +312,7 @@ HTML_TEMPLATE = """
                 card.className = 'card';
                 card.innerHTML = `
                     <div>
-                        <div class="match-league">${m.league}</div>
+                        <div class="match-league">${m.league} ${m.is_popular ? '<span style="color:#eab308;">🔥 Top Liga</span>' : ''}</div>
                         <div class="match-title">${m.name}</div>
                         <div style="margin-top:6px;">
                             ${m.status === 'FT' ? `<span class="score-badge">Final: ${m.score}</span>` : `<span class="pred-tag">${m.prediction.prediction}</span> <span class="confidence">Încredere: ${m.prediction.confidence}</span>`}
@@ -305,14 +325,14 @@ HTML_TEMPLATE = """
 
         function loadTickets() {
             const container = document.getElementById('tickets-list');
-            container.innerHTML = '<p style="text-align:center;">Se generează biletele din meciuri Superbet cu încredere maximă...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se generează biletele din meciurile cu încredere maximă...</p>';
 
             fetch('/api/tickets?date=' + dateInput.value)
                 .then(r => r.json())
                 .then(data => {
                     container.innerHTML = '';
                     if (data.length === 0 || data[0].matches.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există meciuri neîncepute în ligile principale pentru această dată.</p>';
+                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există meciuri neîncepute pentru această dată.</p>';
                         return;
                     }
                     data.forEach(t => {
@@ -456,7 +476,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
             ticket_types = [
                 {"name": "Bilet Top Siguranță (3 Meciuri)", "size": 3},
-                {"name": "Bilet Cota Mărime Medie (5 Meciuri)", "size": 5},
+                {"name": "Bilet Mărime Medie (5 Meciuri)", "size": 5},
                 {"name": "Bilet Ansa Zilnică (7 Meciuri)", "size": 7},
                 {"name": "Bilet Multi-Meci (10 Meciuri)", "size": 10}
             ]
