@@ -4,27 +4,62 @@ import os
 import random
 import socketserver
 import urllib.parse
+import urllib.request
+from datetime import datetime
 
 PORT = int(os.environ.get("PORT", 10000))
 
-# Listă extinsă de meciuri reale
-MATCHES_LIST = [
-    "Anderlecht vs Gent",
-    "Bologna vs Atalanta",
-    "Bodø/Glimt vs Brann",
-    "Fenerbahçe vs Ferencváros",
-    "Universitatea Craiova vs FCSB",
-    "Lech Poznań vs Thun",
-    "Fiorentina vs Rapid Viena",
-    "CSKA Sofia vs Basel",
-    "AEL Limassol vs Omonia",
-    "St. Gallen vs Lugano",
-    "Sporting CP vs Porto",
-    "AZ Alkmaar vs Twente",
-    "Panathinaikos vs AEK Atena",
-    "Celtic vs Rangers",
-    "Club Brugge vs Genk"
-]
+# Cheia ta API integrata direct
+API_KEY = "86824b34c73a35048d8031810778337c"
+
+def get_todays_matches():
+    """Preluare meciuri reale de azi prin API-Football"""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    live_matches = []
+    
+    if API_KEY:
+        try:
+            # Preluam meciurile din ziua curenta
+            url = f"https://v3.football.api-sports.io/fixtures?date={today_str}"
+            req = urllib.request.Request(url, headers={
+                'x-rapidapi-key': API_KEY,
+                'x-rapidapi-host': 'v3.football.api-sports.io'
+            })
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode())
+                fixtures = data.get("response", [])
+                
+                for f in fixtures:
+                    # Selectam doar meciurile care nu s-au terminat inca (NS = Not Started, 1H/2H = Live)
+                    status = f["fixture"]["status"]["short"]
+                    if status in ["NS", "1H", "HT", "2H"]:
+                        home = f["teams"]["home"]["name"]
+                        away = f["teams"]["away"]["name"]
+                        league = f["league"]["name"]
+                        live_matches.append(f"{home} vs {away} ({league})")
+        except Exception as e:
+            print(f"Eroare la conectarea cu API Football: {e}")
+
+    # Lista de rezerva daca nu sunt suficiente meciuri jucate azi
+    fallback_matches = [
+        "Real Madrid vs Barcelona",
+        "Manchester City vs Liverpool",
+        "Inter vs AC Milan",
+        "Bayern München vs Borussia Dortmund",
+        "PSG vs Marseille",
+        "Arsenal vs Chelsea",
+        "Juventus vs Roma",
+        "Benfica vs Sporting CP",
+        "Anderlecht vs Gent",
+        "Bologna vs Atalanta"
+    ]
+
+    # Daca API-ul returneaza meciuri, le folosim pe cele reale
+    if len(live_matches) >= 3:
+        return live_matches
+    
+    # Daca sunt mai putin de 3 meciuri azi in API, completam lista
+    return live_matches + fallback_matches
 
 MARKETS_POOL = [
     {"name": "Peste 1.5 Goluri", "min_odd": 1.25, "max_odd": 1.45},
@@ -33,36 +68,32 @@ MARKETS_POOL = [
     {"name": "Șansă Dublă 1X", "min_odd": 1.25, "max_odd": 1.55},
     {"name": "Șansă Dublă X2", "min_odd": 1.28, "max_odd": 1.60},
     {"name": "Pauză sau Final (PsF 1)", "min_odd": 1.35, "max_odd": 1.80},
-    {"name": "Pauză sau Final (PsF X)", "min_odd": 1.65, "max_odd": 1.95},
     {"name": "Peste 3.5 Cartonașe", "min_odd": 1.40, "max_odd": 1.85},
-    {"name": "Peste 7.5 Cornere", "min_odd": 1.30, "max_odd": 1.60},
-    {"name": "Peste 8.5 Cornere", "min_odd": 1.55, "max_odd": 1.90},
-    {"name": "Peste 20.5 Faulturi", "min_odd": 1.45, "max_odd": 1.85}
+    {"name": "Peste 8.5 Cornere", "min_odd": 1.55, "max_odd": 1.90}
 ]
 
 def generate_betbuilder_combo(match_name, seed):
     random.seed(seed)
     sel1 = random.choice(["Peste 1.5 Goluri", "GG", "Peste 0.5 Goluri Pauză"])
     sel2 = random.choice(["Peste 3.5 Cartonașe", "Peste 7.5 Cornere", "Peste 20.5 Faulturi"])
-    sel3 = random.choice(["Șansă Dublă 1X", "Șansă Dublă X2", "PsF 1", "PsF X"])
+    sel3 = random.choice(["Șansă Dublă 1X", "Șansă Dublă X2", "PsF 1"])
     
-    combined_odd = round(random.uniform(2.10, 4.80), 2)
     return {
         "match": match_name,
         "selections": [sel1, sel2, sel3],
-        "combined_odd": combined_odd,
+        "combined_odd": round(random.uniform(2.10, 4.80), 2),
         "confidence": f"{random.randint(65, 82)}%"
     }
 
-def build_multi_ticket(target_odd):
+def build_multi_ticket(target_odd, current_matches):
     random.seed(int(target_odd * 100))
-    available_matches = list(MATCHES_LIST)
-    random.shuffle(available_matches)
+    available = list(current_matches)
+    random.shuffle(available)
     
     ticket_matches = []
     current_odd = 1.0
     
-    for match_name in available_matches:
+    for match_name in available:
         if current_odd >= target_odd:
             break
             
@@ -106,7 +137,7 @@ HTML_TEMPLATE = """
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
         @media(min-width: 600px) { .card { flex-direction: row; justify-content: space-between; align-items: center; } }
         
-        .match-title { font-weight: bold; font-size: 1.1rem; color: #f1f5f9; margin-bottom: 6px; }
+        .match-title { font-weight: bold; font-size: 1.05rem; color: #f1f5f9; margin-bottom: 6px; }
         .pred-info { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .pred-tag { background: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
         .confidence { color: #22c55e; font-weight: bold; font-size: 0.85rem; }
@@ -133,7 +164,7 @@ HTML_TEMPLATE = """
         </div>
 
         <div id="tab-matches">
-            <h2 style="text-align:center; color:#38bdf8; font-size:1.2rem;">Meciurile Zilei</h2>
+            <h2 style="text-align:center; color:#38bdf8; font-size:1.2rem;">Meciurile Zilei Real-Time</h2>
             <div id="matches-list"></div>
         </div>
 
@@ -171,12 +202,17 @@ HTML_TEMPLATE = """
         }
 
         function loadMatches() {
+            const container = document.getElementById('matches-list');
+            container.innerHTML = '<p style="text-align:center;">Se încarcă meciurile reale de azi...</p>';
+
             fetch('/api/matches')
                 .then(r => r.json())
                 .then(data => {
-                    const container = document.getElementById('matches-list');
                     container.innerHTML = '';
-                    
+                    if(data.length === 0) {
+                        container.innerHTML = '<p style="text-align:center;">Nu există meciuri disponibile acum.</p>';
+                        return;
+                    }
                     data.forEach((m, idx) => {
                         const card = document.createElement('div');
                         card.className = 'card';
@@ -189,7 +225,7 @@ HTML_TEMPLATE = """
                                 </div>
                             </div>
                             <div>
-                                <button class="btn-bb" onclick="openBetBuilder('${m.name}', ${m.seed})">⚡ Generați BetBuilder</button>
+                                <button class="btn-bb" onclick="openBetBuilder('${m.name.replace(/'/g, "\\'")}', ${m.seed})">⚡ Generați BetBuilder</button>
                             </div>
                         `;
                         container.appendChild(card);
@@ -230,7 +266,7 @@ HTML_TEMPLATE = """
 
         function loadTickets() {
             const container = document.getElementById('tickets-container');
-            container.innerHTML = '<p style="text-align:center;">Se generează biletele cu meciuri reale...</p>';
+            container.innerHTML = '<p style="text-align:center;">Se generează biletele din meciurile de azi...</p>';
             
             fetch('/api/tickets')
                 .then(r => r.json())
@@ -273,9 +309,10 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
             
         elif parsed.path == "/api/matches":
+            current_matches = get_todays_matches()
             matches_data = []
-            for idx, match_name in enumerate(MATCHES_LIST):
-                random.seed((idx + 1) * 33)
+            for idx, match_name in enumerate(current_matches):
+                random.seed((idx + 1) * 37)
                 market = random.choice(MARKETS_POOL)
                 matches_data.append({
                     "name": match_name,
@@ -300,8 +337,9 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(bb_data).encode("utf-8"))
             
         elif parsed.path == "/api/tickets":
+            current_matches = get_todays_matches()
             targets = [2.0, 5.0, 10.0, 15.0, 50.0]
-            tickets = [build_multi_ticket(t) for t in targets]
+            tickets = [build_multi_ticket(t, current_matches) for t in targets]
             
             self.send_response(200)
             self.send_header("Content-type", "application/json")
