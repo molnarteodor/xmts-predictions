@@ -187,15 +187,14 @@ def calculate_advanced_metrics(match, seed_offset=0):
     
     avg_league_goals = 1.35
     
-    home_attack_strength = random.uniform(0.85, 1.45)
-    home_defense_weakness = random.uniform(0.75, 1.25)
-    away_attack_strength = random.uniform(0.80, 1.35)
-    away_defense_weakness = random.uniform(0.80, 1.30)
+    home_attack = random.uniform(0.65, 1.65)
+    home_defense = random.uniform(0.65, 1.45)
+    away_attack = random.uniform(0.60, 1.55)
+    away_defense = random.uniform(0.65, 1.45)
     
-    expected_home_goals = max(0.2, home_attack_strength * away_defense_weakness * avg_league_goals)
-    expected_away_goals = max(0.2, away_attack_strength * home_defense_weakness * avg_league_goals)
+    expected_home_goals = max(0.2, home_attack * away_defense * avg_league_goals)
+    expected_away_goals = max(0.2, away_attack * home_defense * avg_league_goals)
     
-    prob_matrix = {}
     prob_over_15 = 0.0
     prob_over_25 = 0.0
     prob_btts = 0.0
@@ -208,41 +207,46 @@ def calculate_advanced_metrics(match, seed_offset=0):
         for a in range(6):
             p_a = poisson_pmf(a, expected_away_goals)
             prob = p_h * p_a
-            prob_matrix[(h, a)] = prob
             
-            if h + a > 1.5:
-                prob_over_15 += prob
-            if h + a > 2.5:
-                prob_over_25 += prob
-            if h > 0 and a > 0:
-                prob_btts += prob
-            if h > a:
-                prob_home_win += prob
-            elif h == a:
-                prob_draw += prob
-            else:
-                prob_away_win += prob
+            if h + a > 1.5: prob_over_15 += prob
+            if h + a > 2.5: prob_over_25 += prob
+            if h > 0 and a > 0: prob_btts += prob
+            if h > a: prob_home_win += prob
+            elif h == a: prob_draw += prob
+            else: prob_away_win += prob
 
     prob_1x = prob_home_win + prob_draw
     prob_x2 = prob_away_win + prob_draw
     
-    expected_corners = random.uniform(8.0, 11.5)
+    home_name = match.get("home_team", "Gazde")
+    away_name = match.get("away_team", "Oaspeți")
+    
+    candidates = []
+    
+    if prob_1x >= prob_x2:
+        double_chance = f"Șansă Dublă 1X ({home_name})"
+        double_chance_code = f"1X ({home_name})"
+        chance_val = prob_1x
+    else:
+        double_chance = f"Șansă Dublă X2 ({away_name})"
+        double_chance_code = f"X2 ({away_name})"
+        chance_val = prob_x2
+
+    candidates.append((double_chance, chance_val))
+    candidates.append(("GG (Ambele Marchează)", prob_btts))
+    candidates.append(("Peste 2.5 Goluri", prob_over_25))
+    candidates.append(("Peste 1.5 Goluri", prob_over_15 * 0.88))
+    
+    expected_corners = random.uniform(7.5, 11.5)
     expected_cards = random.uniform(3.0, 5.5)
     
-    candidates = [
-        ("Peste 1.5 Goluri", prob_over_15),
-        ("Peste 2.5 Goluri", prob_over_25),
-        ("GG (Ambele Marchează)", prob_btts),
-        ("Șansă Dublă 1X", prob_1x),
-        ("Șansă Dublă X2", prob_x2),
-        (f"Peste {round(expected_corners - 1.5, 1)} Cornere", min(0.92, prob_over_15 * 0.95)),
-        (f"Peste {round(expected_cards - 1.0, 1)} Cartonașe", min(0.90, prob_btts * 0.92))
-    ]
+    candidates.append((f"Peste {round(expected_corners - 1.5, 1)} Cornere", random.uniform(0.70, 0.85)))
+    candidates.append((f"Peste {round(expected_cards - 1.0, 1)} Cartonașe", random.uniform(0.68, 0.82)))
     
     adjusted_candidates = []
     for name, raw_prob in candidates:
         boost = get_market_boost(name)
-        final_conf = min(96, max(60, int((raw_prob * 100) + boost)))
+        final_conf = min(95, max(61, int((raw_prob * 100) + boost)))
         adjusted_candidates.append((name, final_conf))
         
     adjusted_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -251,12 +255,12 @@ def calculate_advanced_metrics(match, seed_offset=0):
     bb_options = [
         {
             "label": "🛡️ BetBuilder Matematic Sigur",
-            "selection": f"Șansă Dublă 1X/X2 + Peste 1.5 Goluri + Peste {round(expected_corners - 2.0, 1)} Cornere",
+            "selection": f"{double_chance_code} + Peste 1.5 Goluri + Peste {round(expected_corners - 2.0, 1)} Cornere",
             "confidence": f"{min(94, confidence_val + 3)}%"
         },
         {
             "label": "⚡ BetBuilder Echilibrat (Poisson)",
-            "selection": f"GG/Peste 2.5 Goluri + Peste {round(expected_cards, 1)} Cartonașe",
+            "selection": f"GG / Peste 2.5 Goluri + Peste {round(expected_cards, 1)} Cartonașe",
             "confidence": f"{max(70, confidence_val - 5)}%"
         },
         {
