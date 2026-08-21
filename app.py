@@ -23,7 +23,8 @@ TOP_LEAGUES_MATCH = [
 
 EXCLUDED_KEYWORDS = [
     "u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", 
-    "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional", "youth"
+    "amateur", "women", "feminin", "frauen", "w-league", "next pro", 
+    "armenia", "bhutan", "regional", "youth"
 ]
 
 def init_db():
@@ -143,7 +144,7 @@ def fetch_football_data(date_str):
                     country_name = f["league"].get("country", "")
                     full_league_str = f"{country_name} {league_name}".lower()
                     
-                    # Filtru direct la citire
+                    # Filtrare strictă a meciurilor de tineret, amatori și fotbal feminin
                     if any(ex in full_league_str for ex in EXCLUDED_KEYWORDS):
                         continue
 
@@ -232,15 +233,14 @@ def calculate_advanced_metrics(match, seed_offset=0):
     
     candidates = []
     
-    # Favorizăm 1X dacă probabilitatea e mai mare
-    if prob_1x >= prob_x2:
-        double_chance = f"Șansă Dublă 1X ({home_name})"
-        double_chance_code = f"1X ({home_name})"
-        chance_val = prob_1x
-    else:
+    if prob_x2 >= prob_1x:
         double_chance = f"Șansă Dublă X2 ({away_name})"
         double_chance_code = f"X2 ({away_name})"
         chance_val = prob_x2
+    else:
+        double_chance = f"Șansă Dublă 1X ({home_name})"
+        double_chance_code = f"1X ({home_name})"
+        chance_val = prob_1x
 
     candidates.append((double_chance, chance_val, 1.22))
     candidates.append(("Peste 1.5 Goluri", prob_over_15, 1.30))
@@ -248,7 +248,6 @@ def calculate_advanced_metrics(match, seed_offset=0):
     candidates.append(("Peste 2.5 Goluri", prob_over_25, 1.85))
     
     expected_corners = random.uniform(8.5, 11.5)
-    expected_cards = random.uniform(3.5, 5.5)
     
     candidates.append((f"Peste {round(expected_corners - 2.5, 1)} Cornere", random.uniform(0.75, 0.90), 1.35))
     
@@ -308,8 +307,11 @@ def get_or_generate_challenge(date_str):
         
     all_matches = fetch_football_data(date_str)
     
-    # Filtrare strictă: doar meciuri din Top Ligi și exclusiv fără ligi de tineret
-    top_matches = [m for m in all_matches if m["is_popular"] and not any(ex in m["league"].lower() for ex in EXCLUDED_KEYWORDS)]
+    # Filtrare strictă: Exclude categoric ligile de tineret și meciurile feminine
+    top_matches = [
+        m for m in all_matches 
+        if m["is_popular"] and not any(ex in m["league"].lower() for ex in EXCLUDED_KEYWORDS)
+    ]
     
     if not top_matches:
         top_matches = [m for m in all_matches if not any(ex in m["league"].lower() for ex in EXCLUDED_KEYWORDS)]
