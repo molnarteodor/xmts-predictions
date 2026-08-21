@@ -23,7 +23,7 @@ TOP_LEAGUES_MATCH = [
 
 EXCLUDED_KEYWORDS = [
     "u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", 
-    "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional"
+    "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional", "youth"
 ]
 
 def init_db():
@@ -141,6 +141,12 @@ def fetch_football_data(date_str):
                     match_id = f["fixture"]["id"]
                     league_name = f["league"]["name"]
                     country_name = f["league"].get("country", "")
+                    full_league_str = f"{country_name} {league_name}".lower()
+                    
+                    # Filtru direct la citire
+                    if any(ex in full_league_str for ex in EXCLUDED_KEYWORDS):
+                        continue
+
                     home = f["teams"]["home"]["name"]
                     away = f["teams"]["away"]["name"]
                     home_id = f["teams"]["home"]["id"]
@@ -190,13 +196,13 @@ def calculate_advanced_metrics(match, seed_offset=0):
     
     avg_league_goals = 1.35
     
-    home_attack = random.uniform(0.65, 1.65)
-    home_defense = random.uniform(0.65, 1.45)
-    away_attack = random.uniform(0.60, 1.55)
-    away_defense = random.uniform(0.65, 1.45)
+    home_attack = random.uniform(0.80, 1.65)
+    home_defense = random.uniform(0.70, 1.35)
+    away_attack = random.uniform(0.60, 1.45)
+    away_defense = random.uniform(0.80, 1.45)
     
-    expected_home_goals = max(0.2, home_attack * away_defense * avg_league_goals)
-    expected_away_goals = max(0.2, away_attack * home_defense * avg_league_goals)
+    expected_home_goals = max(0.4, home_attack * away_defense * avg_league_goals)
+    expected_away_goals = max(0.3, away_attack * home_defense * avg_league_goals)
     
     prob_over_15 = 0.0
     prob_over_25 = 0.0
@@ -226,6 +232,7 @@ def calculate_advanced_metrics(match, seed_offset=0):
     
     candidates = []
     
+    # Favorizăm 1X dacă probabilitatea e mai mare
     if prob_1x >= prob_x2:
         double_chance = f"Șansă Dublă 1X ({home_name})"
         double_chance_code = f"1X ({home_name})"
@@ -235,21 +242,20 @@ def calculate_advanced_metrics(match, seed_offset=0):
         double_chance_code = f"X2 ({away_name})"
         chance_val = prob_x2
 
-    candidates.append((double_chance, chance_val, 1.30))
-    candidates.append(("GG (Ambele Marchează)", prob_btts, 1.75))
+    candidates.append((double_chance, chance_val, 1.22))
+    candidates.append(("Peste 1.5 Goluri", prob_over_15, 1.30))
+    candidates.append(("GG (Ambele Marchează)", prob_btts, 1.70))
     candidates.append(("Peste 2.5 Goluri", prob_over_25, 1.85))
-    candidates.append(("Peste 1.5 Goluri", prob_over_15 * 0.88, 1.25))
     
-    expected_corners = random.uniform(7.5, 11.5)
-    expected_cards = random.uniform(3.0, 5.5)
+    expected_corners = random.uniform(8.5, 11.5)
+    expected_cards = random.uniform(3.5, 5.5)
     
-    candidates.append((f"Peste {round(expected_corners - 1.5, 1)} Cornere", random.uniform(0.70, 0.85), 1.40))
-    candidates.append((f"Peste {round(expected_cards - 1.0, 1)} Cartonașe", random.uniform(0.68, 0.82), 1.45))
+    candidates.append((f"Peste {round(expected_corners - 2.5, 1)} Cornere", random.uniform(0.75, 0.90), 1.35))
     
     adjusted_candidates = []
     for name, raw_prob, est_odds in candidates:
         boost = get_market_boost(name)
-        final_conf = min(95, max(61, int((raw_prob * 100) + boost)))
+        final_conf = min(96, max(65, int((raw_prob * 100) + boost)))
         adjusted_candidates.append((name, final_conf, est_odds))
         
     adjusted_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -258,21 +264,21 @@ def calculate_advanced_metrics(match, seed_offset=0):
     bb_options = [
         {
             "label": "🛡️ BetBuilder Matematic Sigur",
-            "selection": f"{double_chance_code} + Peste 1.5 Goluri + Peste {round(expected_corners - 2.0, 1)} Cornere",
-            "confidence": f"{min(94, confidence_val + 3)}%",
+            "selection": f"{double_chance_code} + Peste 1.5 Goluri",
+            "confidence": f"{min(95, confidence_val + 2)}%",
             "est_odds": 1.55
         },
         {
             "label": "⚡ BetBuilder Echilibrat (Poisson)",
-            "selection": f"GG / Peste 2.5 Goluri + Peste {round(expected_cards, 1)} Cartonașe",
-            "confidence": f"{max(70, confidence_val - 5)}%",
-            "est_odds": 1.90
+            "selection": f"{double_chance_code} + Peste {round(expected_corners - 2.5, 1)} Cornere",
+            "confidence": f"{max(72, confidence_val - 4)}%",
+            "est_odds": 1.65
         },
         {
             "label": "🔥 BetBuilder Valoare Statistică",
-            "selection": f"{best_market} + Peste {round(expected_corners, 1)} Cornere + Peste {round(expected_cards + 0.5, 1)} Cartonașe",
-            "confidence": f"{max(62, confidence_val - 12)}%",
-            "est_odds": 2.30
+            "selection": f"{best_market} + Peste {round(expected_corners - 1.5, 1)} Cornere",
+            "confidence": f"{max(65, confidence_val - 10)}%",
+            "est_odds": 1.95
         }
     ]
     
@@ -301,7 +307,13 @@ def get_or_generate_challenge(date_str):
         }
         
     all_matches = fetch_football_data(date_str)
-    top_matches = [m for m in all_matches if m["is_popular"]]
+    
+    # Filtrare strictă: doar meciuri din Top Ligi și exclusiv fără ligi de tineret
+    top_matches = [m for m in all_matches if m["is_popular"] and not any(ex in m["league"].lower() for ex in EXCLUDED_KEYWORDS)]
+    
+    if not top_matches:
+        top_matches = [m for m in all_matches if not any(ex in m["league"].lower() for ex in EXCLUDED_KEYWORDS)]
+        
     if not top_matches:
         top_matches = all_matches
         
@@ -311,9 +323,8 @@ def get_or_generate_challenge(date_str):
     top_matches.sort(key=lambda x: x["metrics"]["confidence_val"], reverse=True)
     
     challenge_matches = []
-    total_odds = 1.0
     
-    if len(top_matches) > 0 and top_matches[0]["metrics"]["confidence_val"] >= 82:
+    if top_matches:
         m = top_matches[0]
         bb_safe = m["metrics"]["betbuilder"][0]
         challenge_matches.append({
@@ -326,26 +337,15 @@ def get_or_generate_challenge(date_str):
         })
         total_odds = 1.55
     else:
-        for m in top_matches[:2]:
-            met = m["metrics"]
-            challenge_matches.append({
-                "match": m["name"],
-                "league": m["league"],
-                "selection": met["prediction"],
-                "confidence": met["confidence"],
-                "odds": round(met["est_odds"], 2),
-                "status": "Pending"
-            })
-            total_odds *= met["est_odds"]
-            
+        total_odds = 1.50
+
     c.execute("SELECT COUNT(*) FROM challenge_days")
     count = c.fetchone()[0]
     next_day = count + 1
     
-    total_odds = round(total_odds, 2)
     matches_json = json.dumps(challenge_matches)
     
-    c.execute("INSERT INTO challenge_days (date, matches_json, target_odds, status) VALUES (?, ?, ?, ?)",
+    c.execute("INSERT OR REPLACE INTO challenge_days (date, matches_json, target_odds, status) VALUES (?, ?, ?, ?)",
               (date_str, matches_json, total_odds, "Pending"))
     conn.commit()
     conn.close()
