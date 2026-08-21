@@ -3,6 +3,7 @@ import json
 import os
 import random
 import socketserver
+import sqlite3
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -10,6 +11,7 @@ from datetime import datetime
 PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+DB_NAME = "xmts_stats.db"
 
 TOP_LEAGUES_MATCH = [
     "premier league", "la liga", "serie a", "bundesliga", "ligue 1", 
@@ -22,6 +24,51 @@ EXCLUDED_KEYWORDS = [
     "u19", "u21", "u20", "u23", "reserve", "liga 3", "league 3", "3. liga", 
     "amateur", "women", "feminin", "next pro", "armenia", "bhutan", "regional"
 ]
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS predictions
+                 (match_id INTEGER PRIMARY KEY, date TEXT, match_name TEXT, 
+                  prediction TEXT, status TEXT, result TEXT)''')
+    conn.commit()
+    conn.close()
+
+def evaluate_prediction(prediction, goals_home, goals_away):
+    if goals_home is None or goals_away is None:
+        return "Pending"
+    
+    total_goals = goals_home + goals_away
+    
+    if "Peste 1.5 Goluri" in prediction:
+        return "Won" if total_goals > 1.5 else "Lost"
+    elif "GG" in prediction:
+        return "Won" if goals_home > 0 and goals_away > 0 else "Lost"
+    elif "1X" in prediction:
+        return "Won" if goals_home >= goals_away else "Lost"
+    elif "X2" in prediction:
+        return "Won" if goals_away >= goals_home else "Lost"
+    
+    return "Pending"
+
+def save_or_update_prediction(match_id, date_str, match_name, prediction, match_status, goals_home, goals_away):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    c.execute("SELECT prediction, result FROM predictions WHERE match_id=?", (match_id,))
+    row = c.fetchone()
+    
+    if row is None:
+        if match_status in ["NS", "TBD"]:
+            c.execute("INSERT INTO predictions (match_id, date, match_name, prediction, status, result) VALUES (?, ?, ?, ?, ?, ?)",
+                      (match_id, date_str, match_name, prediction, match_status, "Pending"))
+    else:
+        if match_status in ["FT", "AET", "PEN"] and row[1] == "Pending":
+            result = evaluate_prediction(row[0], goals_home, goals_away)
+            c.execute("UPDATE predictions SET status=?, result=? WHERE match_id=?", (match_status, result, match_id))
+            
+    conn.commit()
+    conn.close()
 
 def check_is_popular(league_name, country_name=""):
     full_name = f"{country_name} {league_name}".lower()
@@ -45,6 +92,7 @@ def fetch_football_data(date_str):
                 fixtures = data.get("response", [])
                 
                 for f in fixtures:
+                    match_id = f["fixture"]["id"]
                     league_name = f["league"]["name"]
                     country_name = f["league"].get("country", "")
                     home = f["teams"]["home"]["name"]
@@ -57,29 +105,32 @@ def fetch_football_data(date_str):
                     
                     is_popular = check_is_popular(league_name, country_name)
                     display_league = f"{country_name}: {league_name}" if country_name else league_name
+                    match_name = f"{home} vs {away}"
                     
                     matches.append({
-                        "id": f["fixture"]["id"],
-                        "name": f"{home} vs {away}",
+                        "id": match_id,
+                        "name": match_name,
                         "league": display_league,
                         "status": status,
                         "score": score_str,
                         "is_popular": is_popular,
                         "home_team": home,
-                        "away_team": away
+                        "away_team": away,
+                        "goals_home": goals_home,
+                        "goals_away": goals_away
                     })
         except Exception as e:
             print(f"Eroare API Football: {e}")
 
     if not matches:
         matches = [
-            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "Spain: La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona"},
-            {"id": 102, "name": "Manchester City vs Liverpool", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool"},
-            {"id": 103, "name": "Inter vs AC Milan", "league": "Italy: Serie A", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Inter", "away_team": "AC Milan"},
-            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Universitatea Craiova", "away_team": "FCSB"},
-            {"id": 105, "name": "Arsenal vs Chelsea", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea"},
-            {"id": 106, "name": "Bayern Munchen vs Dortmund", "league": "Germany: Bundesliga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Bayern Munchen", "away_team": "Dortmund"},
-            {"id": 107, "name": "PSG vs Marseille", "league": "France: Ligue 1", "status": "NS", "score": "VS", "is_popular": True, "home_team": "PSG", "away_team": "Marseille"}
+            {"id": 101, "name": "Real Madrid vs Barcelona", "league": "Spain: La Liga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Real Madrid", "away_team": "Barcelona", "goals_home": None, "goals_away": None},
+            {"id": 102, "name": "Manchester City vs Liverpool", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Manchester City", "away_team": "Liverpool", "goals_home": None, "goals_away": None},
+            {"id": 103, "name": "Inter vs AC Milan", "league": "Italy: Serie A", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Inter", "away_team": "AC Milan", "goals_home": None, "goals_away": None},
+            {"id": 104, "name": "Universitatea Craiova vs FCSB", "league": "Romania: SuperLiga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Universitatea Craiova", "away_team": "FCSB", "goals_home": None, "goals_away": None},
+            {"id": 105, "name": "Arsenal vs Chelsea", "league": "England: Premier League", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Arsenal", "away_team": "Chelsea", "goals_home": None, "goals_away": None},
+            {"id": 106, "name": "Bayern Munchen vs Dortmund", "league": "Germany: Bundesliga", "status": "NS", "score": "VS", "is_popular": True, "home_team": "Bayern Munchen", "away_team": "Dortmund", "goals_home": None, "goals_away": None},
+            {"id": 107, "name": "PSG vs Marseille", "league": "France: Ligue 1", "status": "NS", "score": "VS", "is_popular": True, "home_team": "PSG", "away_team": "Marseille", "goals_home": None, "goals_away": None}
         ]
     return matches
 
@@ -182,6 +233,8 @@ HTML_TEMPLATE = """
         h1 { text-align: center; color: #38bdf8; font-size: 1.5rem; margin: 10px 0 15px; }
         .container { max-width: 850px; margin: 0 auto; }
         
+        .stats-banner { background: #022c22; border: 1px solid #059669; color: #34d399; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; display: none; }
+
         .nav-tabs { display: flex; gap: 6px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
         .tab-btn { flex: 1; min-width: 110px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.82rem; text-align: center; white-space: nowrap; }
         .tab-btn.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
@@ -221,6 +274,10 @@ HTML_TEMPLATE = """
 <body>
     <div class="container">
         <h1>XMTS AI Predictions & BetBuilder</h1>
+        
+        <div id="stats-banner" class="stats-banner">
+            📊 Rata de Succes XMTS: <span id="win-rate-val">0%</span> (<span id="stats-details">0 ✅ / 0 ❌</span>)
+        </div>
         
         <div class="nav-tabs">
             <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri Superbet</button>
@@ -277,6 +334,18 @@ HTML_TEMPLATE = """
         dateInput.max = today.toISOString().split('T')[0];
         dateInput.min = minDate.toISOString().split('T')[0];
 
+        function loadStats() {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.total > 0) {
+                        document.getElementById('stats-banner').style.display = 'block';
+                        document.getElementById('win-rate-val').innerText = data.win_rate + '%';
+                        document.getElementById('stats-details').innerText = `${data.won} ✅ / ${data.lost} ❌`;
+                    }
+                });
+        }
+
         function switchTab(tab) {
             activeTab = tab;
             document.getElementById('tab-matches').style.display = (tab === 'matches' || tab === 'popular') ? 'block' : 'none';
@@ -301,6 +370,7 @@ HTML_TEMPLATE = """
                 .then(data => {
                     allMatches = data;
                     filterMatches();
+                    loadStats();
                 });
         }
 
@@ -485,6 +555,7 @@ HTML_TEMPLATE = """
         }
 
         loadMatchesForDate();
+        loadStats();
     </script>
 </body>
 </html>
@@ -506,10 +577,38 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             raw_matches = fetch_football_data(date_str)
             for m in raw_matches:
                 m["prediction"] = generate_algorithmic_prediction(m)
+                save_or_update_prediction(
+                    match_id=m["id"],
+                    date_str=date_str,
+                    match_name=m["name"],
+                    prediction=m["prediction"]["prediction"],
+                    match_status=m["status"],
+                    goals_home=m.get("goals_home"),
+                    goals_away=m.get("goals_away")
+                )
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(raw_matches).encode("utf-8"))
+
+        elif parsed.path == "/api/stats":
+            conn = sqlite3.connect(DB_NAME)
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM predictions WHERE result='Won'")
+            won = c.fetchone()[0]
+            c.execute("SELECT COUNT(*) FROM predictions WHERE result='Lost'")
+            lost = c.fetchone()[0]
+            conn.close()
+            
+            total = won + lost
+            win_rate = round((won / total * 100), 2) if total > 0 else 0
+            
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "won": won, "lost": lost, "total": total, "win_rate": win_rate
+            }).encode("utf-8"))
 
         elif parsed.path == "/api/regenerate":
             match_id = int(query.get("match_id", [0])[0])
@@ -537,7 +636,6 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
             all_matches = fetch_football_data(date_str)
             
-            # FILTRARE STRICTA: Doar meciuri de Top Ligi neincepute
             top_matches = [m for m in all_matches if m["is_popular"] and m["status"] in ["NS", "TBD"]]
             if not top_matches:
                 top_matches = [m for m in all_matches if m["is_popular"]]
@@ -594,6 +692,7 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"response": ai_response}).encode("utf-8"))
 
 if __name__ == "__main__":
+    init_db()
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("0.0.0.0", PORT), SimpleHTTPRequestHandler) as httpd:
         print(f"Server XMTS activ pe portul: {PORT}")
