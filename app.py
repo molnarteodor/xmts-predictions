@@ -7,7 +7,7 @@ import socketserver
 import sqlite3
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 
 PORT = int(os.environ.get("PORT", 10000))
 API_KEY = "86824b34c73a35048d8031810778337c"
@@ -34,6 +34,9 @@ def init_db():
                   prediction TEXT, status TEXT, result TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS market_weights
                  (market_name TEXT PRIMARY KEY, success_rate REAL, total_evaluated INTEGER)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS challenge_days
+                 (day_number INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE, 
+                  matches_json TEXT, target_odds REAL, status TEXT)''')
     conn.commit()
     conn.close()
 
@@ -232,41 +235,44 @@ def calculate_advanced_metrics(match, seed_offset=0):
         double_chance_code = f"X2 ({away_name})"
         chance_val = prob_x2
 
-    candidates.append((double_chance, chance_val))
-    candidates.append(("GG (Ambele Marchează)", prob_btts))
-    candidates.append(("Peste 2.5 Goluri", prob_over_25))
-    candidates.append(("Peste 1.5 Goluri", prob_over_15 * 0.88))
+    candidates.append((double_chance, chance_val, 1.30))
+    candidates.append(("GG (Ambele Marchează)", prob_btts, 1.75))
+    candidates.append(("Peste 2.5 Goluri", prob_over_25, 1.85))
+    candidates.append(("Peste 1.5 Goluri", prob_over_15 * 0.88, 1.25))
     
     expected_corners = random.uniform(7.5, 11.5)
     expected_cards = random.uniform(3.0, 5.5)
     
-    candidates.append((f"Peste {round(expected_corners - 1.5, 1)} Cornere", random.uniform(0.70, 0.85)))
-    candidates.append((f"Peste {round(expected_cards - 1.0, 1)} Cartonașe", random.uniform(0.68, 0.82)))
+    candidates.append((f"Peste {round(expected_corners - 1.5, 1)} Cornere", random.uniform(0.70, 0.85), 1.40))
+    candidates.append((f"Peste {round(expected_cards - 1.0, 1)} Cartonașe", random.uniform(0.68, 0.82), 1.45))
     
     adjusted_candidates = []
-    for name, raw_prob in candidates:
+    for name, raw_prob, est_odds in candidates:
         boost = get_market_boost(name)
         final_conf = min(95, max(61, int((raw_prob * 100) + boost)))
-        adjusted_candidates.append((name, final_conf))
+        adjusted_candidates.append((name, final_conf, est_odds))
         
     adjusted_candidates.sort(key=lambda x: x[1], reverse=True)
-    best_market, confidence_val = adjusted_candidates[0]
+    best_market, confidence_val, est_odds = adjusted_candidates[0]
     
     bb_options = [
         {
             "label": "🛡️ BetBuilder Matematic Sigur",
             "selection": f"{double_chance_code} + Peste 1.5 Goluri + Peste {round(expected_corners - 2.0, 1)} Cornere",
-            "confidence": f"{min(94, confidence_val + 3)}%"
+            "confidence": f"{min(94, confidence_val + 3)}%",
+            "est_odds": 1.55
         },
         {
             "label": "⚡ BetBuilder Echilibrat (Poisson)",
             "selection": f"GG / Peste 2.5 Goluri + Peste {round(expected_cards, 1)} Cartonașe",
-            "confidence": f"{max(70, confidence_val - 5)}%"
+            "confidence": f"{max(70, confidence_val - 5)}%",
+            "est_odds": 1.90
         },
         {
             "label": "🔥 BetBuilder Valoare Statistică",
             "selection": f"{best_market} + Peste {round(expected_corners, 1)} Cornere + Peste {round(expected_cards + 0.5, 1)} Cartonașe",
-            "confidence": f"{max(62, confidence_val - 12)}%"
+            "confidence": f"{max(62, confidence_val - 12)}%",
+            "est_odds": 2.30
         }
     ]
     
@@ -274,8 +280,101 @@ def calculate_advanced_metrics(match, seed_offset=0):
         "prediction": best_market,
         "confidence_val": confidence_val,
         "confidence": f"{confidence_val}%",
+        "est_odds": est_odds,
         "betbuilder": bb_options
     }
+
+def get_or_generate_challenge(date_str):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT day_number, date, matches_json, target_odds, status FROM challenge_days WHERE date=?", (date_str,))
+    row = c.fetchone()
+    
+    if row:
+        conn.close()
+        return {
+            "day_number": row[0],
+            "date": row[1],
+            "matches": json.loads(row[2]),
+            "target_odds": row[3],
+            "status": row[4]
+        }
+        
+    all_matches = fetch_football_data(date_str)
+    top_matches = [m for m in all_matches if m["is_popular"]]
+    if not top_matches:
+        top_matches = all_matches
+        
+    for m in top_matches:
+        m["metrics"] = calculate_advanced_metrics(m)
+        
+    top_matches.sort(key=lambda x: x["metrics"]["confidence_val"], reverse=True)
+    
+    challenge_matches = []
+    total_odds = 1.0
+    
+    if len(top_matches) > 0 and top_matches[0]["metrics"]["confidence_val"] >= 82:
+        m = top_matches[0]
+        bb_safe = m["metrics"]["betbuilder"][0]
+        challenge_matches.append({
+            "match": m["name"],
+            "league": m["league"],
+            "selection": f"BetBuilder: {bb_safe['selection']}",
+            "confidence": bb_safe["confidence"],
+            "odds": 1.55,
+            "status": "Pending"
+        })
+        total_odds = 1.55
+    else:
+        for m in top_matches[:2]:
+            met = m["metrics"]
+            challenge_matches.append({
+                "match": m["name"],
+                "league": m["league"],
+                "selection": met["prediction"],
+                "confidence": met["confidence"],
+                "odds": round(met["est_odds"], 2),
+                "status": "Pending"
+            })
+            total_odds *= met["est_odds"]
+            
+    c.execute("SELECT COUNT(*) FROM challenge_days")
+    count = c.fetchone()[0]
+    next_day = count + 1
+    
+    total_odds = round(total_odds, 2)
+    matches_json = json.dumps(challenge_matches)
+    
+    c.execute("INSERT INTO challenge_days (date, matches_json, target_odds, status) VALUES (?, ?, ?, ?)",
+              (date_str, matches_json, total_odds, "Pending"))
+    conn.commit()
+    conn.close()
+    
+    return {
+        "day_number": next_day,
+        "date": date_str,
+        "matches": challenge_matches,
+        "target_odds": total_odds,
+        "status": "Pending"
+    }
+
+def get_all_challenge_history():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT day_number, date, matches_json, target_odds, status FROM challenge_days ORDER BY day_number ASC")
+    rows = c.fetchall()
+    conn.close()
+    
+    history = []
+    for r in rows:
+        history.append({
+            "day_number": r[0],
+            "date": r[1],
+            "matches": json.loads(r[2]),
+            "target_odds": r[3],
+            "status": r[4]
+        })
+    return history
 
 def analyze_with_gemini(prompt, images_b64=None):
     if not GEMINI_API_KEY:
@@ -286,7 +385,7 @@ def analyze_with_gemini(prompt, images_b64=None):
     if prompt:
         parts.append({"text": prompt})
     else:
-        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate. Identifică meciurile și oferă o recomandare bazată exclusiv pe formă și statistici."})
+        parts.append({"text": "Analizează detaliat biletele/meciurile din pozele atașate."})
         
     if images_b64 and isinstance(images_b64, list):
         for img_data in images_b64:
@@ -342,7 +441,6 @@ HTML_TEMPLATE = """
         .match-league { font-size: 0.8rem; color: #38bdf8; margin-bottom: 4px; }
         .pred-tag { background: #0369a1; color: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
         .confidence { color: #22c55e; font-weight: bold; font-size: 0.85rem; margin-left: 6px; }
-        .score-badge { background: #eab308; color: #0f172a; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; }
         
         .action-bar { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
         .btn-action { background: #334155; color: #38bdf8; border: 1px solid #0284c7; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
@@ -361,6 +459,13 @@ HTML_TEMPLATE = """
         
         .ticket-box { background: #1e293b; border-left: 4px solid #22c55e; padding: 14px; margin-bottom: 14px; border-radius: 6px; }
         .ticket-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px; }
+
+        .challenge-card { background: #1e293b; border: 2px solid #eab308; border-radius: 10px; padding: 16px; margin-bottom: 15px; }
+        .challenge-badge { background: #eab308; color: #0f172a; font-weight: bold; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; display: inline-block; }
+        .history-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-top: 10px; }
+        .status-won { color: #22c55e; font-weight: bold; }
+        .status-pending { color: #eab308; font-weight: bold; }
+        .status-lost { color: #ef4444; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -372,18 +477,25 @@ HTML_TEMPLATE = """
         </div>
         
         <div class="nav-tabs">
-            <button class="tab-btn active" id="btn-matches" onclick="switchTab('matches')">Meciuri Live / Azi</button>
+            <button class="tab-btn active" id="btn-challenge" onclick="switchTab('challenge')">🏆 Challenge 1.5</button>
+            <button class="tab-btn" id="btn-matches" onclick="switchTab('matches')">Meciuri Live / Azi</button>
             <button class="tab-btn" id="btn-popular" onclick="switchTab('popular')">🔥 Top Ligi</button>
-            <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top Încredere</button>
+            <button class="tab-btn" id="btn-tickets" onclick="switchTab('tickets')">⭐ Bilete Top</button>
             <button class="tab-btn" id="btn-chat" onclick="switchTab('chat')">💬 AI Chat & Poze</button>
         </div>
 
-        <div class="controls-bar" id="controls-bar">
+        <div class="controls-bar" id="controls-bar" style="display:none;">
             <input type="text" id="search-box" class="search-input" placeholder="🔍 Căutare echipă sau ligă..." onkeyup="filterMatches()">
             <input type="date" id="date-picker" class="date-input" onchange="loadMatchesForDate()">
         </div>
 
-        <div id="tab-matches">
+        <div id="tab-challenge">
+            <div id="current-challenge-container"></div>
+            <h3 style="color:#38bdf8; margin-top:25px; border-bottom:1px solid #334155; padding-bottom:8px;">📜 Istoric Challenge Pe Zile</h3>
+            <div id="challenge-history-container"></div>
+        </div>
+
+        <div id="tab-matches" style="display:none;">
             <div id="matches-list"></div>
         </div>
 
@@ -413,33 +525,17 @@ HTML_TEMPLATE = """
 
     <script>
         let allMatches = [];
-        let activeTab = 'matches';
+        let activeTab = 'challenge';
         let regenOffsets = {};
         let ticketSeeds = { 3: 0, 5: 0, 7: 0 };
 
         const dateInput = document.getElementById('date-picker');
         const today = new Date();
-        const minDate = new Date();
-        minDate.setDate(today.getDate() - 7);
-        
         dateInput.value = today.toISOString().split('T')[0];
-        dateInput.max = today.toISOString().split('T')[0];
-        dateInput.min = minDate.toISOString().split('T')[0];
-
-        function loadStats() {
-            fetch('/api/stats')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.total > 0) {
-                        document.getElementById('stats-banner').style.display = 'block';
-                        document.getElementById('win-rate-val').innerText = data.win_rate + '%';
-                        document.getElementById('stats-details').innerText = `${data.won} ✅ / ${data.lost} ❌`;
-                    }
-                });
-        }
 
         function switchTab(tab) {
             activeTab = tab;
+            document.getElementById('tab-challenge').style.display = tab === 'challenge' ? 'block' : 'none';
             document.getElementById('tab-matches').style.display = (tab === 'matches' || tab === 'popular') ? 'block' : 'none';
             document.getElementById('tab-tickets').style.display = tab === 'tickets' ? 'block' : 'none';
             document.getElementById('tab-chat').style.display = tab === 'chat' ? 'block' : 'none';
@@ -448,8 +544,71 @@ HTML_TEMPLATE = """
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + tab).classList.add('active');
 
-            if (tab === 'tickets') loadTickets();
+            if (tab === 'challenge') loadChallengeData();
+            else if (tab === 'tickets') loadTickets();
             else if (tab === 'matches' || tab === 'popular') filterMatches();
+        }
+
+        function loadChallengeData() {
+            const container = document.getElementById('current-challenge-container');
+            const historyContainer = document.getElementById('challenge-history-container');
+            
+            container.innerHTML = '<p style="text-align:center;">Se calculează cel mai sigur bilet Challenge (Cota 1.50+)...</p>';
+
+            fetch('/api/challenge?date=' + dateInput.value)
+                .then(r => r.json())
+                .then(data => {
+                    let matchesHtml = '';
+                    data.matches.forEach(m => {
+                        matchesHtml += `
+                            <div style="background:#0f172a; padding:10px; border-radius:6px; margin-top:8px;">
+                                <div style="font-size:0.8rem; color:#38bdf8;">${m.league}</div>
+                                <div style="font-weight:bold; color:#f1f5f9;">${m.match}</div>
+                                <div style="margin-top:4px;">
+                                    <span style="background:#0369a1; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.8rem;">${m.selection}</span>
+                                    <span style="color:#22c55e; font-size:0.8rem; font-weight:bold; margin-left:6px;">Probabilitate: ${m.confidence}</span>
+                                    <span style="color:#eab308; font-size:0.8rem; font-weight:bold; margin-left:6px;">Cotă ~${m.odds}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = `
+                        <div class="challenge-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <span class="challenge-badge">🎯 Ziua ${data.day_number} (${data.date})</span>
+                                <span style="font-size:1.1rem; font-weight:bold; color:#eab308;">Cotă Totală Target: ~${data.target_odds}</span>
+                            </div>
+                            ${matchesHtml}
+                        </div>
+                    `;
+                });
+
+            fetch('/api/challenge/history')
+                .then(r => r.json())
+                .then(history => {
+                    historyContainer.innerHTML = '';
+                    if (history.length === 0) {
+                        historyContainer.innerHTML = '<p style="color:#94a3b8;">Nu există încă zile finalizate în istoric.</p>';
+                        return;
+                    }
+                    history.forEach(h => {
+                        let statusClass = h.status === 'Won' ? 'status-won' : (h.status === 'Lost' ? 'status-lost' : 'status-pending');
+                        let statusText = h.status === 'Won' ? '✅ CÂȘTIGAT' : (h.status === 'Lost' ? '❌ PIERDUT' : '⏳ ÎN DESFĂȘURARE');
+                        
+                        let mList = h.matches.map(m => `• ${m.match}: <strong>${m.selection}</strong>`).join('<br>');
+
+                        historyContainer.innerHTML += `
+                            <div class="history-box">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <strong>Ziua ${h.day_number} (${h.date})</strong>
+                                    <span class="${statusClass}">${statusText} (Cotă ${h.target_odds})</span>
+                                </div>
+                                <div style="font-size:0.85rem; color:#cbd5e1;">${mList}</div>
+                            </div>
+                        `;
+                    });
+                });
         }
 
         function loadMatchesForDate() {
@@ -462,7 +621,6 @@ HTML_TEMPLATE = """
                 .then(data => {
                     allMatches = data;
                     filterMatches();
-                    loadStats();
                 });
         }
 
@@ -501,15 +659,13 @@ HTML_TEMPLATE = """
                         <div class="match-league">${m.league} ${m.is_popular ? '<span style="color:#eab308;">🔥 Top Liga</span>' : ''}</div>
                         <div class="match-title">${m.name}</div>
                         <div style="margin-top:6px;">
-                            ${m.status === 'FT' ? `<span class="score-badge">Final: ${m.score}</span>` : `<span class="pred-tag">${m.prediction.prediction}</span> <span class="confidence">Calcul Poisson: ${m.prediction.confidence}</span>`}
+                            <span class="pred-tag">${m.prediction.prediction}</span> <span class="confidence">Calcul Poisson: ${m.prediction.confidence}</span>
                         </div>
                     </div>
-                    ${m.status !== 'FT' ? `
                     <div class="action-bar">
                         <button class="btn-action" onclick="toggleBetBuilder(${m.id})">🛠️ BetBuilder</button>
                         <button class="btn-action btn-regen" onclick="regeneratePrediction(${m.id})">🔄 Recalculează</button>
                     </div>
-                    ` : ''}
                     ${bbHtml}
                 `;
                 container.appendChild(card);
@@ -550,10 +706,6 @@ HTML_TEMPLATE = """
                 .then(r => r.json())
                 .then(data => {
                     container.innerHTML = '';
-                    if (data.length === 0 || data[0].matches.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; color:#94a3b8;">Nu există suficiente meciuri din Top Ligi pentru această dată.</p>';
-                        return;
-                    }
                     data.forEach(t => {
                         const box = document.createElement('div');
                         box.className = 'ticket-box';
@@ -567,18 +719,12 @@ HTML_TEMPLATE = """
                                     <span style="font-size:1.05rem; color:#f1f5f9;">${t.name}</span>
                                     <span style="color:#22c55e; font-size:0.85rem; margin-left:8px;">(${t.matches.length} Meciuri)</span>
                                 </div>
-                                <button class="btn-action btn-regen" onclick="regenSingleTicket(${t.size})">🔄 Recalculează Bilet</button>
                             </div>
                             ${matchesHtml}
                         `;
                         container.appendChild(box);
                     });
                 });
-        }
-
-        function regenSingleTicket(size) {
-            ticketSeeds[size] = (ticketSeeds[size] || 0) + 1;
-            loadTickets();
         }
 
         function updateFileNames() {
@@ -646,8 +792,7 @@ HTML_TEMPLATE = """
             });
         }
 
-        loadMatchesForDate();
-        loadStats();
+        loadChallengeData();
     </script>
 </body>
 </html>
@@ -664,43 +809,30 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
             
+        elif parsed.path == "/api/challenge":
+            date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
+            data = get_or_generate_challenge(date_str)
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
+        elif parsed.path == "/api/challenge/history":
+            data = get_all_challenge_history()
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(data).encode("utf-8"))
+
         elif parsed.path == "/api/matches":
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
             raw_matches = fetch_football_data(date_str)
             for m in raw_matches:
                 m["prediction"] = calculate_advanced_metrics(m)
-                save_or_update_prediction(
-                    match_id=m["id"],
-                    date_str=date_str,
-                    match_name=m["name"],
-                    prediction=m["prediction"]["prediction"],
-                    match_status=m["status"],
-                    goals_home=m.get("goals_home"),
-                    goals_away=m.get("goals_away")
-                )
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(raw_matches).encode("utf-8"))
-
-        elif parsed.path == "/api/stats":
-            conn = sqlite3.connect(DB_NAME)
-            c = conn.cursor()
-            c.execute("SELECT COUNT(*) FROM predictions WHERE result='Won'")
-            won = c.fetchone()[0]
-            c.execute("SELECT COUNT(*) FROM predictions WHERE result='Lost'")
-            lost = c.fetchone()[0]
-            conn.close()
-            
-            total = won + lost
-            win_rate = round((won / total * 100), 2) if total > 0 else 0
-            
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({
-                "won": won, "lost": lost, "total": total, "win_rate": win_rate
-            }).encode("utf-8"))
 
         elif parsed.path == "/api/regenerate":
             match_id = int(query.get("match_id", [0])[0])
@@ -722,50 +854,27 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         elif parsed.path == "/api/tickets":
             date_str = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
-            seed3 = int(query.get("seed3", [0])[0])
-            seed5 = int(query.get("seed5", [0])[0])
-            seed7 = int(query.get("seed7", [0])[0])
-
             all_matches = fetch_football_data(date_str)
-            
-            top_matches = [m for m in all_matches if m["is_popular"] and m["status"] in ["NS", "TBD"]]
-            if not top_matches:
-                top_matches = [m for m in all_matches if m["is_popular"]]
-            if not top_matches:
-                top_matches = all_matches
+            top_matches = [m for m in all_matches if m["is_popular"]] or all_matches
 
-            ticket_configs = [
-                {"name": "Bilet Top Siguranță (3 Meciuri)", "size": 3, "seed": seed3},
-                {"name": "Bilet Mărime Medie (5 Meciuri)", "size": 5, "seed": seed5},
-                {"name": "Bilet Șansa Zilnică (7 Meciuri)", "size": 7, "seed": seed7}
-            ]
-            
             tickets = []
-            for cfg in ticket_configs:
-                pool = list(top_matches)
-                random.seed(sum(ord(c) for c in date_str) + cfg["seed"] + cfg["size"])
-                random.shuffle(pool)
-                
-                selected = pool[:cfg["size"]]
-                ticket_matches = []
+            for size, name in [(3, "Bilet Top Siguranță"), (5, "Bilet Mediu"), (7, "Bilet Șansă")]:
+                selected = top_matches[:size]
+                t_matches = []
                 for m in selected:
-                    pred = calculate_advanced_metrics(m, seed_offset=cfg["seed"])
-                    ticket_matches.append({
+                    pred = calculate_advanced_metrics(m)
+                    t_matches.append({
                         "match": m["name"],
                         "league": m["league"],
                         "prediction": pred["prediction"],
                         "confidence": pred["confidence"]
                     })
-                tickets.append({"name": cfg["name"], "size": cfg["size"], "matches": ticket_matches})
+                tickets.append({"name": name, "matches": t_matches})
                 
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(tickets).encode("utf-8"))
-            
-        else:
-            self.send_response(404)
-            self.end_headers()
 
     def do_POST(self):
         if self.path == "/api/chat":
