@@ -20,7 +20,7 @@ except Exception:
 # ATENTIE: cheia e hardcodata aici la cererea ta explicita, pt. ca repo-ul e privat.
 # Daca repo-ul devine vreodata public / e clonat / fork-uit, cheia asta se considera
 # expusa si trebuie regenerata din dashboard.api-football.com.
-API_TOKEN = os.getenv("API_TOKEN", "86824b34c73a35048d8031810778337c")
+API_TOKEN = os.getenv("API_TOKEN", "bd0e84dbde9660ece4ce8910c881c36b")
 API_BASE = "https://v3.football.api-sports.io"
 
 CACHE_FILE = "predictions_cache.json"
