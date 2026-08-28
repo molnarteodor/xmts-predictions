@@ -294,6 +294,12 @@ def build_daily_predictions():
         if truncated:
             payload["notice"] = (f"S-au analizat primele {MAX_MATCHES_PER_DAY} din {total_found} "
                                   f"meciuri gasite azi (limita zilnica de cereri API).")
+        elif total_found > 0 and len(results) == 0:
+            payload["notice"] = (f"S-au gasit {total_found} meciuri azi, dar niciunul nu a putut fi "
+                                  f"analizat - foarte probabil cota API-Football a fost depasita sau "
+                                  f"planul curent nu permite cererile de istoric. Verifica logurile din Render.")
+        elif total_found == 0:
+            payload["notice"] = "Nu s-a gasit niciun meci de fotbal in raspunsul API pentru data de azi."
         _save_json(CACHE_FILE, payload)
         _last_build_error = None
         print(f"[SUCCESS] {len(results)} meciuri analizate pentru {date_str}.")
