@@ -50,7 +50,10 @@ LEAGUE_IDS = _parse_league_ids(os.getenv("LEAGUE_IDS", ""))
 
 # Plafon de siguranta pentru cota API: fiecare meci analizat costa 2 cereri
 # (istoric gazde + istoric oaspeti), pe langa cererea initiala de fixtures.
-MAX_MATCHES_PER_DAY = int(os.getenv("MAX_MATCHES_PER_DAY", "25"))
+# Redus la 10 (nu 25) pentru ca pe Render free, discul se sterge la fiecare
+# repaus/trezire a serviciului - deci recalcularea completa se poate intampla
+# de mai multe ori pe zi, iar cota API-Football gratuita e doar 100/zi.
+MAX_MATCHES_PER_DAY = int(os.getenv("MAX_MATCHES_PER_DAY", "10"))
 
 
 def now_local():
@@ -291,15 +294,16 @@ def build_daily_predictions():
             "date": date_str, "generated_at": now_local().isoformat(),
             "matches": results, "total_meciuri_gasite": total_found,
         }
-        if truncated:
-            payload["notice"] = (f"S-au analizat primele {MAX_MATCHES_PER_DAY} din {total_found} "
-                                  f"meciuri gasite azi (limita zilnica de cereri API).")
-        elif total_found > 0 and len(results) == 0:
-            payload["notice"] = (f"S-au gasit {total_found} meciuri azi, dar niciunul nu a putut fi "
-                                  f"analizat - foarte probabil cota API-Football a fost depasita sau "
-                                  f"planul curent nu permite cererile de istoric. Verifica logurile din Render.")
+        if total_found > 0 and len(results) == 0:
+            payload["notice"] = (f"S-au gasit {total_found} meciuri azi, dar niciunul dintre cele "
+                                  f"{min(total_found, MAX_MATCHES_PER_DAY)} verificate nu a putut fi "
+                                  f"analizat - foarte probabil cota API-Football s-a epuizat azi. "
+                                  f"Verifica cota ramasa pe dashboard.api-football.com.")
         elif total_found == 0:
             payload["notice"] = "Nu s-a gasit niciun meci de fotbal in raspunsul API pentru data de azi."
+        elif truncated:
+            payload["notice"] = (f"S-au analizat primele {MAX_MATCHES_PER_DAY} din {total_found} "
+                                  f"meciuri gasite azi (limita zilnica de cereri API).")
         _save_json(CACHE_FILE, payload)
         _last_build_error = None
         print(f"[SUCCESS] {len(results)} meciuri analizate pentru {date_str}.")
