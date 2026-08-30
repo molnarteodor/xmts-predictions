@@ -1,6 +1,8 @@
 import os
 import json
 import math
+import csv
+import io
 from datetime import datetime
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
@@ -10,13 +12,21 @@ CORS(app)
 
 CACHE_FILE = "matches_cache.json"
 
-# --- ALGORITM MATEMATIC REAL (DISTRIBUȚIE POISSON) ---
+# --- ALGORITM MATEMATIC (POISSON BAZAT PE COTE REALE) ---
 def poisson_probability(k, lambd):
     return (math.pow(lambd, k) * math.exp(-lambd)) / math.factorial(k)
 
-def calculate_match_metrics(home_name, away_name):
-    home_exp = 1.45
-    away_exp = 1.15
+def calculate_metrics_from_odds(home, away, odd_h, odd_d, odd_a):
+    """Calcul matematic folosind cotele reale din CSV pentru estimarea golurilor."""
+    try:
+        prob_h = 1 / float(odd_h) if float(odd_h) > 0 else 0.4
+        prob_a = 1 / float(odd_a) if float(odd_a) > 0 else 0.3
+    except (ValueError, TypeError):
+        prob_h, prob_a = 0.45, 0.30
+
+    # Estimare goluri pe baza favoriților
+    home_exp = 1.2 + (prob_h * 1.5)
+    away_exp = 0.8 + (prob_a * 1.2)
 
     prob_over_1_5 = 0.0
     prob_home_or_draw = 0.0
@@ -29,44 +39,59 @@ def calculate_match_metrics(home_name, away_name):
             if h >= a:
                 prob_home_or_draw += p
 
-    confidence_score = (prob_over_1_5 + prob_home_or_draw) / 2
+    confidence_score = (prob_over_1_5 * 0.4) + (prob_home_or_draw * 0.6)
     
     return {
         "confidence": round(confidence_score * 100, 1),
         "prediction_text": f"1X & Peste 1.5 Goluri (Șansă: {round(confidence_score * 100)}%)"
     }
 
-def process_raw_matches(raw_matches):
-    """Procesează lista de meciuri prin algoritmul Poisson."""
+def process_csv_content(csv_text):
+    """Parsează fișierul fixtures.csv descărcat de pe football-data.co.uk."""
     processed = []
-    for m in raw_matches:
-        home = m.get("home") or m.get("HomeTeam") or "Echipa Gazda"
-        away = m.get("away") or m.get("AwayTeam") or "Echipa Oaspete"
-        league = m.get("league") or m.get("Div") or "Fotbal"
-        
-        metrics = calculate_match_metrics(home, away)
-        processed.append({
-            "league": league,
-            "home": home,
-            "away": away,
-            "metrics": metrics
-        })
+    # Folosim csv.DictReader pentru a citi după capul de tabel
+    f = io.StringIO(csv_text)
+    reader = csv.DictReader(f)
     
-    # Sortare după șansele de reușită calculate de algoritm
+    for row in reader:
+        home = row.get("HomeTeam", "").strip()
+        away = row.get("AwayTeam", "").strip()
+        league = row.get("Div", "").strip()
+        date_str = row.get("Date", "").strip()
+        
+        odd_h = row.get("B365H", 0)
+        odd_d = row.get("B365D", 0)
+        odd_a = row.get("B365A", 0)
+
+        if home and away:
+            metrics = calculate_metrics_from_odds(home, away, odd_h, odd_d, odd_a)
+            processed.append({
+                "league": league,
+                "date": date_str,
+                "home": home,
+                "away": away,
+                "metrics": metrics
+            })
+
+    # Sortăm după cel mai sigur meci calculat
     processed.sort(key=lambda x: x["metrics"]["confidence"], reverse=True)
     return processed
 
-@app.route('/api/upload', methods=['POST'])
-def upload_matches():
-    """Endpoint pentru încărcarea manuală a meciurilor (JSON)."""
+@app.route('/api/upload-csv', methods=['POST'])
+def upload_csv():
+    """Endpoint pentru încărcarea fișierului fixtures.csv."""
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "Niciun fișier încărcat!"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "Fișier neselectat!"}), 400
+
     try:
-        data = request.get_json()
-        if not data or "matches" not in data:
-            return jsonify({"status": "error", "message": "Format JSON invalid!"}), 400
+        content = file.read().decode('utf-8', errors='ignore')
+        processed_matches = process_csv_content(content)
         
         today = datetime.now().strftime("%Y-%m-%d")
-        processed_matches = process_raw_matches(data["matches"])
-        
         cache_data = {
             "date": today,
             "matches": processed_matches,
@@ -114,24 +139,23 @@ HTML_TEMPLATE = """
         .prediction-badge { background-color: #0284c7; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
         .empty-state { text-align: center; padding: 20px 15px; color: #64748b; font-size: 14px; }
         .upload-area { margin-bottom: 15px; text-align: center; }
-        textarea { width: 100%; height: 80px; background: #111a2e; color: #fff; border: 1px solid #1e293b; border-radius: 8px; padding: 8px; box-sizing: border-box; font-size: 12px; }
-        .btn-upload { background: #22c55e; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+        input[type="file"] { display: none; }
+        .file-label { background: #0284c7; color: #fff; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; display: inline-block; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">XMTS AI Analytics</div>
         
-        <!-- Zona incarcare manuala -->
         <div class="card upload-area">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">📥 Adaugă Meciuri Manual (Format JSON)</div>
-            <textarea id="jsonInput" placeholder='[{"home": "Real Madrid", "away": "Barcelona", "league": "La Liga"}]'></textarea>
-            <button class="btn-upload" onclick="uploadData()">Procesează Meciuri</button>
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px;">📂 Încarcă Fișierul fixtures.csv</div>
+            <label for="csvFileInput" class="file-label">Alege fișierul CSV</label>
+            <input type="file" id="csvFileInput" accept=".csv" onchange="uploadCSV()">
         </div>
 
         <div class="nav-tabs">
             <button class="tab-btn active" onclick="switchTab('challenge', this)">🏆 Challenge 1.5</button>
-            <button class="tab-btn" onclick="switchTab('live', this)">Meciuri Incarcate</button>
+            <button class="tab-btn" onclick="switchTab('live', this)">Toate Meciurile</button>
         </div>
 
         <div id="tab-content">
@@ -152,25 +176,27 @@ HTML_TEMPLATE = """
             }
         }
 
-        async function uploadData() {
-            const rawText = document.getElementById('jsonInput').value;
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            if (fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
             try {
-                const parsed = JSON.parse(rawText);
-                const response = await fetch('/api/upload', {
+                const response = await fetch('/api/upload-csv', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ matches: parsed })
+                    body: formData
                 });
                 const res = await response.json();
                 if (res.status === 'success') {
-                    alert(`Au fost procesate cu succes ${res.count} meciuri!`);
-                    document.getElementById('jsonInput').value = '';
+                    alert(`Fișier încărcat cu succes! Au fost procesate ${res.count} meciuri.`);
                     init();
                 } else {
                     alert("Eroare: " + res.message);
                 }
             } catch (e) {
-                alert("Formatul textului nu este un JSON valid!");
+                alert("Eroare la încărcarea fișierului CSV.");
             }
         }
 
@@ -182,7 +208,7 @@ HTML_TEMPLATE = """
             const matches = cachedData.matches || [];
 
             if (matches.length === 0) {
-                content.innerHTML = `<div class="card empty-state">Nu există meciuri încărcate pentru azi. Folosește caseta de sus pentru a adăuga meciuri.</div>`;
+                content.innerHTML = `<div class="card empty-state">Nu există meciuri. Apasă pe butonul de mai sus și încarcă fișierul <b>fixtures.csv</b> descărcat de pe site.</div>`;
                 return;
             }
 
@@ -191,9 +217,9 @@ HTML_TEMPLATE = """
                 content.innerHTML = `
                     <div class="card card-gold">
                         <div class="card-header">
-                            <span class="tag">🎯 Meciul Zilei (Calculat Matematic)</span>
+                            <span class="tag">🎯 Meciul Zilei (Poisson + Cote Bet365)</span>
                         </div>
-                        <div class="league-name">${topMatch.league}</div>
+                        <div class="league-name">Liga: ${topMatch.league} | Data: ${topMatch.date}</div>
                         <div class="match-title">${topMatch.home} vs ${topMatch.away}</div>
                         <div class="prediction-badge">${topMatch.metrics.prediction_text}</div>
                     </div>
@@ -201,7 +227,7 @@ HTML_TEMPLATE = """
             } else {
                 content.innerHTML = matches.map(m => `
                     <div class="card">
-                        <div class="league-name">${m.league}</div>
+                        <div class="league-name">Liga: ${m.league} | Data: ${m.date}</div>
                         <div class="match-title">${m.home} vs ${m.away}</div>
                         <div class="prediction-badge">Pronostic: ${m.metrics.prediction_text}</div>
                     </div>
