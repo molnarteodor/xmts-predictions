@@ -1,4 +1,3 @@
-cat > /mnt/user-data/outputs/predictie_csv/app.py << 'PYEOF'
 import os
 import json
 import math
