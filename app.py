@@ -24,17 +24,15 @@ CHALLENGE_TARGET_ODD = 1.5
 TICKET_TARGET_ODDS = [2.0, 3.0, 5.0]
 MIN_PICK_CONFIDENCE_FOR_TICKET = 0.55
 
-TOP_LEAGUES = {"E0", "SP1", "I1", "D1", "F1"}  # "top 5" ligi europene - extinde dupa nevoie
+TOP_LEAGUES = {"E0", "SP1", "I1", "D1", "F1"}  # "top 5" ligi europene
 CORNERS_LINES = [8.5, 9.5, 10.5]
 CARDS_LINES = [3.5, 4.5]
-MIN_STATS_SAMPLE = 3  # sub 3 meciuri istorice per echipa, nu estimam (esantion prea mic)
+MIN_STATS_SAMPLE = 3
 
 TICKET_DISCLAIMER = ("Cota afisata e cota corecta a modelului (1/probabilitate calculata), nu o cota "
-                      "reala oferita de o casa de pariuri - o casa reala ar da o cota mai mica, din "
-                      "cauza marjei proprii. Combinarea mai multor meciuri intr-un bilet scade "
-                      "probabilitatea totala de succes, chiar daca fiecare meci in parte pare sigur.")
+                      "reala oferita de o casa de pariuri. Combinarea mai multor meciuri într-un bilet "
+                      "scade probabilitatea totala de succes.")
 
-# football-data.co.uk pune cote de la mai multe case; incercam in ordine de prioritate.
 BOOKMAKER_1X2_PRIORITY = [
     ("B365H", "B365D", "B365A", "Bet365"),
     ("PSH", "PSD", "PSA", "Pinnacle"),
@@ -58,9 +56,6 @@ LEAGUE_NAMES = {
     "P1": "Primeira Liga (Portugalia)", "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
 }
 
-# Combinatii BetBuilder posibile - fiecare e o conditie pe scorul exact (h goluri gazde, a goluri oaspeti).
-# Probabilitatea lor se calculeaza direct din grila Poisson a meciului (evenimente corelate,
-# nu se inmultesc probabilitatile separate - ar fi gresit matematic, la fel ca in codul initial).
 BETBUILDER_COMBOS = [
     ("1 & Peste 1.5 goluri", lambda h, a: h > a and (h + a) > 1.5),
     ("1 & GG Da", lambda h, a: h > a and h > 0 and a > 0),
@@ -131,7 +126,7 @@ def implied_probs(oh, od, oa):
     return raw_h / total, raw_d / total, raw_a / total
 
 
-# ────────────────────────────── MODEL POISSON CALIBRAT PE COTE ──────────────────────────────
+# ────────────────────────────── MODEL POISSON CALIBRAT ──────────────────────────────
 
 def poisson_pmf(k, lam):
     lam = max(lam, 0.02)
@@ -261,7 +256,6 @@ def predict_from_odds(row):
 
 
 def compute_betbuilder(lam_h, lam_a, max_g=7, top_n=3, min_pct=0.30):
-    """Probabilitate REALA (comun-calculata din grila Poisson), nu produsul a doua procente separate."""
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
     pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
     scored = []
@@ -272,14 +266,7 @@ def compute_betbuilder(lam_h, lam_a, max_g=7, top_n=3, min_pct=0.30):
     return [{"combo": lbl, "pct": round(p * 100, 1)} for lbl, p in scored[:top_n] if p >= min_pct]
 
 
-# ────────────────────────────── CARTONASE & CORNERE (necesita al doilea CSV, cu istoric) ──────────────────────────────
-
 def process_stats_csv(csv_text):
-    """
-    Fisierul de istoric per liga de pe football-data.co.uk (ex. E0.csv) - NU fixtures.csv -
-    are coloanele HC/AC (cornere gazde/oaspeti) si HY/AY/HR/AR (galbene/rosii gazde/oaspeti)
-    pt. meciuri deja jucate. Din ele calculam medii per echipa.
-    """
     reader = csv.DictReader(io.StringIO(csv_text))
     team_stats = {}
     for row in reader:
@@ -298,7 +285,7 @@ def process_stats_csv(csv_text):
         team_stats.setdefault(away, {"corners_for": [], "corners_against": [], "cards": []})
         team_stats[home]["corners_for"].append(hc)
         team_stats[home]["corners_against"].append(ac)
-        team_stats[home]["cards"].append(hy + hr)  # numar simplu de cartonase, nu sistemul de puncte al caselor
+        team_stats[home]["cards"].append(hy + hr)
         team_stats[away]["corners_for"].append(ac)
         team_stats[away]["corners_against"].append(hc)
         team_stats[away]["cards"].append(ay + ar)
@@ -310,7 +297,7 @@ def estimate_corners_cards(home_team, away_team, team_stats):
     if not h or not a:
         return None
     if len(h["corners_for"]) < MIN_STATS_SAMPLE or len(a["corners_for"]) < MIN_STATS_SAMPLE:
-        return None  # esantion prea mic - nu estimam, nu inventam
+        return None
 
     def avg(lst):
         return sum(lst) / len(lst)
@@ -329,8 +316,6 @@ def estimate_corners_cards(home_team, away_team, team_stats):
         "sample": min(len(h["corners_for"]), len(a["corners_for"])),
     }
 
-
-# ────────────────────────────── BILETE + CHALLENGE ──────────────────────────────
 
 def build_ticket_for_target(candidates, target):
     selection, cum_odd, cum_prob = [], 1.0, 1.0
@@ -368,8 +353,6 @@ def build_tickets_and_challenge(matches):
             tickets.append(t)
     return challenge, tickets
 
-
-# ────────────────────────────── PROCESARE CSV FIXTURES ──────────────────────────────
 
 def process_csv_content(csv_text):
     reader = csv.DictReader(io.StringIO(csv_text))
@@ -482,252 +465,508 @@ def get_predictions():
     return jsonify(data)
 
 
+# ────────────────────────────── INTERFAȚĂ FUTURISTĂ ──────────────────────────────
+
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XMTS AI Predictive Analytics</title>
+<title>XMTS AI · Predictive Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#080b16; --card:#111a2e; --border:#1e293b;
-    --accent:#38bdf8; --accent2:#818cf8; --muted:#8b98ac; --gold:#eab308;
+  :root {
+    --bg-dark: #040711;
+    --card-bg: rgba(15, 23, 42, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --accent-cyan: #06b6d4;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-gold: #f59e0b;
+    --accent-green: #10b981;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glow-cyan: rgba(6, 182, 212, 0.25);
+    --glow-gold: rgba(245, 158, 11, 0.25);
   }
-  *{box-sizing:border-box;}
-  body{
-    background: radial-gradient(circle at 20% 0%, #0d1428 0%, #080b16 55%);
-    color:#f1f5f9; font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    margin:0; padding:16px; -webkit-font-smoothing:antialiased;
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-dark);
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    padding: 20px 12px;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
   }
-  .container{max-width:520px;margin:0 auto;}
-  .header{
-    text-align:center; font-size:22px; font-weight:800; margin:8px 0 4px;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
+
+  .container { max-width: 560px; margin: 0 auto; }
+
+  /* Top Navigation & Status */
+  .header-box {
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
   }
-  .subheader{text-align:center;font-size:12px;color:var(--muted);margin-bottom:18px;}
-  .upload-area{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;text-align:center;margin-bottom:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);}
-  .upload-title{font-size:13px;font-weight:700;margin-bottom:10px;}
-  input[type="file"]{display:none;}
-  .file-label{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px;display:inline-block;}
-  .upload-status{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4;}
-  .nav-tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px;-webkit-overflow-scrolling:touch;}
-  .nav-tabs::-webkit-scrollbar{display:none;}
-  .tab-btn{background:#0e1526;color:var(--muted);border:1px solid var(--border);padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s ease;}
-  .tab-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 3px 12px rgba(56,189,248,.3);}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 14px 14px 18px;margin-bottom:12px;position:relative;box-shadow:0 3px 14px rgba(0,0,0,.22);animation:fadeIn .25s ease;}
-  .card::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:4px;background:var(--border);}
-  .card.risc-scazut::before{background:#22c55e;} .card.risc-mediu::before{background:#eab308;} .card.risc-ridicat::before{background:#ef4444;}
-  .hero-card{border-color:var(--gold);box-shadow:0 6px 22px rgba(234,179,8,.18);}
-  .hero-card::before{background:var(--gold);}
-  .card-top{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;}
-  .match-title{font-size:15px;font-weight:700;margin-bottom:10px;}
-  .pred-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
-  .pred-main{font-size:13px;font-weight:700;background:#0284c7;padding:5px 10px;border-radius:8px;}
-  .pred-alt{font-size:12px;color:var(--muted);}
-  .risc-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;}
-  .risc-badge.Scazut{background:#14532d;color:#86efac;} .risc-badge.Mediu{background:#713f12;color:#fde68a;} .risc-badge.Ridicat{background:#7f1d1d;color:#fca5a5;}
-  .exp-goals{font-size:11px;color:var(--muted);margin-top:6px;}
-  .ticket-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
-  .ticket-target{font-size:13px;color:var(--muted);font-weight:600;}
-  .ticket-odd{font-size:19px;font-weight:800;color:var(--gold);}
-  .ticket-leg{display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-top:1px solid var(--border);}
-  .ticket-prob{font-size:11px;color:var(--muted);margin-top:8px;}
-  .disclaimer{background:#161f36;border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;}
-  .empty-state{text-align:center;padding:26px 15px;color:var(--muted);font-size:14px;}
-  .footer-note{font-size:11px;color:var(--muted);text-align:center;margin-top:16px;line-height:1.5;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .pulse-dot {
+    width: 6px; height: 6px;
+    background-color: var(--accent-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-cyan);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse { 0%{ opacity: 0.3; } 50%{ opacity: 1; } 100%{ opacity: 0.3; } }
+
+  .title-main {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, var(--accent-cyan) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Modern Glass Cards */
+  .glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .glass-card:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  /* Upload Zone */
+  .upload-card {
+    border: 1px dashed rgba(6, 182, 212, 0.4);
+    background: rgba(6, 182, 212, 0.03);
+    text-align: center;
+  }
+  .file-input { display: none; }
+  .btn-upload {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px var(--glow-cyan);
+    transition: all 0.2s ease;
+    display: inline-block;
+  }
+  .btn-upload:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--glow-cyan); }
+  .status-text { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.4; }
+
+  /* Custom Futurist Navigation Tabs */
+  .tabs-wrapper {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+  }
+  .tabs-wrapper::-webkit-scrollbar { display: none; }
+  
+  .tab-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 9px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .tab-btn.active {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
+    border-color: var(--accent-cyan);
+    color: #fff;
+    box-shadow: 0 0 15px var(--glow-cyan);
+  }
+
+  /* Challenge Specific Card */
+  .challenge-card {
+    border: 1px solid var(--accent-gold);
+    background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.15), var(--card-bg));
+    box-shadow: 0 0 25px var(--glow-gold);
+    position: relative;
+    overflow: hidden;
+  }
+  .challenge-badge {
+    position: absolute;
+    top: 0; right: 0;
+    background: linear-gradient(135deg, var(--accent-gold), #d97706);
+    color: #000;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 4px 12px;
+    border-bottom-left-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Cards Inner Layout */
+  .card-header-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .match-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  
+  .pred-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .pred-target { font-size: 13px; font-weight: 700; color: var(--accent-cyan); }
+  .risk-tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+  .risk-Scazut { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .risk-Mediu { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+  .risk-Ridicat { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+  .goals-estimate {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Ticket Structure */
+  .ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .ticket-odd-display {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent-gold);
+    text-shadow: 0 0 10px var(--glow-gold);
+  }
+  .ticket-selection-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  }
+
+  .disclaimer-box {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .footer-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 24px;
+    opacity: 0.7;
+    line-height: 1.4;
+  }
 </style>
 </head>
 <body>
+
 <div class="container">
-  <div class="header">⚽ XMTS AI Analytics</div>
-  <div class="subheader">Model Poisson calibrat pe cotele reale din CSV</div>
 
-  <div class="upload-area">
-    <div class="upload-title">📂 Incarca fixtures.csv (football-data.co.uk)</div>
-    <label for="csvFileInput" class="file-label">Alege fisierul CSV</label>
-    <input type="file" id="csvFileInput" accept=".csv" onchange="uploadCSV()">
-    <div class="upload-status" id="upload-status"></div>
+  <!-- Header Section -->
+  <div class="header-box">
+    <div class="brand-badge"><span class="pulse-dot"></span> XMTS ENGINE V2</div>
+    <div class="title-main">Predictive Analytics</div>
+    <div class="subtitle">Model statistic Poisson calibrat pe piața cotațiilor</div>
   </div>
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('challenge', this)">🎯 Challenge</button>
-    <button class="tab-btn" onclick="switchTab('sigure', this)">🔥 Sigure</button>
-    <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate</button>
+  <!-- Upload Form -->
+  <div class="glass-card upload-card">
+    <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #fff;">
+      ⚡ Încarcă Fișier Fixtures (.CSV)
+    </div>
+    <label for="csvFileInput" class="btn-upload">Selectează CSV</label>
+    <input type="file" id="csvFileInput" class="file-input" accept=".csv" onchange="uploadCSV()">
+    <div class="status-text" id="upload-status">Așteaptă un fișier de pe football-data.co.uk</div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-wrapper">
+    <button class="tab-btn active" onclick="switchTab('challenge', this)">🎯 Challenge 1.50</button>
+    <button class="tab-btn" onclick="switchTab('sigure', this)">🔥 Selecții Sigure</button>
+    <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Meciurile</button>
     <button class="tab-btn" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
-    <button class="tab-btn" onclick="switchTab('cartonase', this)">🟨 Cartonase</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)">🎟 Bilete</button>
+    <button class="tab-btn" onclick="switchTab('cartonase', this)">🟨 Cartonașe & Cornere</button>
+    <button class="tab-btn" onclick="switchTab('bilete', this)">🎟 Bilete Cota 2.0+</button>
   </div>
 
-  <div id="tab-content"><div class="empty-state">Incarca un fisier CSV ca sa incepi.</div></div>
-  <div class="footer-note">Estimari statistice pe baza cotelor si istoricului real la momentul incarcarii - nu constituie garantie de rezultat sau recomandare de pariere. Daca folosesti aceste informatii pentru pariuri, joaca responsabil.</div>
+  <!-- Dynamic Content Container -->
+  <div id="tab-content">
+    <div class="glass-card empty-state">Încarcă fișierul fixtures.csv pentru a rula modelul.</div>
+  </div>
+
+  <div class="footer-text">
+    Informații cu caracter statistic. Nu constituie îndemn la pariere. Joacă responsabil.
+  </div>
+
 </div>
 
 <script>
 let cachedData = { matches: [], tickets: [], challenge: null, stats_uploaded: false };
 let currentTab = 'challenge';
 
-function riskClass(r){ return {"Scazut":"risc-scazut","Mediu":"risc-mediu","Ridicat":"risc-ridicat"}[r] || ""; }
-
-function matchCard(m){
-  const alt = m.alternativ ? `<div class="pred-alt">Alternativ: ${m.alternativ} (${m.alternativ_pct}%)</div>` : '';
-  const noPick = m.fara_pronostic ? '<div class="pred-alt">Fara pronostic clar - meci echilibrat</div>' : '';
+function matchCard(m) {
+  const alt = m.alternativ ? `<div style="font-size: 11px; color: var(--text-muted);">Alternativ: <b>${m.alternativ}</b> (${m.alternativ_pct}%)</div>` : '';
+  const noPick = m.fara_pronostic ? '<div style="font-size: 11px; color: var(--text-muted);">Meci echilibrat fără selecție clară</div>' : '';
+  
   return `
-    <div class="card ${riskClass(m.risc)}">
-      <div class="card-top"><span>${m.league} · ${m.date}${m.time ? ' ' + m.time : ''}</span><span>${m.bookmaker || ''}</span></div>
+    <div class="glass-card">
+      <div class="card-header-line">
+        <span>${m.league} · ${m.date} ${m.time ? '· ' + m.time : ''}</span>
+        <span>${m.bookmaker || ''}</span>
+      </div>
       <div class="match-title">${m.home} vs ${m.away}</div>
       <div class="pred-row">
-        <span class="pred-main">${m.principal} (${m.principal_pct}%)</span>
-        <span class="risc-badge ${m.risc}">${m.risc}</span>
+        <span class="pred-target">${m.principal} (${m.principal_pct}%)</span>
+        <span class="risk-tag risk-${m.risc}">${m.risc}</span>
       </div>
       ${alt}${noPick}
-      <div class="exp-goals">Goluri estimate: ${m.exp_goals_home} - ${m.exp_goals_away}</div>
+      <div class="goals-estimate">
+        <span>xG Gazde: <b>${m.exp_goals_home}</b></span>
+        <span>xG Oaspeți: <b>${m.exp_goals_away}</b></span>
+      </div>
     </div>`;
 }
 
-function ticketBlock(t, heroClass){
-  const legs = t.selections.map(s => `<div class="ticket-leg"><span>${s.home} vs ${s.away} - ${s.pick}</span><span>${s.pct}%</span></div>`).join('');
+function ticketBlock(t, isChallenge) {
+  const legs = t.selections.map(s => `
+    <div class="ticket-selection-item">
+      <span><b>${s.home} vs ${s.away}</b><br><span style="color:var(--accent-cyan);">${s.pick}</span></span>
+      <span style="font-weight:700;">${s.pct}%</span>
+    </div>`).join('');
+    
   return `
-    <div class="card ${heroClass || ''}">
+    <div class="glass-card ${isChallenge ? 'challenge-card' : ''}">
+      ${isChallenge ? '<div class="challenge-badge">🎯 CHALLENGE COTA 1.50</div>' : ''}
       <div class="ticket-header">
-        <span class="ticket-target">Cota tinta ${t.target_odd}</span>
-        <span class="ticket-odd">${t.combined_odd}</span>
+        <div>
+          <div style="font-size:11px; color:var(--text-muted);">TINTĂ COTA</div>
+          <div style="font-size:13px; font-weight:700;">${t.target_odd}</div>
+        </div>
+        <div class="ticket-odd-display">@ ${t.combined_odd}</div>
       </div>
       ${legs}
-      <div class="ticket-prob">Probabilitate estimata ca tot biletul sa iasa: ${t.combined_probability_pct}%</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:12px; font-weight:600;">
+        Probabilitate teoretică cumulată: ${t.combined_probability_pct}%
+      </div>
     </div>`;
 }
 
-function betbuilderCard(m){
-  const combos = m.betbuilder.map(b => `<div class="ticket-leg"><span>${b.combo}</span><span>${b.pct}%</span></div>`).join('');
+function betbuilderCard(m) {
+  const combos = m.betbuilder.map(b => `
+    <div class="ticket-selection-item">
+      <span>${b.combo}</span>
+      <span style="font-weight:700; color:var(--accent-cyan);">${b.pct}%</span>
+    </div>`).join('');
   return `
-    <div class="card">
-      <div class="card-top"><span>${m.league} · ${m.date}</span></div>
+    <div class="glass-card">
+      <div class="card-header-line"><span>${m.league} · ${m.date}</span></div>
       <div class="match-title">${m.home} vs ${m.away}</div>
       ${combos}
     </div>`;
 }
 
-function cornersCardsCard(m){
+function cornersCardsCard(m) {
   const cc = m.corners_cards;
-  const corners = Object.entries(cc.corners_over).map(([line,pct]) => `<div class="ticket-leg"><span>Peste ${line} cornere</span><span>${pct}%</span></div>`).join('');
-  const cards = Object.entries(cc.cards_over).map(([line,pct]) => `<div class="ticket-leg"><span>Peste ${line} cartonase</span><span>${pct}%</span></div>`).join('');
+  const corners = Object.entries(cc.corners_over).map(([line,pct]) => `
+    <div class="ticket-selection-item"><span>Peste ${line} cornere</span><span style="font-weight:700;">${pct}%</span></div>`).join('');
+  const cards = Object.entries(cc.cards_over).map(([line,pct]) => `
+    <div class="ticket-selection-item"><span>Peste ${line} cartonașe</span><span style="font-weight:700;">${pct}%</span></div>`).join('');
   return `
-    <div class="card">
-      <div class="card-top"><span>${m.league} · ${m.date}</span><span>esantion: ${cc.sample}</span></div>
+    <div class="glass-card">
+      <div class="card-header-line"><span>${m.league} · ${m.date}</span><span>Eșantion: ${cc.sample} meciuri</span></div>
       <div class="match-title">${m.home} vs ${m.away}</div>
-      <div class="exp-goals">Estimat: ${cc.exp_corners} cornere · ${cc.exp_cards} cartonase</div>
+      <div class="goals-estimate" style="margin-bottom:10px;">
+        <span>Estimat Cornere: <b>${cc.exp_corners}</b></span>
+        <span>Estimat Cartonașe: <b>${cc.exp_cards}</b></span>
+      </div>
       ${corners}${cards}
     </div>`;
 }
 
-function render(){
+function render() {
   const content = document.getElementById('tab-content');
   const matches = cachedData.matches || [];
 
-  if(matches.length === 0){
-    content.innerHTML = '<div class="empty-state">Nu exista meciuri. Incarca fisierul <b>fixtures.csv</b> mai sus.</div>';
+  if (matches.length === 0) {
+    content.innerHTML = '<div class="glass-card empty-state">Nu există date încărcate. Adaugă un fișier CSV mai sus.</div>';
     return;
   }
 
-  if(currentTab === 'challenge'){
+  if (currentTab === 'challenge') {
     content.innerHTML = cachedData.challenge
-      ? ticketBlock(cachedData.challenge, 'hero-card') + `<div class="disclaimer">${TICKET_DISCLAIMER}</div>`
-      : '<div class="empty-state">Nu sunt destule meciuri sigure in acest CSV pentru un Challenge azi.</div>';
-  } else if(currentTab === 'sigure'){
+      ? ticketBlock(cachedData.challenge, true) + `<div class="disclaimer-box">${TICKET_DISCLAIMER}</div>`
+      : '<div class="glass-card empty-state">Nu sunt suficiente meciuri cu coeficient ridicat pentru un Challenge de cota 1.50 în acest fișier.</div>';
+  } else if (currentTab === 'sigure') {
     const top = matches.filter(m => !m.fara_pronostic).slice(0, 10);
-    content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="empty-state">Niciun meci cu incredere suficienta.</div>';
-  } else if(currentTab === 'toate'){
+    content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="glass-card empty-state">Fără selecții peste pragul de încredere.</div>';
+  } else if (currentTab === 'toate') {
     content.innerHTML = matches.map(matchCard).join('');
-  } else if(currentTab === 'betbuilder'){
+  } else if (currentTab === 'betbuilder') {
     const withCombos = matches.filter(m => m.betbuilder && m.betbuilder.length > 0);
     content.innerHTML = withCombos.length ? withCombos.map(betbuilderCard).join('')
-      : '<div class="empty-state">Niciun meci din ligile mari (Premier League, La Liga, Serie A, Bundesliga, Ligue 1) cu o combinatie suficient de probabila in acest CSV.</div>';
-  } else if(currentTab === 'cartonase'){
-    if(!cachedData.stats_uploaded){
+      : '<div class="glass-card empty-state">Nu există combinații valide pentru ligile principale în fișier.</div>';
+  } else if (currentTab === 'cartonase') {
+    if (!cachedData.stats_uploaded) {
       content.innerHTML = `
-        <div class="upload-area">
-          <div class="upload-title">📊 Incarca istoricul ligii (nu fixtures.csv)</div>
-          <div class="upload-status" style="margin-bottom:10px;">De pe football-data.co.uk, descarca fisierul complet al ligii (ex: E0.csv) - acela are coloanele de cornere si cartonase (fixtures.csv nu le are).</div>
-          <label for="statsFileInput" class="file-label">Alege fisierul CSV</label>
-          <input type="file" id="statsFileInput" accept=".csv" onchange="uploadStatsCSV()">
-          <div class="upload-status" id="stats-upload-status"></div>
+        <div class="glass-card upload-card">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #fff;">📊 Încarcă fișierul cu Istoric (ex: E0.csv)</div>
+          <div class="status-text" style="margin-bottom: 12px;">Fișierele normale de fixtures nu conțin datele de cornere/cartonașe. Descarcă fișierul complet al ligii pentru aceste calcule.</div>
+          <label for="statsFileInput" class="btn-upload">Încarcă CSV Istoric</label>
+          <input type="file" id="statsFileInput" class="file-input" accept=".csv" onchange="uploadStatsCSV()">
+          <div class="status-text" id="stats-upload-status"></div>
         </div>`;
     } else {
       const withCC = matches.filter(m => m.corners_cards);
       content.innerHTML = withCC.length ? withCC.map(cornersCardsCard).join('')
-        : '<div class="empty-state">Echipele din acest CSV nu au fost gasite in istoricul incarcat (sau esantionul e prea mic).</div>';
+        : '<div class="glass-card empty-state">Echipele din fișier nu au putut fi potrivite în istoricul încărcat.</div>';
     }
   } else {
     const tickets = cachedData.tickets || [];
     content.innerHTML = tickets.length
-      ? `<div class="disclaimer">${TICKET_DISCLAIMER}</div>` + tickets.map(t => ticketBlock(t)).join('')
-      : '<div class="empty-state">Nu sunt destule meciuri sigure pentru a construi bilete.</div>';
+      ? `<div class="disclaimer-box">${TICKET_DISCLAIMER}</div>` + tickets.map(t => ticketBlock(t, false)).join('')
+      : '<div class="glass-card empty-state">Nu există destule selecții valide pentru bilete combinate.</div>';
   }
 }
 
-const TICKET_DISCLAIMER = "Cota afisata e cota corecta a modelului (1/probabilitate), nu o cota reala de bookmaker. Combinarea meciurilor scade probabilitatea totala de succes, chiar daca fiecare meci pare sigur.";
+const TICKET_DISCLAIMER = "Cota este calculată direct pe baza distribuției de probabilitate teoretică. Combinarea mai multor evenimente scade rata totală de succes a biletului.";
 
-function switchTab(tab, btn){
+function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   render();
 }
 
-async function init(){
-  try{
+async function init() {
+  try {
     const res = await fetch('/api/predictions');
     cachedData = await res.json();
     render();
-  } catch(err){
-    document.getElementById('tab-content').innerHTML = '<div class="empty-state">Eroare la conectarea cu serverul.</div>';
+  } catch(err) {
+    document.getElementById('tab-content').innerHTML = '<div class="glass-card empty-state">Eroare de conexiune cu serverul.</div>';
   }
 }
 
-async function uploadCSV(){
+async function uploadCSV() {
   const fileInput = document.getElementById('csvFileInput');
   if(fileInput.files.length === 0) return;
   const status = document.getElementById('upload-status');
-  status.textContent = 'Se proceseaza...';
+  status.textContent = 'Procesare în curs...';
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
-  try{
+  try {
     const res = await fetch('/api/upload-csv', { method: 'POST', body: formData });
     const data = await res.json();
-    if(data.status === 'success'){
-      status.textContent = `${data.count} meciuri, ${data.skipped} sarite, ${data.tickets} bilete, ${data.betbuilder_matches} cu BetBuilder${data.challenge ? ', Challenge disponibil' : ''}.`;
+    if(data.status === 'success') {
+      status.textContent = `Procesat: ${data.count} meciuri validated.`;
       init();
     } else {
       status.textContent = 'Eroare: ' + data.message;
     }
-  } catch(e){
-    status.textContent = 'Eroare la incarcarea fisierului.';
+  } catch(e) {
+    status.textContent = 'Eroare la încărcare.';
   }
 }
 
-async function uploadStatsCSV(){
+async function uploadStatsCSV() {
   const fileInput = document.getElementById('statsFileInput');
   if(!fileInput || fileInput.files.length === 0) return;
   const status = document.getElementById('stats-upload-status');
-  status.textContent = 'Se proceseaza...';
+  status.textContent = 'Procesare istoric...';
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
-  try{
+  try {
     const res = await fetch('/api/upload-stats-csv', { method: 'POST', body: formData });
     const data = await res.json();
-    if(data.status === 'success'){
-      status.textContent = `${data.teams_recunoscute} echipe recunoscute, ${data.meciuri_actualizate} meciuri actualizate.`;
+    if(data.status === 'success') {
+      status.textContent = `Preluat: ${data.teams_recunoscute} echipe.`;
       init();
     } else {
       status.textContent = 'Eroare: ' + data.message;
     }
-  } catch(e){
-    status.textContent = 'Eroare la incarcare.';
+  } catch(e) {
+    status.textContent = 'Eroare la încărcare.';
   }
 }
 
@@ -747,4 +986,4 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
 PYEOF
-echo "Fisier scris."
+echo "Fișier actualizat cu succes!"
