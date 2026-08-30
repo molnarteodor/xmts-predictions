@@ -7,6 +7,17 @@ from datetime import datetime
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
 
+try:
+    from zoneinfo import ZoneInfo
+    TZ = ZoneInfo("Europe/Bucharest")
+except Exception:
+    TZ = None  # fallback la ora serverului daca zoneinfo/tzdata lipsesc
+
+
+def today_str():
+    return datetime.now(TZ).strftime("%Y-%m-%d") if TZ else datetime.now().strftime("%Y-%m-%d")
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -398,6 +409,7 @@ def upload_csv():
         processed_matches, challenge, skipped = process_csv_content(content)
         cache_data = {
             "uploaded_at": datetime.now().isoformat(),
+            "upload_date": today_str(),
             "matches": processed_matches,
             "challenge": challenge,
             "skipped_no_odds": skipped,
@@ -429,7 +441,7 @@ def upload_stats_csv():
 
         cache = _load_json(CACHE_FILE, None)
         matched = 0
-        if cache and cache.get("matches"):
+        if cache and cache.get("matches") and cache.get("upload_date") == today_str():
             for m in cache["matches"]:
                 cc = estimate_corners_cards(m["home"], m["away"], team_stats)
                 m["corners_cards"] = cc
@@ -448,6 +460,14 @@ def get_predictions():
     data = _load_json(CACHE_FILE, None)
     if not data:
         return jsonify({"matches": [], "challenge": None, "stats_uploaded": False, "api_active": False})
+    if data.get("upload_date") != today_str():
+        # fisierul e din alta zi - il tratam ca inexistent, ca sa nu aratam meciuri vechi
+        return jsonify({
+            "matches": [], "challenge": None,
+            "stats_uploaded": data.get("stats_uploaded", False),
+            "api_active": False, "expired": True,
+            "last_upload_date": data.get("upload_date"),
+        })
     return jsonify(data)
 
 
@@ -581,6 +601,19 @@ HTML_TEMPLATE = """
   }
   .chip-btn.gold { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: var(--accent-gold); }
   .odd-input-row { display: flex; gap: 8px; }
+  .filter-chip {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--text-muted);
+    padding: 7px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .filter-chip[data-risk="Scazut"].active { background: rgba(16,185,129,0.18); border-color: #10b981; color:#34d399; }
+  .filter-chip[data-risk="Mediu"].active { background: rgba(245,158,11,0.18); border-color: #f59e0b; color:#fbbf24; }
+  .filter-chip[data-risk="Ridicat"].active { background: rgba(239,68,68,0.18); border-color: #ef4444; color:#fca5a5; }
+  .bb-toggle-btn {
+    display:block; width:100%; text-align:center; margin-top:10px; background: rgba(139,92,246,0.12);
+    border:1px solid rgba(139,92,246,0.35); color: var(--accent-purple); padding: 8px 12px;
+    border-radius: 10px; font-size: 12px; font-weight: 700; cursor:pointer;
+  }
+  .bb-panel { margin-top: 8px; }
   #target-odd-input {
     background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); color: #fff;
     border-radius: 10px; padding: 10px 12px; font-size: 14px; flex: 1; min-width: 0; font-family: inherit;
@@ -628,6 +661,7 @@ HTML_TEMPLATE = """
 <script>
 let cachedData = { matches: [], challenge: null, stats_uploaded: false };
 let currentTab = 'challenge';
+let activeRiskFilters = new Set(['Scazut', 'Mediu', 'Ridicat']);
 const MAX_TICKET_LEGS = 10;
 const TICKET_DISCLAIMER = "Cota este calculata direct pe baza distributiei de probabilitate teoretica. Combinarea mai multor evenimente scade rata totala de succes a biletului.";
 
@@ -636,6 +670,61 @@ function formatPct(p){
   if(p >= 1) return p.toFixed(1);
   if(p >= 0.01) return p.toFixed(2);
   return p.toFixed(4);
+}
+
+function riskFilterBar(){
+  const risks = ['Scazut','Mediu','Ridicat'];
+  const labels = {Scazut:'🟢 Scazut', Mediu:'🟡 Mediu', Ridicat:'🔴 Ridicat'};
+  return '<div class="chip-row">' + risks.map(r =>
+    `<button class="filter-chip ${activeRiskFilters.has(r) ? 'active' : ''}" data-risk="${r}" onclick="toggleRiskFilter('${r}')">${labels[r]}</button>`
+  ).join('') + '</div>';
+}
+
+function toggleRiskFilter(risk){
+  if(activeRiskFilters.has(risk)) activeRiskFilters.delete(risk); else activeRiskFilters.add(risk);
+  render();
+}
+
+/* ── BetBuilder pe cerere, pt. orice meci (nu doar top 5 ligi) ──
+   Foloseste exp_goals_home/exp_goals_away, deja calculate pt. fiecare meci,
+   ca sa calculeze aceleasi combinatii ca la meciurile importante, direct in browser. */
+function factorial(n){ let r = 1; for(let i=2;i<=n;i++) r *= i; return r; }
+function poissonPmf(k, lam){
+  lam = Math.max(lam, 0.02);
+  return Math.exp(-lam) * Math.pow(lam, k) / factorial(k);
+}
+const BETBUILDER_COMBOS_JS = [
+  ["1 & Peste 1.5 goluri", (h,a) => h>a && (h+a)>1.5],
+  ["1 & GG Da", (h,a) => h>a && h>0 && a>0],
+  ["2 & Peste 1.5 goluri", (h,a) => h<a && (h+a)>1.5],
+  ["2 & GG Da", (h,a) => h<a && h>0 && a>0],
+  ["X & Sub 2.5 goluri", (h,a) => h===a && (h+a)<2.5],
+  ["GG Da & Peste 2.5 goluri", (h,a) => h>0 && a>0 && (h+a)>2.5],
+  ["Sansa Dubla 1X & Sub 3.5 goluri", (h,a) => h>=a && (h+a)<3.5],
+  ["Sansa Dubla X2 & Sub 3.5 goluri", (h,a) => h<=a && (h+a)<3.5],
+];
+function computeBetbuilderJS(lamH, lamA, maxG=7, topN=3, minPct=0.30){
+  const phList = [], paList = [];
+  for(let i=0;i<maxG;i++){ phList.push(poissonPmf(i, lamH)); paList.push(poissonPmf(i, lamA)); }
+  const scored = BETBUILDER_COMBOS_JS.map(([label, cond]) => {
+    let p = 0;
+    for(let h=0;h<maxG;h++) for(let a=0;a<maxG;a++) if(cond(h,a)) p += phList[h]*paList[a];
+    return [label, p];
+  });
+  scored.sort((x,y) => y[1]-x[1]);
+  return scored.slice(0, topN).filter(([,p]) => p >= minPct).map(([label,p]) => ({combo:label, pct: Math.round(p*1000)/10}));
+}
+function toggleBetbuilderPanel(btn, lamH, lamA){
+  const panel = btn.nextElementSibling;
+  if(panel.style.display === 'block'){ panel.style.display = 'none'; return; }
+  if(!panel.dataset.filled){
+    const combos = computeBetbuilderJS(lamH, lamA);
+    panel.innerHTML = combos.length
+      ? combos.map(c => `<div class="ticket-selection-item"><span>${c.combo}</span><span style="font-weight:700;color:var(--accent-cyan);">${c.pct}%</span></div>`).join('')
+      : '<div style="font-size:11px;color:var(--text-muted);padding:8px 0;">Nicio combinatie cu sansa suficienta (peste 30%) la acest meci.</div>';
+    panel.dataset.filled = '1';
+  }
+  panel.style.display = 'block';
 }
 
 function matchCard(m) {
@@ -657,6 +746,8 @@ function matchCard(m) {
         <span>xG Gazde: <b>${m.exp_goals_home}</b></span>
         <span>xG Oaspeti: <b>${m.exp_goals_away}</b></span>
       </div>
+      <button class="bb-toggle-btn" onclick="toggleBetbuilderPanel(this, ${m.exp_goals_home}, ${m.exp_goals_away})">🧩 Vreau o cota mai mare (BetBuilder)</button>
+      <div class="bb-panel" style="display:none;"></div>
     </div>`;
 }
 
@@ -792,7 +883,10 @@ function render() {
   const matches = cachedData.matches || [];
 
   if (matches.length === 0) {
-    content.innerHTML = '<div class="glass-card empty-state">Nu exista date incarcate. Adauga un fisier CSV mai sus.</div>';
+    const msg = cachedData.expired
+      ? `Fisierul incarcat pentru ${cachedData.last_upload_date} a expirat. Incarca fixtures.csv pentru ziua de azi.`
+      : 'Nu exista date incarcate. Adauga un fisier CSV mai sus.';
+    content.innerHTML = `<div class="glass-card empty-state">${msg}</div>`;
     return;
   }
 
@@ -804,7 +898,10 @@ function render() {
     const top = matches.filter(m => !m.fara_pronostic).slice(0, 10);
     content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="glass-card empty-state">Fara selectii peste pragul de incredere.</div>';
   } else if (currentTab === 'toate') {
-    content.innerHTML = matches.map(matchCard).join('');
+    const filtered = matches.filter(m => activeRiskFilters.has(m.risc));
+    content.innerHTML = riskFilterBar() + (filtered.length
+      ? filtered.map(matchCard).join('')
+      : '<div class="glass-card empty-state">Niciun meci cu riscul selectat mai sus.</div>');
   } else if (currentTab === 'betbuilder') {
     const withCombos = matches.filter(m => m.betbuilder && m.betbuilder.length > 0);
     content.innerHTML = withCombos.length ? withCombos.map(betbuilderCard).join('')
