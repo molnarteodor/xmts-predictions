@@ -183,6 +183,28 @@ def calibrate_lambdas(target_h, target_d, target_a):
     return best
 
 
+TARGET_ODD_MIN = 1.30
+TARGET_ODD_MAX = 1.40
+
+
+def pick_market_near_target(candidates, target_min=TARGET_ODD_MIN, target_max=TARGET_ODD_MAX):
+    """
+    Alege, dintre toate piata calculate la un meci, cea a carei cota corecta (1/probabilitate)
+    e cea mai apropiata de intervalul tinta - NU neaparat cea mai probabila piata (asta e rolul
+    lui 'principal'). Daca nicio piata nu cade exact in interval, alege cea mai apropiata si
+    marcheaza clar asta (in_range: false), in loc sa ascunda meciul sau sa forteze un numar
+    care nu exista in date.
+    """
+    scored = [(label, p, 1 / p) for label, p in candidates.items() if p > 0]
+    in_range = [c for c in scored if target_min <= c[2] <= target_max]
+    if in_range:
+        label, p, odd = max(in_range, key=lambda c: c[1])  # cea mai sigura dintre cele din interval
+        return {"pick": label, "pct": round(p * 100, 1), "odd": round(odd, 2), "in_range": True}
+    mid = (target_min + target_max) / 2
+    label, p, odd = min(scored, key=lambda c: abs(c[2] - mid))
+    return {"pick": label, "pct": round(p * 100, 1), "odd": round(odd, 2), "in_range": False}
+
+
 def predict_from_odds(row):
     odds_1x2 = extract_1x2_odds(row)
     if not odds_1x2:
@@ -232,12 +254,17 @@ def predict_from_odds(row):
     ]
 
     best_market, best_p = max(markets.items(), key=lambda kv: kv[1])
+    all_candidates = dict(markets)
+    for label, p in fallback:
+        all_candidates.setdefault(label, p)
+
     result = {
         "principal": best_market, "principal_pct": round(best_p * 100, 1),
         "alternativ": None, "alternativ_pct": None,
         "exp_goals_home": round(lam_h, 2), "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
         "pick_for_ticket": None, "pick_pct": None, "fair_odd": None,
+        "target_odd_pick": pick_market_near_target(all_candidates),
     }
 
     if best_p >= CONFIDENCE_THRESHOLD:
@@ -646,6 +673,7 @@ HTML_TEMPLATE = """
     <button class="tab-btn" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
     <button class="tab-btn" onclick="switchTab('cartonase', this)">🟨 Cartonase & Cornere</button>
     <button class="tab-btn" onclick="switchTab('bilete', this)">🎟 Generator Bilete</button>
+    <button class="tab-btn" onclick="switchTab('targetodd', this)">🎯 Cota 1.30-1.40</button>
   </div>
 
   <div id="tab-content">
@@ -794,6 +822,25 @@ function betbuilderCard(m) {
     </div>`;
 }
 
+function targetOddCard(m) {
+  const t = m.target_odd_pick;
+  if(!t) return '';
+  const note = t.in_range ? '' : `<div style="font-size:11px;color:var(--accent-gold);margin-top:8px;">Nicio piata nu a cazut exact in 1.30-1.40 la acest meci - varianta cea mai apropiata disponibila.</div>`;
+  return `
+    <div class="glass-card">
+      <div class="card-header-line">
+        <span>${m.league} · ${m.date} ${m.time ? '· ' + m.time : ''}</span>
+        <span>${m.bookmaker || ''}</span>
+      </div>
+      <div class="match-title">${m.home} vs ${m.away}</div>
+      <div class="pred-row">
+        <span class="pred-target">${t.pick} (${t.pct}%)</span>
+        <span style="font-weight:800;color:var(--accent-gold);font-size:16px;">@ ${t.odd}</span>
+      </div>
+      ${note}
+    </div>`;
+}
+
 function cornersCardsCard(m) {
   const cc = m.corners_cards;
   const corners = Object.entries(cc.corners_over).map(([line,pct]) => `
@@ -902,6 +949,9 @@ function render() {
     content.innerHTML = riskFilterBar() + (filtered.length
       ? filtered.map(matchCard).join('')
       : '<div class="glass-card empty-state">Niciun meci cu riscul selectat mai sus.</div>');
+  } else if (currentTab === 'targetodd') {
+    content.innerHTML = `<div class="disclaimer-box">Pentru fiecare meci, aleg piata (din toate cele calculate) a carei cota corecta e cea mai apropiata de 1.30-1.40 - nu neaparat cea mai probabila piata. Cand niciuna nu cade exact in interval, arat cea mai apropiata varianta disponibila.</div>`
+      + matches.map(targetOddCard).join('');
   } else if (currentTab === 'betbuilder') {
     const withCombos = matches.filter(m => m.betbuilder && m.betbuilder.length > 0);
     content.innerHTML = withCombos.length ? withCombos.map(betbuilderCard).join('')
@@ -951,14 +1001,55 @@ function switchTab(tab, btn) {
   render();
 }
 
-async function init() {
+const LOCAL_STORAGE_KEY = 'xmts_predictions_v1';
+
+function localTodayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function saveToLocalStorage(data){
+  try{
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  } catch(e){
+    console.warn('Nu am putut salva local:', e);
+  }
+}
+
+function loadFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(data.upload_date !== localTodayStr()) return null; // e din alta zi - nu mai e valid
+    return data;
+  } catch(e){
+    return null;
+  }
+}
+
+async function refreshAndCache(){
   try {
     const res = await fetch('/api/predictions');
-    cachedData = await res.json();
+    const data = await res.json();
+    cachedData = data;
+    if(data.matches && data.matches.length > 0){
+      saveToLocalStorage(data);
+    }
     render();
   } catch(err) {
     document.getElementById('tab-content').innerHTML = '<div class="glass-card empty-state">Eroare de conexiune cu serverul.</div>';
   }
+}
+
+async function init() {
+  const cached = loadFromLocalStorage();
+  if(cached){
+    cachedData = cached;
+    render();
+    return; // avem deja datele de azi, salvate in telefon - nu mai batem serverul
+  }
+  await refreshAndCache();
 }
 
 async function uploadCSV() {
@@ -973,7 +1064,7 @@ async function uploadCSV() {
     const data = await res.json();
     if(data.status === 'success') {
       status.textContent = `Procesat: ${data.count} meciuri, ${data.skipped} sarite, ${data.betbuilder_matches} cu BetBuilder${data.challenge ? ', Challenge disponibil' : ''}.`;
-      init();
+      await refreshAndCache();
     } else {
       status.textContent = 'Eroare: ' + data.message;
     }
@@ -994,7 +1085,7 @@ async function uploadStatsCSV() {
     const data = await res.json();
     if(data.status === 'success') {
       status.textContent = `Preluat: ${data.teams_recunoscute} echipe, ${data.meciuri_actualizate} meciuri actualizate.`;
-      init();
+      await refreshAndCache();
     } else {
       status.textContent = 'Eroare: ' + data.message;
     }
