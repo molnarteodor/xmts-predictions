@@ -515,12 +515,13 @@ HTML_TEMPLATE = """
     --accent-cyan: #06b6d4;
     --accent-blue: #3b82f6;
     --accent-purple: #8b5cf6;
-    --accent-gold: #f59e0b;
+    --accent-gold: #f5c518;
+    --accent-gold-deep: #d97706;
     --accent-green: #10b981;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --glow-cyan: rgba(6, 182, 212, 0.25);
-    --glow-gold: rgba(245, 158, 11, 0.25);
+    --glow-gold: rgba(245, 197, 24, 0.28);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -528,15 +529,34 @@ HTML_TEMPLATE = """
   body {
     background-color: var(--bg-dark);
     background-image:
-      radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
-      radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
-      radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+      radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.10) 0%, transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.10) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.04) 0%, transparent 60%);
     background-attachment: fixed;
     color: var(--text-main);
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
     padding: 20px 12px;
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
+    position: relative;
+  }
+
+  .bg-orbs {
+    position: fixed; inset: -10%; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(circle at 22% 20%, rgba(245, 197, 24, 0.12) 0%, transparent 32%),
+      radial-gradient(circle at 78% 12%, rgba(59, 130, 246, 0.12) 0%, transparent 32%),
+      radial-gradient(circle at 55% 92%, rgba(139, 92, 246, 0.10) 0%, transparent 38%);
+    animation: bgDrift 16s ease-in-out infinite alternate;
+    filter: blur(2px);
+  }
+  @keyframes bgDrift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-3%, 2.5%) scale(1.1); }
+  }
+  .bg-grid {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+    background-image: repeating-linear-gradient(115deg, rgba(245,197,24,0.035) 0px, rgba(245,197,24,0.035) 1px, transparent 1px, transparent 90px);
   }
 
   .container { max-width: 560px; margin: 0 auto; }
@@ -544,37 +564,47 @@ HTML_TEMPLATE = """
   .header-box { text-align: center; margin-bottom: 24px; position: relative; }
   .brand-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);
+    background: rgba(245, 197, 24, 0.1); border: 1px solid rgba(245, 197, 24, 0.3);
     padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700;
-    color: var(--accent-cyan); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+    color: var(--accent-gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
   }
   .pulse-dot {
-    width: 6px; height: 6px; background-color: var(--accent-cyan); border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent-cyan); animation: pulse 1.8s infinite;
+    width: 6px; height: 6px; background-color: var(--accent-gold); border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-gold); animation: pulse 1.8s infinite;
   }
   @keyframes pulse { 0%{ opacity: 0.3; } 50%{ opacity: 1; } 100%{ opacity: 0.3; } }
   .title-main {
     font-size: 26px; font-weight: 800;
-    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, var(--accent-cyan) 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f3e3ad 45%, var(--accent-gold) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -0.5px;
   }
   .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
+  @keyframes cardIn { from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
   .glass-card {
     background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--card-border); border-radius: 20px; padding: 18px; margin-bottom: 14px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); transition: transform 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); transition: transform 0.15s ease, border-color 0.2s ease;
+    animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1) backwards;
   }
   .glass-card:hover { border-color: rgba(255, 255, 255, 0.18); }
+  .glass-card:active { transform: scale(0.985); }
+  .glass-card:nth-child(1){ animation-delay: 0s; }
+  .glass-card:nth-child(2){ animation-delay: .05s; }
+  .glass-card:nth-child(3){ animation-delay: .1s; }
+  .glass-card:nth-child(4){ animation-delay: .15s; }
+  .glass-card:nth-child(5){ animation-delay: .2s; }
+  .glass-card:nth-child(n+6){ animation-delay: .22s; }
 
-  .upload-card { border: 1px dashed rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.03); text-align: center; }
+  .upload-card { border: 1px dashed rgba(245, 197, 24, 0.35); background: rgba(245, 197, 24, 0.03); text-align: center; }
   .file-input { display: none; }
   .btn-upload {
-    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); color: #fff; border: none;
-    padding: 11px 22px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 4px 14px var(--glow-cyan); transition: all 0.2s ease; display: inline-block;
+    background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-deep)); color: #0a0a0a; border: none;
+    padding: 11px 22px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 14px var(--glow-gold); transition: all 0.15s ease; display: inline-block;
   }
-  .btn-upload:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--glow-cyan); }
+  .btn-upload:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--glow-gold); }
+  .btn-upload:active { transform: scale(0.96); }
   .status-text { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.4; }
 
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; }
@@ -582,16 +612,17 @@ HTML_TEMPLATE = """
   .tab-btn {
     background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border); color: var(--text-muted);
     padding: 9px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
-    white-space: nowrap; transition: all 0.2s ease;
+    white-space: nowrap; transition: all 0.15s ease;
   }
+  .tab-btn:active, .chip-btn:active, .filter-chip:active, .bb-toggle-btn:active { transform: scale(0.94); }
   .tab-btn.active {
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
-    border-color: var(--accent-cyan); color: #fff; box-shadow: 0 0 15px var(--glow-cyan);
+    background: linear-gradient(135deg, rgba(245, 197, 24, 0.22), rgba(217, 119, 6, 0.22));
+    border-color: var(--accent-gold); color: #fff; box-shadow: 0 0 15px var(--glow-gold);
   }
 
   .challenge-card {
     border: 1px solid var(--accent-gold);
-    background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.15), var(--card-bg));
+    background: radial-gradient(circle at top right, rgba(245, 197, 24, 0.15), var(--card-bg));
     box-shadow: 0 0 25px var(--glow-gold); position: relative; overflow: hidden;
   }
   .challenge-badge {
@@ -641,6 +672,39 @@ HTML_TEMPLATE = """
     border-radius: 10px; font-size: 12px; font-weight: 700; cursor:pointer;
   }
   .bb-panel { margin-top: 8px; }
+
+  /* ── Animatie "scanare" la generarea biletului ── */
+  .scan-loader { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 34px 20px; }
+  .scan-ring {
+    width: 54px; height: 54px; border-radius: 50%;
+    border: 3px solid rgba(245, 197, 24, 0.15); border-top-color: var(--accent-gold);
+    animation: scanSpin 0.85s linear infinite;
+    box-shadow: 0 0 18px rgba(245, 197, 24, 0.25);
+  }
+  @keyframes scanSpin { to { transform: rotate(360deg); } }
+  .scan-text {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent-gold); animation: scanPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes scanPulse { 0%,100%{ opacity: 0.45; } 50%{ opacity: 1; } }
+  .scan-bars { display: flex; gap: 4px; align-items: flex-end; height: 18px; }
+  .scan-bars span {
+    width: 4px; background: var(--accent-gold); border-radius: 2px;
+    animation: scanBar 0.9s ease-in-out infinite;
+  }
+  .scan-bars span:nth-child(1){ animation-delay: 0s; }
+  .scan-bars span:nth-child(2){ animation-delay: .12s; }
+  .scan-bars span:nth-child(3){ animation-delay: .24s; }
+  .scan-bars span:nth-child(4){ animation-delay: .36s; }
+  .scan-bars span:nth-child(5){ animation-delay: .48s; }
+  @keyframes scanBar { 0%,100%{ height: 5px; } 50%{ height: 18px; } }
+
+  .odd-value.reveal-glow { animation: oddGlow 1s ease-out; }
+  @keyframes oddGlow {
+    0%   { text-shadow: 0 0 0 rgba(245,197,24,0); }
+    35%  { text-shadow: 0 0 22px rgba(245,197,24,0.95); }
+    100% { text-shadow: 0 0 10px var(--glow-gold); }
+  }
   #target-odd-input {
     background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); color: #fff;
     border-radius: 10px; padding: 10px 12px; font-size: 14px; flex: 1; min-width: 0; font-family: inherit;
@@ -648,6 +712,8 @@ HTML_TEMPLATE = """
 </style>
 </head>
 <body>
+<div class="bg-orbs"></div>
+<div class="bg-grid"></div>
 
 <div class="container">
 
@@ -798,7 +864,7 @@ function ticketBlock(t, isChallenge) {
           <div style="font-size:11px; color:var(--text-muted);">TINTA COTA</div>
           <div style="font-size:13px; font-weight:700;">${t.target_odd}</div>
         </div>
-        <div class="ticket-odd-display">@ ${formatOdd(t.combined_odd)}</div>
+        <div class="ticket-odd-display">@ <span class="odd-value">${formatOdd(t.combined_odd)}</span></div>
       </div>
       ${legs}
       <div style="font-size:11px; color:var(--text-muted); margin-top:12px; font-weight:600;">
@@ -911,18 +977,48 @@ function setTargetOdd(v){
   generateCustomTicket();
 }
 
-function generateCustomTicket(){
+function animateOddValue(el, from, to, duration, decimals){
+  const start = performance.now();
+  function step(now){
+    const t = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = (from + (to - from) * eased).toFixed(decimals);
+    if(t < 1) requestAnimationFrame(step);
+    else el.textContent = decimals === 0 ? Math.round(to).toString() : to.toFixed(decimals);
+  }
+  requestAnimationFrame(step);
+}
+
+async function generateCustomTicket(){
   const input = document.getElementById('target-odd-input');
   let target = parseFloat(input.value);
   if(isNaN(target) || target < 1.1) target = 1.1;
   if(target > 1000) target = 1000;
   input.value = target;
 
-  const ticket = buildCustomTicket(target);
   const result = document.getElementById('custom-ticket-result');
-  result.innerHTML = ticket
-    ? ticketBlock(ticket, false) + `<div class="disclaimer-box">${TICKET_DISCLAIMER} La cote foarte mari, probabilitatea reala a intregului bilet devine foarte mica, chiar daca fiecare piesa are sens statistic - e afisata mai sus, nu ascunsa.</div>`
-    : '<div class="glass-card empty-state">Nu exista meciuri valide in acest CSV pentru a construi un bilet.</div>';
+  result.innerHTML = `
+    <div class="glass-card scan-loader">
+      <div class="scan-ring"></div>
+      <div class="scan-bars"><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="scan-text">Se calculeaza combinatia optima...</div>
+    </div>`;
+
+  const ticket = await new Promise(resolve => setTimeout(() => resolve(buildCustomTicket(target)), 600));
+
+  if(!ticket){
+    result.innerHTML = '<div class="glass-card empty-state">Nu exista meciuri valide in acest CSV pentru a construi un bilet.</div>';
+    return;
+  }
+
+  result.innerHTML = ticketBlock(ticket, false) + `<div class="disclaimer-box">${TICKET_DISCLAIMER} La cote foarte mari, probabilitatea reala a intregului bilet devine foarte mica, chiar daca fiecare piesa are sens statistic - e afisata mai sus, nu ascunsa.</div>`;
+
+  const oddEl = result.querySelector('.odd-value');
+  if(oddEl){
+    oddEl.classList.add('reveal-glow');
+    const decimals = ticket.combined_odd >= 100 ? 0 : 2;
+    animateOddValue(oddEl, 1.00, ticket.combined_odd, 750, decimals);
+  }
 }
 
 function render() {
