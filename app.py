@@ -499,7 +499,7 @@ def upload_stats_csv():
 
         cache = _load_json(CACHE_FILE, None)
         matched = 0
-        if cache and cache.get("matches") and cache.get("upload_date") == today_str():
+        if cache and cache.get("matches"):
             for m in cache["matches"]:
                 cc = estimate_corners_cards(m["home"], m["away"], team_stats)
                 m["corners_cards"] = cc
@@ -518,14 +518,6 @@ def get_predictions():
     data = _load_json(CACHE_FILE, None)
     if not data:
         return jsonify({"matches": [], "challenge": None, "stats_uploaded": False, "api_active": False})
-    if data.get("upload_date") != today_str():
-        # fisierul e din alta zi - il tratam ca inexistent, ca sa nu aratam meciuri vechi
-        return jsonify({
-            "matches": [], "challenge": None,
-            "stats_uploaded": data.get("stats_uploaded", False),
-            "api_active": False, "expired": True,
-            "last_upload_date": data.get("upload_date"),
-        })
     return jsonify(data)
 
 
@@ -816,6 +808,7 @@ let cachedData = { matches: [], challenge: null, stats_uploaded: false };
 let currentTab = 'challenge';
 let activeRiskFilters = new Set(['Scazut', 'Mediu', 'Ridicat']);
 const MAX_TICKET_LEGS = 10;
+const CHALLENGE_TARGET_ODD = 1.5;
 const TICKET_DISCLAIMER = "Cota este calculata direct pe baza distributiei de probabilitate teoretica. Combinarea mai multor evenimente scade rata totala de succes a biletului.";
 
 const AJUTOR_HTML = `
@@ -1194,9 +1187,9 @@ function cornersCardsCard(m) {
    Faza 2: daca tot n-am atins tinta, completam cu variantele cu cota individuala cea mai mare
    (piete mai riscante SAU combinatii BetBuilder ale aceluiasi meci) - tot cate una per meci,
    niciodata doua variante din acelasi meci (ar fi evenimente corelate, nu independente). */
-function buildCustomTicket(target){
+function buildCustomTicket(target, matches){
   const pool = [];
-  for(const m of cachedData.matches){
+  for(const m of (matches || [])){
     const key = m.home + '|' + m.away;
     const pct = m.pick_pct != null ? m.pick_pct : m.principal_pct;
     const pick = m.pick_for_ticket || m.principal;
@@ -1268,7 +1261,7 @@ async function generateCustomTicket(){
       <div class="scan-text">Se calculeaza combinatia optima...</div>
     </div>`;
 
-  const ticket = await new Promise(resolve => setTimeout(() => resolve(buildCustomTicket(target)), 600));
+  const ticket = await new Promise(resolve => setTimeout(() => resolve(buildCustomTicket(target, todayMatches())), 600));
 
   if(!ticket){
     result.innerHTML = '<div class="glass-card empty-state">Nu exista meciuri valide in acest CSV pentru a construi un bilet.</div>';
@@ -1298,20 +1291,27 @@ function render() {
     return;
   }
 
-  const matches = cachedData.matches || [];
+  const allMatches = cachedData.matches || [];
 
-  if (matches.length === 0) {
-    const msg = cachedData.expired
-      ? `Fisierul incarcat pentru ${cachedData.last_upload_date} a expirat. Incarca fixtures.csv pentru ziua de azi.`
-      : 'Nu exista date incarcate. Adauga un fisier CSV mai sus.';
-    content.innerHTML = `<div class="glass-card empty-state">${msg}</div>`;
+  if (allMatches.length === 0) {
+    content.innerHTML = '<div class="glass-card empty-state">Nu exista date incarcate. Adauga un fisier CSV mai sus.</div>';
     return;
   }
 
+  const matches = todayMatches();
+
+  if (matches.length === 0) {
+    const otherDates = [...new Set(allMatches.map(m => m.date))].sort();
+    content.innerHTML = `<div class="glass-card empty-state">Fisierul incarcat nu are meciuri pentru azi (${localTodayStr()}).<br><br>Acopera: ${otherDates.join(', ')}.<br><br>Incarca un fixtures.csv mai recent cand apare (de obicei de 2 ori/saptamana).</div>`;
+    return;
+  }
+
+  const todayChallenge = buildCustomTicket(CHALLENGE_TARGET_ODD, matches);
+
   if (currentTab === 'challenge') {
-    content.innerHTML = cachedData.challenge
-      ? ticketBlock(cachedData.challenge, true) + `<div class="disclaimer-box">${TICKET_DISCLAIMER}</div>`
-      : '<div class="glass-card empty-state">Nu sunt suficiente meciuri cu coeficient ridicat pentru un Challenge de cota 1.50 in acest fisier.</div>';
+    content.innerHTML = todayChallenge
+      ? ticketBlock(todayChallenge, true) + `<div class="disclaimer-box">${TICKET_DISCLAIMER}</div>`
+      : '<div class="glass-card empty-state">Nu sunt suficiente meciuri cu coeficient ridicat pentru un Challenge de cota 1.50 azi.</div>';
   } else if (currentTab === 'sigure') {
     const top = matches.filter(m => !m.fara_pronostic).slice(0, 10);
     content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="glass-card empty-state">Fara selectii peste pragul de incredere.</div>';
@@ -1392,12 +1392,15 @@ function loadFromLocalStorage(){
   try{
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if(!raw) return null;
-    const data = JSON.parse(raw);
-    if(data.upload_date !== localTodayStr()) return null; // e din alta zi - nu mai e valid
-    return data;
+    return JSON.parse(raw);
   } catch(e){
     return null;
   }
+}
+
+function todayMatches(){
+  const today = localTodayStr();
+  return (cachedData.matches || []).filter(m => m.date === today);
 }
 
 async function refreshAndCache(){
