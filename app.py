@@ -722,6 +722,14 @@ HTML_TEMPLATE = """
   }
   .bb-panel { margin-top: 8px; }
 
+  .section-label { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px; margin: 18px 0 10px; text-transform: uppercase; }
+  .grade-btn {
+    flex: 1; padding: 11px; min-height: 40px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .grade-win { background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #34d399; }
+  .grade-loss { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #fca5a5; }
+  .grade-win:active, .grade-loss:active { transform: scale(0.94); }
+
   /* ── Animatie "scanare" la generarea biletului ── */
   .scan-loader { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 34px 20px; }
   .scan-ring {
@@ -789,6 +797,7 @@ HTML_TEMPLATE = """
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('cartonase', this)">🟨 Cartonase & Cornere</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('bilete', this)">🎟 Generator Bilete</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('targetodd', this)">🎯 Cota 1.30-1.40</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('rezultate', this)">📊 Rezultate</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('ajutor', this)">🆘 Ajutor</button>
   </div>
 
@@ -938,6 +947,143 @@ function toggleBetbuilderPanel(btn, lamH, lamA){
 }
 
 const RISK_ICONS = { Scazut: '●', Mediu: '▲', Ridicat: '■' };
+
+/* ── Notare rezultate + calibrare reala (verde/rosu) ──
+   Separat de cache-ul zilnic de meciuri: "pending" tine meciurile care asteapta sa fie
+   notate (persista cateva zile, ca sa poti nota si mai tarziu), "history" tine notarile
+   definitive, pe termen nelimitat - din ele calculam precizia reala a modelului. */
+const PENDING_KEY = 'xmts_pending_grades_v1';
+const HISTORY_KEY = 'xmts_prediction_history_v1';
+
+function matchGradeKey(m){ return m.date + '|' + m.home + '|' + m.away; }
+
+function loadPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch(e){ return []; } }
+function savePending(list){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch(e){} }
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e){ return []; } }
+function saveHistory(list){ try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch(e){} }
+
+function mergeIntoPending(matches){
+  const pending = loadPending();
+  const history = loadHistory();
+  const known = new Set([...pending, ...history].map(matchGradeKey));
+  for(const m of matches || []){
+    if(m.fara_pronostic) continue;
+    const key = matchGradeKey(m);
+    if(known.has(key)) continue;
+    pending.push({
+      date: m.date, league: m.league, home: m.home, away: m.away,
+      pick: m.pick_for_ticket || m.principal,
+      pct: m.pick_pct != null ? m.pick_pct : m.principal_pct,
+      risc: m.risc,
+    });
+    known.add(key);
+  }
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 5);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  savePending(pending.filter(p => p.date >= cutoffStr));
+}
+
+function gradeMatchByIndex(index, result){
+  const pending = loadPending();
+  if(index < 0 || index >= pending.length) return;
+  const item = pending[index];
+  item.result = result;
+  item.graded_at = new Date().toISOString();
+  pending.splice(index, 1);
+  const history = loadHistory();
+  history.push(item);
+  savePending(pending);
+  saveHistory(history);
+  render();
+}
+
+function clearHistory(){
+  if(!confirm('Sigur vrei sa stergi tot istoricul de notari? Nu se poate anula.')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(PENDING_KEY);
+  render();
+}
+
+function computeAccuracyStats(history){
+  const byRisk = { Scazut: [], Mediu: [], Ridicat: [] };
+  for(const h of history){ if(byRisk[h.risc]) byRisk[h.risc].push(h); }
+  const total = history.length;
+  const wins = history.filter(h => h.result === 'win').length;
+  const rows = ['Scazut','Mediu','Ridicat'].map(r => {
+    const list = byRisk[r];
+    const w = list.filter(h => h.result === 'win').length;
+    return {
+      risc: r, n: list.length,
+      hitRate: list.length ? (w / list.length * 100) : null,
+      avgPct: list.length ? (list.reduce((s,h) => s + h.pct, 0) / list.length) : null,
+    };
+  });
+  return { total, wins, overallRate: total ? (wins / total * 100) : null, rows };
+}
+
+function resultsSummaryCard(history){
+  if(history.length === 0){
+    return '<div class="glass-card empty-state">Inca nu ai notat niciun rezultat. Noteaza meciurile de mai jos dupa ce se termina, ca sa vezi aici cat de bine se potrivesc procentele calculate cu ce s-a intamplat in realitate.</div>';
+  }
+  const s = computeAccuracyStats(history);
+  const rows = s.rows.filter(r => r.n > 0).map(r => `
+    <div class="ticket-selection-item">
+      <span>${RISK_ICONS[r.risc]} ${r.risc} (${r.n} notate)</span>
+      <span style="font-weight:700;">${r.hitRate.toFixed(1)}% reale · ${r.avgPct.toFixed(1)}% estimat</span>
+    </div>`).join('');
+  const rateColor = s.overallRate >= 55 ? '#34d399' : (s.overallRate >= 40 ? '#fbbf24' : '#fca5a5');
+  return `
+    <div class="glass-card">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fff;">📊 Precizia modelului (${s.total} notate)</div>
+      <div style="text-align:center;margin-bottom:12px;">
+        <span style="font-size:32px;font-weight:800;color:${rateColor};">${s.overallRate.toFixed(1)}%</span>
+        <div style="font-size:11px;color:var(--text-muted);">${s.wins} din ${s.total} corecte</div>
+      </div>
+      ${rows}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px;">"Estimat" = increderea medie data de model la momentul predictiei. Daca "reale" e apropiat de "estimat", modelul e bine calibrat. Sub 20-30 de notari, cifrele astea inca nu spun mare lucru statistic.</div>
+    </div>`;
+}
+
+function pendingCardByIndex(p, i){
+  return `
+    <div class="glass-card">
+      <div class="card-header-line"><span>${p.league} · ${p.date}</span></div>
+      <div class="match-title">${p.home} vs ${p.away}</div>
+      <div class="pred-row">
+        <span class="pred-target">${p.pick} (${p.pct}%)</span>
+        <span class="risk-tag risk-${p.risc}">${RISK_ICONS[p.risc] || ''} ${p.risc}</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="grade-btn grade-win" onclick="gradeMatchByIndex(${i}, 'win')">✅ A iesit</button>
+        <button class="grade-btn grade-loss" onclick="gradeMatchByIndex(${i}, 'loss')">❌ N-a iesit</button>
+      </div>
+    </div>`;
+}
+
+function historyLogItem(h){
+  const color = h.result === 'win' ? '#10b981' : '#ef4444';
+  const icon = h.result === 'win' ? '✅' : '❌';
+  return `
+    <div class="ticket-selection-item" style="border-left:3px solid ${color};padding-left:10px;">
+      <span>${icon} ${h.home} vs ${h.away} - ${h.pick}</span>
+      <span style="font-weight:700;">${h.pct}%</span>
+    </div>`;
+}
+
+function renderResultsTab(){
+  const pending = loadPending();
+  const history = loadHistory();
+  const summary = resultsSummaryCard(history);
+  const pendingHtml = pending.length
+    ? `<div class="section-label">DE NOTAT (${pending.length})</div>` + pending.map((p, i) => pendingCardByIndex(p, i)).join('')
+    : '<div class="section-label">DE NOTAT</div><div class="glass-card empty-state">Niciun meci in asteptare de notare.</div>';
+  const recent = [...history].reverse().slice(0, 20);
+  const historyHtml = recent.length
+    ? `<div class="section-label">ISTORIC RECENT</div><div class="glass-card">${recent.map(historyLogItem).join('')}</div>
+       <button class="btn-upload" style="background:linear-gradient(135deg,#ef4444,#b91c1c);margin-top:6px;width:100%;text-align:center;" onclick="clearHistory()">🗑️ Sterge istoricul</button>`
+    : '';
+  return summary + pendingHtml + historyHtml;
+}
 
 function matchCard(m) {
   const alt = m.alternativ ? `<div style="font-size: 11px; color: var(--text-muted);">Alternativ: <b>${m.alternativ}</b> (${m.alternativ_pct}%)</div>` : '';
@@ -1147,6 +1293,11 @@ function render() {
     return;
   }
 
+  if (currentTab === 'rezultate') {
+    content.innerHTML = renderResultsTab();
+    return;
+  }
+
   const matches = cachedData.matches || [];
 
   if (matches.length === 0) {
@@ -1256,6 +1407,7 @@ async function refreshAndCache(){
     cachedData = data;
     if(data.matches && data.matches.length > 0){
       saveToLocalStorage(data);
+      mergeIntoPending(data.matches);
     }
     render();
   } catch(err) {
@@ -1267,6 +1419,7 @@ async function init() {
   const cached = loadFromLocalStorage();
   if(cached){
     cachedData = cached;
+    mergeIntoPending(cached.matches || []);
     render();
     return; // avem deja datele de azi, salvate in telefon - nu mai batem serverul
   }
