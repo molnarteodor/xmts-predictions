@@ -140,13 +140,34 @@ def poisson_pmf(k, lam):
     return math.exp(-lam) * (lam ** k) / math.factorial(k)
 
 
-def _match_probs_from_lambdas(lam_h, lam_a, max_g):
+# Corectie Dixon-Coles (Dixon & Coles, 1997, "Modelling Association Football Scores and
+# Inefficiencies in the Football Betting Market"): modelul Poisson independent subestimeaza
+# usor frecventa scorurilor mici corelate (0-0, 1-1) si o supraestimeaza usor pe cea a
+# scorurilor 1-0/0-1. rho e de obicei un parametru estimat din date istorice de liga; noi nu
+# avem volumul necesar pt. o estimare proprie, asa ca folosim o valoare fixa, moderata,
+# reprezentativa pt. fotbalul profesionist (aprox. -0.08 in majoritatea studiilor publicate).
+DIXON_COLES_RHO = -0.08
+
+
+def dixon_coles_tau(x, y, lam, mu, rho):
+    if x == 0 and y == 0:
+        return 1 - (lam * mu * rho)
+    elif x == 0 and y == 1:
+        return 1 + (lam * rho)
+    elif x == 1 and y == 0:
+        return 1 + (mu * rho)
+    elif x == 1 and y == 1:
+        return 1 - rho
+    return 1.0
+
+
+def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=0.0):
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
     pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
     p_h = p_d = p_a = 0.0
     for h in range(max_g):
         for a in range(max_g):
-            p = ph_list[h] * pa_list[a]
+            p = ph_list[h] * pa_list[a] * dixon_coles_tau(h, a, lam_h, lam_a, rho)
             if h > a:
                 p_h += p
             elif h == a:
@@ -165,10 +186,15 @@ def _frange(start, stop, step):
 
 
 def calibrate_lambdas(target_h, target_d, target_a):
+    # Plaja lărgită fata de versiunea initiala, ca sa acopere si favoritii foarte clari
+    # (cote de tip 1.05-1.15), unde lambda gazdelor poate depasi usor 4.
+    # max_g=9/10 (nu 6/7 ca initial) - la lambda mare, un plafon prea mic trunchiaza
+    # semnificativ din masa de probabilitate si distorsioneaza cautarea (verificat: la
+    # lambda=4.4, max_g=6 acopera doar 72% din probabilitate, in timp ce max_g=12 acopera 99.8%).
     best, best_err = None, None
-    for lh in _frange(0.2, 3.8, 0.2):
-        for la in _frange(0.2, 3.0, 0.2):
-            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=6)
+    for lh in _frange(0.15, 4.4, 0.2):
+        for la in _frange(0.15, 3.4, 0.2):
+            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=10, rho=DIXON_COLES_RHO)
             err = (ph - target_h) ** 2 + (pd - target_d) ** 2 + (pa - target_a) ** 2
             if best_err is None or err < best_err:
                 best_err, best = err, (lh, la)
@@ -176,7 +202,7 @@ def calibrate_lambdas(target_h, target_d, target_a):
     lh0, la0 = best
     for lh in _frange(max(0.05, lh0 - 0.15), lh0 + 0.15, 0.03):
         for la in _frange(max(0.05, la0 - 0.15), la0 + 0.15, 0.03):
-            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=7)
+            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=12, rho=DIXON_COLES_RHO)
             err = (ph - target_h) ** 2 + (pd - target_d) ** 2 + (pa - target_a) ** 2
             if err < best_err:
                 best_err, best = err, (lh, la)
@@ -213,14 +239,14 @@ def predict_from_odds(row):
     p_h, p_d, p_a = implied_probs(oh, od, oa)
     lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a)
 
-    max_g = 7
+    max_g = 12
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
     pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
     p_home = p_draw = p_away = p_btts = 0.0
     p_over = {1.5: 0.0, 2.5: 0.0, 3.5: 0.0}
     for h in range(max_g):
         for a in range(max_g):
-            p = ph_list[h] * pa_list[a]
+            p = ph_list[h] * pa_list[a] * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO)
             if h > a:
                 p_home += p
             elif h == a:
@@ -240,6 +266,10 @@ def predict_from_odds(row):
         raw_over, raw_under = 1 / o_over, 1 / o_under
         s = raw_over + raw_under
         p_over[2.5] = raw_over / s
+    # pastram monotonia logica (Peste 1.5 >= Peste 2.5 >= Peste 3.5), chiar si dupa
+    # suprascrierea liniei de 2.5 cu o cota reala de piata
+    p_over[1.5] = max(p_over[1.5], p_over[2.5])
+    p_over[3.5] = min(p_over[3.5], p_over[2.5])
 
     markets = {
         "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeti)": p_away,
@@ -289,12 +319,13 @@ def predict_from_odds(row):
     return result
 
 
-def compute_betbuilder(lam_h, lam_a, max_g=7, top_n=3, min_pct=0.30):
+def compute_betbuilder(lam_h, lam_a, max_g=12, top_n=3, min_pct=0.30):
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
     pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
     scored = []
     for label, cond in BETBUILDER_COMBOS:
-        p = sum(ph_list[h] * pa_list[a] for h in range(max_g) for a in range(max_g) if cond(h, a))
+        p = sum(ph_list[h] * pa_list[a] * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO)
+                for h in range(max_g) for a in range(max_g) if cond(h, a))
         scored.append((label, p))
     scored.sort(key=lambda kv: kv[1], reverse=True)
     return [{"combo": lbl, "pct": round(p * 100, 1)} for lbl, p in scored[:top_n] if p >= min_pct]
@@ -559,6 +590,24 @@ HTML_TEMPLATE = """
     background-image: repeating-linear-gradient(115deg, rgba(245,197,24,0.035) 0px, rgba(245,197,24,0.035) 1px, transparent 1px, transparent 90px);
   }
 
+  /* ── Accesibilitate ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  button:focus-visible, input:focus-visible, a:focus-visible, label:focus-visible {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 2px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
   .container { max-width: 560px; margin: 0 auto; }
 
   .header-box { text-align: center; margin-bottom: 24px; position: relative; }
@@ -611,7 +660,7 @@ HTML_TEMPLATE = """
   .tabs-wrapper::-webkit-scrollbar { display: none; }
   .tab-btn {
     background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border); color: var(--text-muted);
-    padding: 9px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    padding: 12px 16px; min-height: 40px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     white-space: nowrap; transition: all 0.15s ease;
   }
   .tab-btn:active, .chip-btn:active, .filter-chip:active, .bb-toggle-btn:active { transform: scale(0.94); }
@@ -655,20 +704,20 @@ HTML_TEMPLATE = """
   .chip-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .chip-btn {
     background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.3); color: var(--accent-cyan);
-    padding: 6px 13px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+    padding: 10px 15px; min-height: 38px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
   }
   .chip-btn.gold { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: var(--accent-gold); }
   .odd-input-row { display: flex; gap: 8px; }
   .filter-chip {
     background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--text-muted);
-    padding: 7px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+    padding: 10px 16px; min-height: 38px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;
   }
   .filter-chip[data-risk="Scazut"].active { background: rgba(16,185,129,0.18); border-color: #10b981; color:#34d399; }
   .filter-chip[data-risk="Mediu"].active { background: rgba(245,158,11,0.18); border-color: #f59e0b; color:#fbbf24; }
   .filter-chip[data-risk="Ridicat"].active { background: rgba(239,68,68,0.18); border-color: #ef4444; color:#fca5a5; }
   .bb-toggle-btn {
     display:block; width:100%; text-align:center; margin-top:10px; background: rgba(139,92,246,0.12);
-    border:1px solid rgba(139,92,246,0.35); color: var(--accent-purple); padding: 8px 12px;
+    border:1px solid rgba(139,92,246,0.35); color: var(--accent-purple); padding: 11px 12px; min-height: 40px;
     border-radius: 10px; font-size: 12px; font-weight: 700; cursor:pointer;
   }
   .bb-panel { margin-top: 8px; }
@@ -732,14 +781,15 @@ HTML_TEMPLATE = """
     <div class="status-text" id="upload-status">Asteapta un fisier de pe football-data.co.uk</div>
   </div>
 
-  <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('challenge', this)">🎯 Challenge 1.50</button>
-    <button class="tab-btn" onclick="switchTab('sigure', this)">🔥 Selectii Sigure</button>
-    <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Meciurile</button>
-    <button class="tab-btn" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
-    <button class="tab-btn" onclick="switchTab('cartonase', this)">🟨 Cartonase & Cornere</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)">🎟 Generator Bilete</button>
-    <button class="tab-btn" onclick="switchTab('targetodd', this)">🎯 Cota 1.30-1.40</button>
+  <div class="tabs-wrapper" role="tablist" aria-label="Sectiuni">
+    <button class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab('challenge', this)">🎯 Challenge 1.50</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('sigure', this)">🔥 Selectii Sigure</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('toate', this)">📋 Toate Meciurile</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('cartonase', this)">🟨 Cartonase & Cornere</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('bilete', this)">🎟 Generator Bilete</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('targetodd', this)">🎯 Cota 1.30-1.40</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('ajutor', this)">🆘 Ajutor</button>
   </div>
 
   <div id="tab-content">
@@ -758,6 +808,64 @@ let currentTab = 'challenge';
 let activeRiskFilters = new Set(['Scazut', 'Mediu', 'Ridicat']);
 const MAX_TICKET_LEGS = 10;
 const TICKET_DISCLAIMER = "Cota este calculata direct pe baza distributiei de probabilitate teoretica. Combinarea mai multor evenimente scade rata totala de succes a biletului.";
+
+const AJUTOR_HTML = `
+  <div class="glass-card" style="border-color:var(--accent-gold);">
+    <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:#fff;">⚠️ Citeste asta intai</div>
+    <div style="font-size:13px;line-height:1.6;color:var(--text-muted);">
+      Aplicatia calculeaza pronosticuri pornind chiar de la cotele caselor de pariuri. Asta inseamna
+      ca, in medie, pe termen lung, urmarirea acestor pronosticuri nu poate produce profit constant -
+      reproduce (minus marja casei) ceea ce piata deja crede despre fiecare meci. Nu exista o versiune
+      de algoritm care schimba asta - e o proprietate matematica a modului in care functioneaza
+      cotele, nu un defect de cod. Trateaza aplicatia ca pe un instrument de analiza si organizare,
+      nu ca pe o sursa de venit.
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fff;">📖 Cum citesti aplicatia</div>
+    <div style="font-size:13px;line-height:1.8;color:var(--text-muted);">
+      <b style="color:#fff;">Pronostic Principal</b> - piata cu cea mai mare probabilitate calculata pentru acel meci.<br>
+      <b style="color:#fff;">Alternativ</b> - apare doar cand niciun pronostic standard nu trece pragul de incredere; e o piata secundara, mai sigura prin constructie matematica.<br>
+      <b style="color:#fff;">Risc Scazut / Mediu / Ridicat</b> - cat de departe e procentul calculat fata de pragurile interne. Nu e o garantie - e doar increderea modelului in propria estimare.<br>
+      <b style="color:#fff;">Cota 1.30-1.40</b> - piata cea mai apropiata de acel interval, nu neaparat cea mai probabila piata a meciului.<br>
+      <b style="color:#fff;">BetBuilder</b> - probabilitatea REALA a mai multor conditii simultan la acelasi meci (nu produsul a doua procente separate - ar fi gresit matematic).
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fff;">💰 Daca tot decizi sa participi</div>
+    <div style="font-size:13px;line-height:1.8;color:var(--text-muted);">
+      <b style="color:#fff;">1. Bankroll separat.</b> O suma pe care ti-o poti permite sa o pierzi integral, complet separata de bugetul de zi cu zi.<br><br>
+      <b style="color:#fff;">2. Miza procentuala, nu fixa.</b> 1-3% din bankroll per pariu. Daca bankroll-ul scade, miza scade automat cu el - nu mari miza ca sa "recuperezi".<br><br>
+      <b style="color:#fff;">3. Niciodata nu urmari pierderile.</b> O miza mai mare dupa o pierdere, ca sa compensezi, e reactia care goleste bankroll-ul cel mai repede.<br><br>
+      <b style="color:#fff;">4. Limita de pierdere stabilita INAINTE.</b> Zilnica sau saptamanala. Cand o atingi, te opresti, indiferent cum "simti" ca merge ziua.<br><br>
+      <b style="color:#fff;">5. Judeca modelul pe esantioane mari.</b> 5-10 rezultate nu spun nimic statistic. Un pronostic de 65% ar trebui sa iasa corect de-aproximativ 65 de ori din 100, nu de fiecare data - abia pe 50-100+ meciuri poti vedea daca procentele chiar se confirma.
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fff;">🛑 Cand te opresti de tot</div>
+    <div style="font-size:13px;line-height:1.8;color:var(--text-muted);">
+      Opreste-te si cere ajutor daca recunosti oricare dintre astea:<br>
+      • Pariezi bani pe care nu-ti poti permite sa-i pierzi, sau imprumuti ca sa pariezi.<br>
+      • Maresti miza ca sa recuperezi pierderi.<br>
+      • Ascunzi de familie sau apropiati cat pariezi sau cat ai pierdut.<br>
+      • Pariezi ca sa scapi de stres, plictiseala sau tristete.<br>
+      • Ai incercat sa te opresti sau sa reduci si nu ai reusit.
+    </div>
+  </div>
+
+  <div class="glass-card" style="border-color:rgba(16,185,129,0.4);">
+    <div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fff;">🤝 Resurse (Romania)</div>
+    <div style="font-size:13px;line-height:1.9;color:var(--text-muted);">
+      <b style="color:#fff;">Joc Responsabil</b> - linie telefonica gratuita si anonima, consiliere psihologica:<br>
+      📞 <b style="color:#34d399;">0800 800 099</b> · jocresponsabil.ro<br><br>
+      <b style="color:#fff;">Autoexcludere nationala</b> - prin ONJN (Oficiul National pentru Jocuri de Noroc) sau prin orice operator licentiat, te poti bloca legal de pe toate platformele licentiate din Romania.<br><br>
+      Interzis sub 18 ani.
+    </div>
+  </div>
+`;
 
 function formatOdd(o){ return o >= 100 ? Math.round(o).toString() : o.toFixed(2); }
 function formatPct(p){
@@ -787,6 +895,14 @@ function poissonPmf(k, lam){
   lam = Math.max(lam, 0.02);
   return Math.exp(-lam) * Math.pow(lam, k) / factorial(k);
 }
+const DIXON_COLES_RHO = -0.08;
+function dixonColesTau(x, y, lam, mu, rho){
+  if(x===0 && y===0) return 1 - (lam*mu*rho);
+  if(x===0 && y===1) return 1 + (lam*rho);
+  if(x===1 && y===0) return 1 + (mu*rho);
+  if(x===1 && y===1) return 1 - rho;
+  return 1.0;
+}
 const BETBUILDER_COMBOS_JS = [
   ["1 & Peste 1.5 goluri", (h,a) => h>a && (h+a)>1.5],
   ["1 & GG Da", (h,a) => h>a && h>0 && a>0],
@@ -797,12 +913,12 @@ const BETBUILDER_COMBOS_JS = [
   ["Sansa Dubla 1X & Sub 3.5 goluri", (h,a) => h>=a && (h+a)<3.5],
   ["Sansa Dubla X2 & Sub 3.5 goluri", (h,a) => h<=a && (h+a)<3.5],
 ];
-function computeBetbuilderJS(lamH, lamA, maxG=7, topN=3, minPct=0.30){
+function computeBetbuilderJS(lamH, lamA, maxG=12, topN=3, minPct=0.30){
   const phList = [], paList = [];
   for(let i=0;i<maxG;i++){ phList.push(poissonPmf(i, lamH)); paList.push(poissonPmf(i, lamA)); }
   const scored = BETBUILDER_COMBOS_JS.map(([label, cond]) => {
     let p = 0;
-    for(let h=0;h<maxG;h++) for(let a=0;a<maxG;a++) if(cond(h,a)) p += phList[h]*paList[a];
+    for(let h=0;h<maxG;h++) for(let a=0;a<maxG;a++) if(cond(h,a)) p += phList[h]*paList[a]*dixonColesTau(h,a,lamH,lamA,DIXON_COLES_RHO);
     return [label, p];
   });
   scored.sort((x,y) => y[1]-x[1]);
@@ -821,6 +937,8 @@ function toggleBetbuilderPanel(btn, lamH, lamA){
   panel.style.display = 'block';
 }
 
+const RISK_ICONS = { Scazut: '●', Mediu: '▲', Ridicat: '■' };
+
 function matchCard(m) {
   const alt = m.alternativ ? `<div style="font-size: 11px; color: var(--text-muted);">Alternativ: <b>${m.alternativ}</b> (${m.alternativ_pct}%)</div>` : '';
   const noPick = m.fara_pronostic ? '<div style="font-size: 11px; color: var(--text-muted);">Meci echilibrat fara selectie clara</div>' : '';
@@ -833,14 +951,14 @@ function matchCard(m) {
       <div class="match-title">${m.home} vs ${m.away}</div>
       <div class="pred-row">
         <span class="pred-target">${m.principal} (${m.principal_pct}%)</span>
-        <span class="risk-tag risk-${m.risc}">${m.risc}</span>
+        <span class="risk-tag risk-${m.risc}">${RISK_ICONS[m.risc] || ''} ${m.risc}</span>
       </div>
       ${alt}${noPick}
       <div class="goals-estimate">
         <span>xG Gazde: <b>${m.exp_goals_home}</b></span>
         <span>xG Oaspeti: <b>${m.exp_goals_away}</b></span>
       </div>
-      <button class="bb-toggle-btn" onclick="toggleBetbuilderPanel(this, ${m.exp_goals_home}, ${m.exp_goals_away})">🧩 Vreau o cota mai mare (BetBuilder)</button>
+      <button class="bb-toggle-btn" onclick="toggleBetbuilderPanel(this, ${m.exp_goals_home}, ${m.exp_goals_away})" aria-label="Calculeaza combinatii BetBuilder pentru ${m.home} vs ${m.away}">🧩 Vreau o cota mai mare (BetBuilder)</button>
       <div class="bb-panel" style="display:none;"></div>
     </div>`;
 }
@@ -1023,6 +1141,12 @@ async function generateCustomTicket(){
 
 function render() {
   const content = document.getElementById('tab-content');
+
+  if (currentTab === 'ajutor') {
+    content.innerHTML = AJUTOR_HTML;
+    return;
+  }
+
   const matches = cachedData.matches || [];
 
   if (matches.length === 0) {
@@ -1080,7 +1204,8 @@ function render() {
           <button class="chip-btn gold" onclick="setTargetOdd(1000)">1000x</button>
         </div>
         <div class="odd-input-row">
-          <input type="number" id="target-odd-input" min="1.1" max="1000" step="0.1" value="2.0">
+          <label for="target-odd-input" class="sr-only">Cota tinta (1.1 - 1000)</label>
+          <input type="number" id="target-odd-input" min="1.1" max="1000" step="0.1" value="2.0" aria-label="Cota tinta">
           <button class="btn-upload" onclick="generateCustomTicket()">Genereaza</button>
         </div>
         <div class="status-text">Maxim ${MAX_TICKET_LEGS} meciuri per bilet. La cote mari, modelul foloseste automat piete cu sansa mai mica (inclusiv combinatii BetBuilder), nu zeci de meciuri sigure.</div>
@@ -1092,8 +1217,8 @@ function render() {
 
 function switchTab(tab, btn) {
   currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+  if(btn){ btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
   render();
 }
 
