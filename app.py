@@ -42,14 +42,13 @@ TICKET_DISCLAIMER = ("Cota afisata e cota corecta a modelului (1/probabilitate c
                       "reala oferita de o casa de pariuri. Combinarea mai multor meciuri intr-un bilet "
                       "scade probabilitatea totala de succes.")
 
-BOOKMAKER_1X2_PRIORITY = [
+PINNACLE_1X2 = ("PSH", "PSD", "PSA")
+BOOKMAKER_1X2_COLUMNS = [
     ("B365H", "B365D", "B365A", "Bet365"),
-    ("PSH", "PSD", "PSA", "Pinnacle"),
-    ("WHH", "WHD", "WHA", "William Hill"),
-    ("VCH", "VCD", "VCA", "BetVictor"),
-    ("AvgH", "AvgD", "AvgA", "Medie case"),
     ("BWH", "BWD", "BWA", "Bwin"),
     ("IWH", "IWD", "IWA", "Interwetten"),
+    ("WHH", "WHD", "WHA", "William Hill"),
+    ("VCH", "VCD", "VCA", "BetVictor"),
 ]
 OU25_PRIORITY = [("B365>2.5", "B365<2.5"), ("Avg>2.5", "Avg<2.5"), ("BbAv>2.5", "BbAv<2.5")]
 
@@ -107,14 +106,48 @@ def parse_uk_date(date_str):
     return date_str
 
 
+def _valid_odds_triplet(row, h_key, d_key, a_key):
+    try:
+        oh, od, oa = float(row.get(h_key) or 0), float(row.get(d_key) or 0), float(row.get(a_key) or 0)
+        if oh > 1 and od > 1 and oa > 1:
+            return oh, od, oa
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 def extract_1x2_odds(row):
-    for h_key, d_key, a_key, label in BOOKMAKER_1X2_PRIORITY:
-        try:
-            oh, od, oa = float(row.get(h_key) or 0), float(row.get(d_key) or 0), float(row.get(a_key) or 0)
-            if oh > 1 and od > 1 and oa > 1:
-                return oh, od, oa, label
-        except (ValueError, TypeError):
-            continue
+    """
+    Returneaza probabilitatile 1X2 deja curatate de marja casei (nu cotele brute).
+    Prioritate: Pinnacle - recunoscuta in literatura de specialitate ca avand cele mai
+    mici marje, un bun proxy pt. "pretul eficient" al pietei. Daca nu e disponibila,
+    facem consens: eliminam marja fiecarei case gasite separat, apoi mediem
+    probabilitatile rezultate - o medie a mai multor case reduce zgomotul unei singure
+    surse ("wisdom of the crowd"). Ultima varianta: coloana "Avg" deja calculata de sursa.
+    """
+    pinnacle = _valid_odds_triplet(row, *PINNACLE_1X2)
+    if pinnacle:
+        ph, pd, pa = implied_probs(*pinnacle)
+        return ph, pd, pa, "Pinnacle"
+
+    probs = []
+    for h_key, d_key, a_key, _label in BOOKMAKER_1X2_COLUMNS:
+        triplet = _valid_odds_triplet(row, h_key, d_key, a_key)
+        if triplet:
+            probs.append(implied_probs(*triplet))
+
+    if probs:
+        n = len(probs)
+        ph = sum(p[0] for p in probs) / n
+        pd = sum(p[1] for p in probs) / n
+        pa = sum(p[2] for p in probs) / n
+        return ph, pd, pa, (f"Medie {n} case" if n > 1 else "1 casa")
+
+    avg = _valid_odds_triplet(row, "AvgH", "AvgD", "AvgA")
+    if avg:
+        ph, pd, pa = implied_probs(*avg)
+        return ph, pd, pa, "Medie case (sursa)"
+
     return None
 
 
@@ -235,8 +268,7 @@ def predict_from_odds(row):
     odds_1x2 = extract_1x2_odds(row)
     if not odds_1x2:
         return None
-    oh, od, oa, bookmaker = odds_1x2
-    p_h, p_d, p_a = implied_probs(oh, od, oa)
+    p_h, p_d, p_a, bookmaker = odds_1x2
     lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a)
 
     max_g = 12
@@ -271,10 +303,15 @@ def predict_from_odds(row):
     p_over[1.5] = max(p_over[1.5], p_over[2.5])
     p_over[3.5] = min(p_over[3.5], p_over[2.5])
 
+    # "Peste 1.5 goluri" NU e in markets (piata principala) - e adevarata in ~75-85% din
+    # meciuri indiferent cine joaca, deci ar castiga aproape mereu argmax-ul, facand
+    # pronosticul principal repetitiv si cu cota mica. Ramane disponibila doar ca piata
+    # de rezerva (fallback), acolo unde chiar isi are rostul: o varianta mai sigura cand
+    # nimic mai specific nu trece pragul de incredere.
     markets = {
         "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeti)": p_away,
-        "Peste 1.5 goluri": p_over[1.5], "Peste 2.5 goluri": p_over[2.5],
-        "Peste 3.5 goluri": p_over[3.5], "Sub 2.5 goluri": 1 - p_over[2.5],
+        "Peste 2.5 goluri": p_over[2.5], "Peste 3.5 goluri": p_over[3.5],
+        "Sub 2.5 goluri": 1 - p_over[2.5],
         "GG - Da": p_btts, "GG - Nu": 1 - p_btts,
     }
     fallback = [
