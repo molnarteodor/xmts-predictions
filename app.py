@@ -825,6 +825,7 @@ HTML_TEMPLATE = """
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('cartonase', this)">🟨 Cartonase & Cornere</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('bilete', this)">🎟 Generator Bilete</button>
+    <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('weekend', this)">🔥 Bilet Weekend</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('targetodd', this)">🎯 Cota 1.30-1.40</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('rezultate', this)">📊 Rezultate</button>
     <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('ajutor', this)">🆘 Ajutor</button>
@@ -1115,6 +1116,81 @@ function renderResultsTab(){
   return summary + pendingHtml + historyHtml;
 }
 
+const MAX_WEEKEND_LEGS = 15;
+
+function renderWeekendTab(){
+  const allMatches = cachedData.matches || [];
+  if(allMatches.length === 0){
+    return '<div class="glass-card empty-state">Nu exista date incarcate. Adauga un fisier CSV mai sus.</div>';
+  }
+  const wDates = weekendDates();
+  const wMatches = weekendMatches();
+  if(wMatches.length === 0){
+    const otherDates = [...new Set(allMatches.map(m => m.date))].sort();
+    return `<div class="glass-card empty-state">Fisierul incarcat nu are meciuri pentru weekend-ul urmator (${wDates.join(', ')}).<br><br>Acopera: ${otherDates.join(', ')}.<br><br>Incarca un fixtures.csv mai recent cand apare.</div>`;
+  }
+  return `
+    <div class="glass-card">
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px;color:#fff;">🔥 Bilet Weekend - cota mare</div>
+      <div class="status-text" style="margin-bottom:10px;">Acopera ${wDates.join(', ')} · ${wMatches.length} meciuri disponibile in fisier</div>
+      <div class="chip-row">
+        <button class="chip-btn gold" onclick="setWeekendTargetOdd(10)">10x</button>
+        <button class="chip-btn gold" onclick="setWeekendTargetOdd(25)">25x</button>
+        <button class="chip-btn gold" onclick="setWeekendTargetOdd(50)">50x</button>
+        <button class="chip-btn gold" onclick="setWeekendTargetOdd(100)">100x</button>
+        <button class="chip-btn gold" onclick="setWeekendTargetOdd(500)">500x</button>
+      </div>
+      <div class="odd-input-row">
+        <label for="weekend-odd-input" class="sr-only">Cota tinta weekend</label>
+        <input type="number" id="weekend-odd-input" min="1.1" max="1000" step="0.1" value="25" aria-label="Cota tinta weekend">
+        <button class="btn-upload" onclick="generateWeekendTicket()">Genereaza</button>
+      </div>
+      <div class="status-text">Maxim ${MAX_WEEKEND_LEGS} meciuri - foloseste tot poolul din weekend (nu doar azi), ca sa ajunga la cote mari fara sa fie nevoie de zeci de mize riscante.</div>
+    </div>
+    <div id="weekend-ticket-result"></div>`;
+}
+
+function setWeekendTargetOdd(v){
+  document.getElementById('weekend-odd-input').value = v;
+  generateWeekendTicket();
+}
+
+async function generateWeekendTicket(){
+  const input = document.getElementById('weekend-odd-input');
+  let target = parseFloat(input.value);
+  if(isNaN(target) || target < 1.1) target = 1.1;
+  if(target > 1000) target = 1000;
+  input.value = target;
+
+  const result = document.getElementById('weekend-ticket-result');
+  result.innerHTML = `
+    <div class="glass-card scan-loader">
+      <div class="scan-ring"></div>
+      <div class="scan-bars"><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="scan-text">Se calculeaza combinatia optima...</div>
+    </div>`;
+
+  const pool = weekendMatches();
+  const ticket = await new Promise(resolve =>
+    setTimeout(() => resolve(buildCustomTicket(target, pool, MAX_WEEKEND_LEGS)), 600)
+  );
+
+  if(!ticket){
+    result.innerHTML = '<div class="glass-card empty-state">Nu exista meciuri valide in weekend pentru a construi un bilet.</div>';
+    return;
+  }
+
+  result.innerHTML = ticketBlock(ticket, false)
+    + `<div class="disclaimer-box">${TICKET_DISCLAIMER} La cote foarte mari, probabilitatea reala a intregului bilet devine foarte mica, chiar daca fiecare piesa are sens statistic - e afisata mai sus, nu ascunsa.</div>`;
+
+  const oddEl = result.querySelector('.odd-value');
+  if(oddEl){
+    oddEl.classList.add('reveal-glow');
+    const decimals = ticket.combined_odd >= 100 ? 0 : 2;
+    animateOddValue(oddEl, 1.00, ticket.combined_odd, 750, decimals);
+  }
+}
+
 function matchCard(m) {
   const alt = m.alternativ ? `<div style="font-size: 11px; color: var(--text-muted);">Alternativ: <b>${m.alternativ}</b> (${m.alternativ_pct}%)</div>` : '';
   const noPick = m.fara_pronostic ? '<div style="font-size: 11px; color: var(--text-muted);">Meci echilibrat fara selectie clara</div>' : '';
@@ -1224,7 +1300,8 @@ function cornersCardsCard(m) {
    Faza 2: daca tot n-am atins tinta, completam cu variantele cu cota individuala cea mai mare
    (piete mai riscante SAU combinatii BetBuilder ale aceluiasi meci) - tot cate una per meci,
    niciodata doua variante din acelasi meci (ar fi evenimente corelate, nu independente). */
-function buildCustomTicket(target, matches){
+function buildCustomTicket(target, matches, maxLegs){
+  maxLegs = maxLegs || MAX_TICKET_LEGS;
   const pool = [];
   for(const m of (matches || [])){
     const key = m.home + '|' + m.away;
@@ -1247,7 +1324,7 @@ function buildCustomTicket(target, matches){
 
   const safest = [...pool].sort((a,b) => b.pct - a.pct);
   for(const opt of safest){
-    if(cumOdd >= target || sel.length >= MAX_TICKET_LEGS) break;
+    if(cumOdd >= target || sel.length >= maxLegs) break;
     if(usedMatches.has(opt.key)) continue;
     sel.push(opt); usedMatches.add(opt.key);
     cumOdd *= opt.fairOdd; cumProb *= opt.pct / 100;
@@ -1256,7 +1333,7 @@ function buildCustomTicket(target, matches){
   if(cumOdd < target){
     const riskiest = pool.filter(o => !usedMatches.has(o.key)).sort((a,b) => b.fairOdd - a.fairOdd);
     for(const opt of riskiest){
-      if(cumOdd >= target || sel.length >= MAX_TICKET_LEGS) break;
+      if(cumOdd >= target || sel.length >= maxLegs) break;
       sel.push(opt); usedMatches.add(opt.key);
       cumOdd *= opt.fairOdd; cumProb *= opt.pct / 100;
     }
@@ -1325,6 +1402,11 @@ function render() {
 
   if (currentTab === 'rezultate') {
     content.innerHTML = renderResultsTab();
+    return;
+  }
+
+  if (currentTab === 'weekend') {
+    content.innerHTML = renderWeekendTab();
     return;
   }
 
@@ -1438,6 +1520,33 @@ function loadFromLocalStorage(){
 function todayMatches(){
   const today = localTodayStr();
   return (cachedData.matches || []).filter(m => m.date === today);
+}
+
+function _fmtDate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function weekendDates(){
+  // urmatoarele (sau curentele) zile de vineri/sambata/duminica, incepand de azi -
+  // daca azi e deja sambata, nu mai include vinerea trecuta.
+  const dates = [];
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  for(let i = 0; i < 10; i++){
+    const cur = new Date(base);
+    cur.setDate(cur.getDate() + i);
+    const dow = cur.getDay(); // 0=Duminica, 5=Vineri, 6=Sambata
+    if(dow === 5 || dow === 6 || dow === 0){
+      dates.push(_fmtDate(cur));
+      if(dow === 0) break;
+    }
+  }
+  return dates;
+}
+
+function weekendMatches(){
+  const dates = new Set(weekendDates());
+  return (cachedData.matches || []).filter(m => dates.has(m.date));
 }
 
 async function refreshAndCache(){
