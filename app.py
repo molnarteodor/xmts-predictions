@@ -3,6 +3,7 @@ import json
 import math
 import csv
 import io
+import requests
 from datetime import datetime
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
@@ -24,6 +25,14 @@ CORS(app)
 CACHE_FILE = "matches_cache.json"
 STATS_CACHE_FILE = "team_stats_cache.json"
 MAX_ROWS = 300  # plafon de siguranta pt. un CSV neobisnuit de mare
+
+# URL catre fixtures.csv "raw" de pe GitHub (langa app.py si requirements.txt in acelasi
+# repo). Spre deosebire de discul Render (sters la fiecare repaus/trezire a serviciului
+# gratuit), un fisier de pe GitHub nu dispare niciodata si e vizibil identic pt. orice
+# vizitator - nu doar pt. persoana care a facut ultimul upload manual din browser.
+# Seteaza-l in Render -> Environment -> FIXTURES_CSV_URL, cu link-ul de forma:
+# https://raw.githubusercontent.com/<user>/<repo>/<branch>/fixtures.csv
+FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 
 # Praguri de incredere - aceleasi folosite in tot proiectul, pt. consistenta
 CONFIDENCE_THRESHOLD = 0.65
@@ -491,6 +500,22 @@ def process_csv_content(csv_text):
     return processed, challenge, skipped_no_odds
 
 
+def _build_fixtures_cache(content, source):
+    processed_matches, challenge, skipped = process_csv_content(content)
+    cache_data = {
+        "uploaded_at": datetime.now().isoformat(),
+        "upload_date": today_str(),
+        "matches": processed_matches,
+        "challenge": challenge,
+        "skipped_no_odds": skipped,
+        "stats_uploaded": os.path.exists(STATS_CACHE_FILE),
+        "api_active": True,
+        "source": source,
+    }
+    _save_json(CACHE_FILE, cache_data)
+    return cache_data
+
+
 @app.route('/api/upload-csv', methods=['POST'])
 def upload_csv():
     if 'file' not in request.files:
@@ -501,21 +526,11 @@ def upload_csv():
 
     try:
         content = file.read().decode('utf-8', errors='ignore')
-        processed_matches, challenge, skipped = process_csv_content(content)
-        cache_data = {
-            "uploaded_at": datetime.now().isoformat(),
-            "upload_date": today_str(),
-            "matches": processed_matches,
-            "challenge": challenge,
-            "skipped_no_odds": skipped,
-            "stats_uploaded": os.path.exists(STATS_CACHE_FILE),
-            "api_active": True,
-        }
-        _save_json(CACHE_FILE, cache_data)
+        cache_data = _build_fixtures_cache(content, "upload_manual")
         return jsonify({
-            "status": "success", "count": len(processed_matches), "skipped": skipped,
-            "challenge": bool(challenge),
-            "betbuilder_matches": sum(1 for m in processed_matches if m.get("betbuilder")),
+            "status": "success", "count": len(cache_data["matches"]), "skipped": cache_data["skipped_no_odds"],
+            "challenge": bool(cache_data["challenge"]),
+            "betbuilder_matches": sum(1 for m in cache_data["matches"] if m.get("betbuilder")),
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -550,9 +565,61 @@ def upload_stats_csv():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def fetch_csv_from_url(url):
+    if not url:
+        return None
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        return r.text
+    except Exception as e:
+        print(f"[EROARE] Nu am putut prelua CSV de la {url}: {e}")
+        return None
+
+
+def load_or_refresh_fixtures_cache():
+    """
+    Daca discul serverului a fost sters (Render a "adormit" intre timp), cache-ul local
+    dispare. Daca FIXTURES_CSV_URL e configurat (un fisier raw de pe GitHub, care nu
+    dispare niciodata), il preluam automat si reconstruim cache-ul - functioneaza pt.
+    orice vizitator, nu doar pt. persoana care a facut ultimul upload manual din browser.
+    """
+    data = _load_json(CACHE_FILE, None)
+    if data and data.get("matches"):
+        return data
+    if not FIXTURES_CSV_URL:
+        return data
+    content = fetch_csv_from_url(FIXTURES_CSV_URL)
+    if not content:
+        return data
+    try:
+        return _build_fixtures_cache(content, "github_auto")
+    except Exception as e:
+        print(f"[EROARE] Nu am putut procesa CSV-ul preluat automat de la GitHub: {e}")
+        return data
+
+
+@app.route('/api/refresh-from-github', methods=['POST'])
+def refresh_from_github():
+    if not FIXTURES_CSV_URL:
+        return jsonify({"status": "error", "message": "FIXTURES_CSV_URL nu e configurat in Environment."}), 400
+    content = fetch_csv_from_url(FIXTURES_CSV_URL)
+    if not content:
+        return jsonify({"status": "error", "message": "Nu am putut prelua fisierul de la URL-ul configurat."}), 502
+    try:
+        cache_data = _build_fixtures_cache(content, "github_manual")
+        return jsonify({
+            "status": "success", "count": len(cache_data["matches"]), "skipped": cache_data["skipped_no_odds"],
+            "challenge": bool(cache_data["challenge"]),
+            "betbuilder_matches": sum(1 for m in cache_data["matches"] if m.get("betbuilder")),
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
-    data = _load_json(CACHE_FILE, None)
+    data = load_or_refresh_fixtures_cache()
     if not data:
         return jsonify({"matches": [], "challenge": None, "stats_uploaded": False, "api_active": False})
     return jsonify(data)
@@ -814,6 +881,7 @@ HTML_TEMPLATE = """
       ⚡ Incarca fisier Fixtures (.CSV)
     </div>
     <label for="csvFileInput" class="btn-upload">Selecteaza CSV</label>
+    <button class="btn-upload" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);margin-left:8px;" onclick="refreshFromGithub()">🔄 Reincarca din GitHub</button>
     <input type="file" id="csvFileInput" class="file-input" accept=".csv" onchange="uploadCSV()">
     <div class="status-text" id="upload-status">Asteapta un fisier de pe football-data.co.uk</div>
   </div>
@@ -847,6 +915,8 @@ let currentTab = 'challenge';
 let activeRiskFilters = new Set(['Scazut', 'Mediu', 'Ridicat']);
 const MAX_TICKET_LEGS = 10;
 const CHALLENGE_TARGET_ODD = 1.5;
+const HIGH_ODD_TARGET = 100;
+const MAX_HIGH_ODD_LEGS = 15;
 const TICKET_DISCLAIMER = "Cota este calculata direct pe baza distributiei de probabilitate teoretica. Combinarea mai multor evenimente scade rata totala de succes a biletului.";
 
 const AJUTOR_HTML = `
@@ -1426,11 +1496,17 @@ function render() {
   }
 
   const todayChallenge = buildCustomTicket(CHALLENGE_TARGET_ODD, matches);
+  const todayHighOdd = buildCustomTicket(HIGH_ODD_TARGET, matches, MAX_HIGH_ODD_LEGS);
 
   if (currentTab === 'challenge') {
-    content.innerHTML = todayChallenge
+    const challengeHtml = todayChallenge
       ? ticketBlock(todayChallenge, true) + `<div class="disclaimer-box">${TICKET_DISCLAIMER}</div>`
       : '<div class="glass-card empty-state">Nu sunt suficiente meciuri cu coeficient ridicat pentru un Challenge de cota 1.50 azi.</div>';
+    const highOddHtml = todayHighOdd
+      ? `<div class="section-label">💯 COTA ${HIGH_ODD_TARGET} - GENERAT AUTOMAT AZI</div>` + ticketBlock(todayHighOdd, false)
+        + `<div class="disclaimer-box">${TICKET_DISCLAIMER} Tinta asta e mult peste zona "sigura" - foloseste automat piete cu sansa mai mica, indiferent de risc, ca sa ajunga la cota ${HIGH_ODD_TARGET}. Probabilitatea reala a intregului bilet e foarte mica.</div>`
+      : `<div class="section-label">💯 COTA ${HIGH_ODD_TARGET}</div><div class="glass-card empty-state">Nu sunt destule meciuri azi ca sa se apropie de cota ${HIGH_ODD_TARGET}.</div>`;
+    content.innerHTML = challengeHtml + highOddHtml;
   } else if (currentTab === 'sigure') {
     const top = matches.filter(m => !m.fara_pronostic).slice(0, 10);
     content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="glass-card empty-state">Fara selectii peste pragul de incredere.</div>';
@@ -1553,25 +1629,38 @@ async function refreshAndCache(){
   try {
     const res = await fetch('/api/predictions');
     const data = await res.json();
-    cachedData = data;
     if(data.matches && data.matches.length > 0){
+      // serverul are date (proaspete sau preluate automat de la GitHub) - astea sunt
+      // sursa comuna, la fel pentru oricine intra pe site, nu doar pt. tine
+      cachedData = data;
       saveToLocalStorage(data);
       mergeIntoPending(data.matches);
+      render();
+      return;
+    }
+    // serverul n-are nimic (probabil a "adormit" si a pierdut memoria, si nu e configurat
+    // niciun FIXTURES_CSV_URL) - folosim ce avem salvat local, daca exista
+    const cached = loadFromLocalStorage();
+    if(cached){
+      cachedData = cached;
+      mergeIntoPending(cached.matches || []);
+    } else {
+      cachedData = data;
     }
     render();
   } catch(err) {
-    document.getElementById('tab-content').innerHTML = '<div class="glass-card empty-state">Eroare de conexiune cu serverul.</div>';
+    const cached = loadFromLocalStorage();
+    if(cached){
+      cachedData = cached;
+      mergeIntoPending(cached.matches || []);
+      render();
+    } else {
+      document.getElementById('tab-content').innerHTML = '<div class="glass-card empty-state">Eroare de conexiune cu serverul.</div>';
+    }
   }
 }
 
 async function init() {
-  const cached = loadFromLocalStorage();
-  if(cached){
-    cachedData = cached;
-    mergeIntoPending(cached.matches || []);
-    render();
-    return; // avem deja datele de azi, salvate in telefon - nu mai batem serverul
-  }
   await refreshAndCache();
 }
 
@@ -1593,6 +1682,23 @@ async function uploadCSV() {
     }
   } catch(e) {
     status.textContent = 'Eroare la incarcare.';
+  }
+}
+
+async function refreshFromGithub() {
+  const status = document.getElementById('upload-status');
+  status.textContent = 'Se preia fisierul de pe GitHub...';
+  try {
+    const res = await fetch('/api/refresh-from-github', { method: 'POST' });
+    const data = await res.json();
+    if(data.status === 'success') {
+      status.textContent = `Preluat de pe GitHub: ${data.count} meciuri, ${data.skipped} sarite, ${data.betbuilder_matches} cu BetBuilder${data.challenge ? ', Challenge disponibil' : ''}.`;
+      await refreshAndCache();
+    } else {
+      status.textContent = 'Eroare: ' + data.message;
+    }
+  } catch(e) {
+    status.textContent = 'Eroare la preluarea de pe GitHub.';
   }
 }
 
