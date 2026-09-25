@@ -75,13 +75,22 @@ LEAGUE_NAMES = {
 
 BETBUILDER_COMBOS = [
     ("1 & Peste 1.5 goluri", lambda h, a: h > a and (h + a) > 1.5),
+    ("1 & Peste 2.5 goluri", lambda h, a: h > a and (h + a) > 2.5),
     ("1 & GG Da", lambda h, a: h > a and h > 0 and a > 0),
     ("2 & Peste 1.5 goluri", lambda h, a: h < a and (h + a) > 1.5),
+    ("2 & Peste 2.5 goluri", lambda h, a: h < a and (h + a) > 2.5),
     ("2 & GG Da", lambda h, a: h < a and h > 0 and a > 0),
     ("X & Sub 2.5 goluri", lambda h, a: h == a and (h + a) < 2.5),
     ("GG Da & Peste 2.5 goluri", lambda h, a: h > 0 and a > 0 and (h + a) > 2.5),
     ("Sansa Dubla 1X & Sub 3.5 goluri", lambda h, a: h >= a and (h + a) < 3.5),
     ("Sansa Dubla X2 & Sub 3.5 goluri", lambda h, a: h <= a and (h + a) < 3.5),
+    ("Sansa Dubla 1X & GG Da", lambda h, a: h >= a and h > 0 and a > 0),
+    ("Sansa Dubla X2 & GG Da", lambda h, a: h <= a and h > 0 and a > 0),
+    ("1 & Peste 2.5 goluri & GG Da", lambda h, a: h > a and (h + a) > 2.5 and h > 0 and a > 0),
+    ("2 & Peste 2.5 goluri & GG Da", lambda h, a: h < a and (h + a) > 2.5 and h > 0 and a > 0),
+    ("1 & GG Nu & Sub 2.5 goluri", lambda h, a: h > a and not (h > 0 and a > 0) and (h + a) < 2.5),
+    ("Exact 2 goluri in meci", lambda h, a: (h + a) == 2),
+    ("Exact 3 goluri in meci", lambda h, a: (h + a) == 3),
 ]
 
 
@@ -203,10 +212,10 @@ def dixon_coles_tau(x, y, lam, mu, rho):
     return 1.0
 
 
-def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=0.0):
+def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=0.0, over_line=None):
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
     pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
-    p_h = p_d = p_a = 0.0
+    p_h = p_d = p_a = p_over = 0.0
     for h in range(max_g):
         for a in range(max_g):
             p = ph_list[h] * pa_list[a] * dixon_coles_tau(h, a, lam_h, lam_a, rho)
@@ -216,7 +225,9 @@ def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=0.0):
                 p_d += p
             else:
                 p_a += p
-    return p_h, p_d, p_a
+            if over_line is not None and (h + a) > over_line:
+                p_over += p
+    return p_h, p_d, p_a, p_over
 
 
 def _frange(start, stop, step):
@@ -227,25 +238,33 @@ def _frange(start, stop, step):
     return vals
 
 
-def calibrate_lambdas(target_h, target_d, target_a):
+def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
     # Plaja lărgită fata de versiunea initiala, ca sa acopere si favoritii foarte clari
     # (cote de tip 1.05-1.15), unde lambda gazdelor poate depasi usor 4.
     # max_g=9/10 (nu 6/7 ca initial) - la lambda mare, un plafon prea mic trunchiaza
     # semnificativ din masa de probabilitate si distorsioneaza cautarea (verificat: la
     # lambda=4.4, max_g=6 acopera doar 72% din probabilitate, in timp ce max_g=12 acopera 99.8%).
+    # Daca avem si o cota reala Peste/Sub 2.5 (target_over25), o folosim ca al 2-lea semnal
+    # de calibrare - da un (lambda_gazde, lambda_oaspeti) mai bine potrivit pt. TOATE
+    # liniile derivate (1.5, 3.5, GG), nu doar pt. linia de 2.5 (care oricum e suprascrisa
+    # exact cu cota reala mai jos, in predict_from_odds).
     best, best_err = None, None
     for lh in _frange(0.15, 4.4, 0.2):
         for la in _frange(0.15, 3.4, 0.2):
-            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=10, rho=DIXON_COLES_RHO)
+            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=10, rho=DIXON_COLES_RHO, over_line=2.5)
             err = (ph - target_h) ** 2 + (pd - target_d) ** 2 + (pa - target_a) ** 2
+            if target_over25 is not None:
+                err += (p_over25 - target_over25) ** 2
             if best_err is None or err < best_err:
                 best_err, best = err, (lh, la)
 
     lh0, la0 = best
     for lh in _frange(max(0.05, lh0 - 0.15), lh0 + 0.15, 0.03):
         for la in _frange(max(0.05, la0 - 0.15), la0 + 0.15, 0.03):
-            ph, pd, pa = _match_probs_from_lambdas(lh, la, max_g=12, rho=DIXON_COLES_RHO)
+            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=12, rho=DIXON_COLES_RHO, over_line=2.5)
             err = (ph - target_h) ** 2 + (pd - target_d) ** 2 + (pa - target_a) ** 2
+            if target_over25 is not None:
+                err += (p_over25 - target_over25) ** 2
             if err < best_err:
                 best_err, best = err, (lh, la)
     return best
@@ -278,7 +297,18 @@ def predict_from_odds(row):
     if not odds_1x2:
         return None
     p_h, p_d, p_a, bookmaker = odds_1x2
-    lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a)
+
+    # Daca exista si o cota reala Peste/Sub 2.5, o folosim ca al 2-lea semnal de
+    # calibrare (vezi calibrate_lambdas) - lambda-urile rezultate devin mai bine
+    # potrivite pt. toate liniile derivate, nu doar pt. cea de 2.5.
+    ou = extract_ou25_odds(row)
+    target_over25 = None
+    if ou:
+        o_over, o_under = ou
+        raw_over, raw_under = 1 / o_over, 1 / o_under
+        target_over25 = raw_over / (raw_over + raw_under)
+
+    lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a, target_over25)
 
     max_g = 12
     ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
@@ -301,12 +331,8 @@ def predict_from_odds(row):
             if h > 0 and a > 0:
                 p_btts += p
 
-    ou = extract_ou25_odds(row)
-    if ou:
-        o_over, o_under = ou
-        raw_over, raw_under = 1 / o_over, 1 / o_under
-        s = raw_over + raw_under
-        p_over[2.5] = raw_over / s
+    if target_over25 is not None:
+        p_over[2.5] = target_over25  # cota reala exacta, nu doar aproximata prin calibrare
     # pastram monotonia logica (Peste 1.5 >= Peste 2.5 >= Peste 3.5), chiar si dupa
     # suprascrierea liniei de 2.5 cu o cota reala de piata
     p_over[1.5] = max(p_over[1.5], p_over[2.5])
@@ -380,6 +406,7 @@ def compute_betbuilder(lam_h, lam_a, max_g=12, top_n=3, min_pct=0.30):
 def process_stats_csv(csv_text):
     reader = csv.DictReader(io.StringIO(csv_text))
     team_stats = {}
+    all_corners, all_cards = [], []
     for row in reader:
         home = (row.get("HomeTeam") or "").strip()
         away = (row.get("AwayTeam") or "").strip()
@@ -392,15 +419,102 @@ def process_stats_csv(csv_text):
         except (ValueError, TypeError):
             continue
 
-        team_stats.setdefault(home, {"corners_for": [], "corners_against": [], "cards": []})
-        team_stats.setdefault(away, {"corners_for": [], "corners_against": [], "cards": []})
+        team_stats.setdefault(home, {"corners_for": [], "corners_against": [], "cards": [], "goals_matches": []})
+        team_stats.setdefault(away, {"corners_for": [], "corners_against": [], "cards": [], "goals_matches": []})
         team_stats[home]["corners_for"].append(hc)
         team_stats[home]["corners_against"].append(ac)
         team_stats[home]["cards"].append(hy + hr)
         team_stats[away]["corners_for"].append(ac)
         team_stats[away]["corners_against"].append(hc)
         team_stats[away]["cards"].append(ay + ar)
+        all_corners.append(hc); all_corners.append(ac)
+        all_cards.append(hy + hr); all_cards.append(ay + ar)
+
+        # goluri FT (si HT, daca fisierul le are) - pt. statistici de frecventa reala per
+        # echipa (nu model), gen "in cate din ultimele X meciuri proprii a fost Peste 2.5"
+        try:
+            fthg, ftag = float(row.get("FTHG")), float(row.get("FTAG"))
+        except (ValueError, TypeError):
+            fthg = ftag = None
+        if fthg is not None and ftag is not None:
+            try:
+                ht_total = float(row.get("HTHG")) + float(row.get("HTAG"))
+            except (ValueError, TypeError):
+                ht_total = None
+            ft_total = fthg + ftag
+            btts = fthg > 0 and ftag > 0
+            team_stats[home]["goals_matches"].append(
+                {"scored": fthg, "conceded": ftag, "ft_total": ft_total, "ht_total": ht_total, "btts": btts})
+            team_stats[away]["goals_matches"].append(
+                {"scored": ftag, "conceded": fthg, "ft_total": ft_total, "ht_total": ht_total, "btts": btts})
+
+    # medie generala a ligii - folosita mai jos ca "ancora" pt. echipele cu putine meciuri
+    team_stats["__global__"] = {
+        "avg_corners": (sum(all_corners) / len(all_corners)) if all_corners else 5.0,
+        "avg_cards": (sum(all_cards) / len(all_cards)) if all_cards else 2.0,
+    }
     return team_stats
+
+
+GOALS_FREQ_LAST_N = 15  # ultimele N meciuri proprii, pt. statistica de frecventa istorica
+MIN_GOALS_SAMPLE = 3
+
+
+def _pct(count, total):
+    return round(count / total * 100, 1) if total else None
+
+
+def team_goal_frequencies(team_matches):
+    """
+    Frecventa istorica REALA (nu model) - % din propriile meciuri (ultimele
+    GOALS_FREQ_LAST_N) in care s-au indeplinit conditii uzuale de goluri.
+    """
+    recent = team_matches[-GOALS_FREQ_LAST_N:] if len(team_matches) > GOALS_FREQ_LAST_N else team_matches
+    n = len(recent)
+    if n < MIN_GOALS_SAMPLE:
+        return None
+    ht_known = [m for m in recent if m["ht_total"] is not None]
+    return {
+        "n": n,
+        "avg_scored": round(sum(m["scored"] for m in recent) / n, 2),
+        "avg_conceded": round(sum(m["conceded"] for m in recent) / n, 2),
+        "over05_ht": _pct(sum(1 for m in ht_known if m["ht_total"] > 0.5), len(ht_known)),
+        "over05_st": _pct(sum(1 for m in ht_known if (m["ft_total"] - m["ht_total"]) > 0.5), len(ht_known)),
+        "over15": _pct(sum(1 for m in recent if m["ft_total"] > 1.5), n),
+        "over25": _pct(sum(1 for m in recent if m["ft_total"] > 2.5), n),
+        "btts": _pct(sum(1 for m in recent if m["btts"]), n),
+    }
+
+
+def estimate_goal_history(home_team, away_team, team_stats):
+    h, a = team_stats.get(home_team), team_stats.get(away_team)
+    if not h or not a:
+        return None
+    hf = team_goal_frequencies(h.get("goals_matches", []))
+    af = team_goal_frequencies(a.get("goals_matches", []))
+    if not hf or not af:
+        return None
+
+    def blend(key):
+        hv, av = hf.get(key), af.get(key)
+        return round((hv + av) / 2, 1) if (hv is not None and av is not None) else None
+
+    keys = ["over05_ht", "over05_st", "over15", "over25", "btts"]
+    return {"home": hf, "away": af, "combined": {k: blend(k) for k in keys}}
+
+
+def _shrunk_avg(values, prior, k=5):
+    """
+    Media proprie a echipei, atenuata spre media generala a ligii cand esantionul e mic.
+    k = cate "meciuri virtuale" de incredere acordam mediei generale: cu tot atatea meciuri
+    proprii cate k, media proprie si cea generala cantaresc egal; cu mult mai multe meciuri
+    proprii (20+), media proprie domina aproape complet. Evita ca o echipa cu doar 3-4
+    meciuri in istoric sa aiba o estimare la fel de "sigura" ca una cu 30.
+    """
+    n = len(values)
+    if n == 0:
+        return prior
+    return (sum(values) + k * prior) / (n + k)
 
 
 def estimate_corners_cards(home_team, away_team, team_stats):
@@ -410,12 +524,18 @@ def estimate_corners_cards(home_team, away_team, team_stats):
     if len(h["corners_for"]) < MIN_STATS_SAMPLE or len(a["corners_for"]) < MIN_STATS_SAMPLE:
         return None
 
-    def avg(lst):
-        return sum(lst) / len(lst)
+    g = team_stats.get("__global__", {"avg_corners": 5.0, "avg_cards": 2.0})
+    prior_corners, prior_cards = g["avg_corners"], g["avg_cards"]
 
-    exp_corners = (avg(h["corners_for"]) + avg(a["corners_against"])) / 2 + \
-                  (avg(a["corners_for"]) + avg(h["corners_against"])) / 2
-    exp_cards = avg(h["cards"]) + avg(a["cards"])
+    h_cf = _shrunk_avg(h["corners_for"], prior_corners)
+    h_ca = _shrunk_avg(h["corners_against"], prior_corners)
+    a_cf = _shrunk_avg(a["corners_for"], prior_corners)
+    a_ca = _shrunk_avg(a["corners_against"], prior_corners)
+    h_cards = _shrunk_avg(h["cards"], prior_cards)
+    a_cards = _shrunk_avg(a["cards"], prior_cards)
+
+    exp_corners = (h_cf + a_ca) / 2 + (a_cf + h_ca) / 2
+    exp_cards = h_cards + a_cards
 
     def over_prob(exp_val, line, max_k=25):
         return sum(poisson_pmf(k, exp_val) for k in range(math.ceil(line), max_k))
@@ -482,14 +602,16 @@ def process_csv_content(csv_text):
             betbuilder = compute_betbuilder(pred["exp_goals_home"], pred["exp_goals_away"])
 
         corners_cards = None
+        goal_history = None
         if existing_team_stats:
             corners_cards = estimate_corners_cards(home, away, existing_team_stats)
+            goal_history = estimate_goal_history(home, away, existing_team_stats)
 
         processed.append({
             "league": league_display_name(league_code), "league_code": league_code,
             "date": parse_uk_date(row.get("Date")), "time": (row.get("Time") or "").strip(),
             "home": home, "away": away,
-            "betbuilder": betbuilder, "corners_cards": corners_cards,
+            "betbuilder": betbuilder, "corners_cards": corners_cards, "goal_history": goal_history,
             **pred,
         })
 
@@ -554,8 +676,10 @@ def upload_stats_csv():
         if cache and cache.get("matches"):
             for m in cache["matches"]:
                 cc = estimate_corners_cards(m["home"], m["away"], team_stats)
+                gh = estimate_goal_history(m["home"], m["away"], team_stats)
                 m["corners_cards"] = cc
-                if cc:
+                m["goal_history"] = gh
+                if cc or gh:
                     matched += 1
             cache["stats_uploaded"] = True
             _save_json(CACHE_FILE, cache)
@@ -913,6 +1037,7 @@ HTML_TEMPLATE = """
 let cachedData = { matches: [], challenge: null, stats_uploaded: false };
 let currentTab = 'challenge';
 let activeRiskFilters = new Set(['Scazut', 'Mediu', 'Ridicat']);
+let searchQuery = '';
 const MAX_TICKET_LEGS = 10;
 const CHALLENGE_TARGET_ODD = 1.5;
 const HIGH_ODD_TARGET = 100;
@@ -997,6 +1122,28 @@ function toggleRiskFilter(risk){
   render();
 }
 
+function matchesSearchQuery(m, q){
+  if(!q) return true;
+  const needle = q.toLowerCase();
+  return (m.home && m.home.toLowerCase().includes(needle))
+      || (m.away && m.away.toLowerCase().includes(needle))
+      || (m.league && m.league.toLowerCase().includes(needle));
+}
+
+function renderToateResults(){
+  const container = document.getElementById('toate-results');
+  if(!container) return;
+  const filtered = todayMatches().filter(m => activeRiskFilters.has(m.risc) && matchesSearchQuery(m, searchQuery));
+  container.innerHTML = filtered.length
+    ? filtered.map(matchCard).join('')
+    : '<div class="glass-card empty-state">Niciun meci nu corespunde cautarii/filtrului selectat.</div>';
+}
+
+function updateSearchQuery(v){
+  searchQuery = v;
+  renderToateResults();
+}
+
 /* ── BetBuilder pe cerere, pt. orice meci (nu doar top 5 ligi) ──
    Foloseste exp_goals_home/exp_goals_away, deja calculate pt. fiecare meci,
    ca sa calculeze aceleasi combinatii ca la meciurile importante, direct in browser. */
@@ -1015,13 +1162,22 @@ function dixonColesTau(x, y, lam, mu, rho){
 }
 const BETBUILDER_COMBOS_JS = [
   ["1 & Peste 1.5 goluri", (h,a) => h>a && (h+a)>1.5],
+  ["1 & Peste 2.5 goluri", (h,a) => h>a && (h+a)>2.5],
   ["1 & GG Da", (h,a) => h>a && h>0 && a>0],
   ["2 & Peste 1.5 goluri", (h,a) => h<a && (h+a)>1.5],
+  ["2 & Peste 2.5 goluri", (h,a) => h<a && (h+a)>2.5],
   ["2 & GG Da", (h,a) => h<a && h>0 && a>0],
   ["X & Sub 2.5 goluri", (h,a) => h===a && (h+a)<2.5],
   ["GG Da & Peste 2.5 goluri", (h,a) => h>0 && a>0 && (h+a)>2.5],
   ["Sansa Dubla 1X & Sub 3.5 goluri", (h,a) => h>=a && (h+a)<3.5],
   ["Sansa Dubla X2 & Sub 3.5 goluri", (h,a) => h<=a && (h+a)<3.5],
+  ["Sansa Dubla 1X & GG Da", (h,a) => h>=a && h>0 && a>0],
+  ["Sansa Dubla X2 & GG Da", (h,a) => h<=a && h>0 && a>0],
+  ["1 & Peste 2.5 goluri & GG Da", (h,a) => h>a && (h+a)>2.5 && h>0 && a>0],
+  ["2 & Peste 2.5 goluri & GG Da", (h,a) => h<a && (h+a)>2.5 && h>0 && a>0],
+  ["1 & GG Nu & Sub 2.5 goluri", (h,a) => h>a && !(h>0 && a>0) && (h+a)<2.5],
+  ["Exact 2 goluri in meci", (h,a) => (h+a)===2],
+  ["Exact 3 goluri in meci", (h,a) => (h+a)===3],
 ];
 function computeBetbuilderJS(lamH, lamA, maxG=12, topN=3, minPct=0.30){
   const phList = [], paList = [];
@@ -1261,9 +1417,53 @@ async function generateWeekendTicket(){
   }
 }
 
+function toggleSimplePanel(btn) {
+  const panel = btn.nextElementSibling;
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+
+function goalHistoryPanel(m) {
+  const gh = m.goal_history;
+  if (!gh) return '';
+  const rows = [
+    ['Peste 0.5 (rep. 1)', 'over05_ht'],
+    ['Peste 0.5 (rep. 2)', 'over05_st'],
+    ['Peste 1.5 goluri', 'over15'],
+    ['Peste 2.5 goluri', 'over25'],
+    ['Ambele inscriu (GG)', 'btts'],
+  ];
+  const rowsHtml = rows.map(([label, key]) => {
+    const hv = gh.home[key], av = gh.away[key], cv = gh.combined[key];
+    return `
+      <div style="margin-bottom:9px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px;">
+          <span style="font-weight:700;color:#fff;">${hv != null ? hv + '%' : '-'}</span>
+          <span>${label}</span>
+          <span style="font-weight:700;color:#fff;">${av != null ? av + '%' : '-'}</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.07);border-radius:6px;height:7px;overflow:hidden;">
+          <div style="width:${cv || 0}%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="gh-panel" style="display:none;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 8px;">
+        Istoric real - ultimele ${gh.home.n}/${gh.away.n} meciuri proprii
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${m.home}: ${gh.home.avg_scored} marcate / ${gh.home.avg_conceded} primite</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">${m.away}: ${gh.away.avg_scored} marcate / ${gh.away.avg_conceded} primite</div>
+      ${rowsHtml}
+    </div>`;
+}
+
 function matchCard(m) {
   const alt = m.alternativ ? `<div style="font-size: 11px; color: var(--text-muted);">Alternativ: <b>${m.alternativ}</b> (${m.alternativ_pct}%)</div>` : '';
   const noPick = m.fara_pronostic ? '<div style="font-size: 11px; color: var(--text-muted);">Meci echilibrat fara selectie clara</div>' : '';
+  const goalHistoryBtn = m.goal_history
+    ? `<button class="bb-toggle-btn" style="background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.35); color: #34d399;" onclick="toggleSimplePanel(this)">📊 Istoric goluri (real)</button>${goalHistoryPanel(m)}`
+    : '';
   return `
     <div class="glass-card">
       <div class="card-header-line">
@@ -1282,6 +1482,7 @@ function matchCard(m) {
       </div>
       <button class="bb-toggle-btn" onclick="toggleBetbuilderPanel(this, ${m.exp_goals_home}, ${m.exp_goals_away})" aria-label="Calculeaza combinatii BetBuilder pentru ${m.home} vs ${m.away}">🧩 Vreau o cota mai mare (BetBuilder)</button>
       <div class="bb-panel" style="display:none;"></div>
+      ${goalHistoryBtn}
     </div>`;
 }
 
@@ -1293,7 +1494,7 @@ function ticketBlock(t, isChallenge) {
     </div>`).join('');
 
   const shortfallNote = (t.combined_odd < t.target_odd * 0.95)
-    ? `<div style="font-size:11px;color:var(--accent-gold);margin-top:8px;">Cota tinta nu a putut fi atinsa cu meciurile disponibile - aceasta e cea mai apropiata combinatie posibila (max. ${MAX_TICKET_LEGS} meciuri).</div>`
+    ? `<div style="font-size:11px;color:var(--accent-gold);margin-top:8px;">Cota tinta nu a putut fi atinsa - doar ${t.pool_size || t.selections.length} meciuri distincte erau disponibile (folosite ${t.selections.length}, plafon ${t.max_legs || MAX_TICKET_LEGS}). Aceasta e cea mai mare cota posibila cu datele curente.</div>`
     : '';
 
   return `
@@ -1380,11 +1581,27 @@ function buildCustomTicket(target, matches, maxLegs){
     if(pct && pct > 0){
       pool.push({ key, home:m.home, away:m.away, league:m.league, pick, pct, fairOdd: 100/pct });
     }
-    if(m.betbuilder){
-      for(const b of m.betbuilder){
-        if(b.pct > 0){
-          pool.push({ key, home:m.home, away:m.away, league:m.league, pick:b.combo, pct:b.pct, fairOdd: 100/b.pct });
-        }
+    // BetBuilder pt. ORICE meci (nu doar top 5 ligi), calculat pe loc, cu set larg de
+    // combinatii (inclusiv cele riscante) - utile ca sa atingem cote mari fara zeci de meciuri
+    const combos = computeBetbuilderJS(m.exp_goals_home, m.exp_goals_away, 12, 30, 0.03);
+    for(const b of combos){
+      if(b.pct > 0){
+        pool.push({ key, home:m.home, away:m.away, league:m.league, pick:b.combo, pct:b.pct, fairOdd: 100/b.pct });
+      }
+    }
+    // cornere/cartonase, daca a fost incarcat fisierul de istoric - piese separate
+    // (independente de golurile din acelasi meci, nu combinate cu BetBuilder-ul de mai sus)
+    if(m.corners_cards){
+      const cc = m.corners_cards;
+      for(const [line, p] of Object.entries(cc.corners_over || {})){
+        pool.push({ key, home:m.home, away:m.away, league:m.league, pick:`Peste ${line} cornere`, pct:p, fairOdd:100/p });
+        const under = 100 - p;
+        if(under > 0) pool.push({ key, home:m.home, away:m.away, league:m.league, pick:`Sub ${line} cornere`, pct:under, fairOdd:100/under });
+      }
+      for(const [line, p] of Object.entries(cc.cards_over || {})){
+        pool.push({ key, home:m.home, away:m.away, league:m.league, pick:`Peste ${line} cartonase`, pct:p, fairOdd:100/p });
+        const under = 100 - p;
+        if(under > 0) pool.push({ key, home:m.home, away:m.away, league:m.league, pick:`Sub ${line} cartonase`, pct:under, fairOdd:100/under });
       }
     }
   }
@@ -1410,6 +1627,11 @@ function buildCustomTicket(target, matches, maxLegs){
   }
 
   if(sel.length === 0) return null;
+  const poolSize = new Set(pool.map(o => o.key)).size;
+  return {
+    target_odd: target, combined_odd: cumOdd, combined_probability_pct: cumProb * 100,
+    selections: sel, max_legs: maxLegs, pool_size: poolSize,
+  };
   return { target_odd: target, combined_odd: cumOdd, combined_probability_pct: cumProb * 100, selections: sel };
 }
 
@@ -1511,10 +1733,17 @@ function render() {
     const top = matches.filter(m => !m.fara_pronostic).slice(0, 10);
     content.innerHTML = top.length ? top.map(matchCard).join('') : '<div class="glass-card empty-state">Fara selectii peste pragul de incredere.</div>';
   } else if (currentTab === 'toate') {
-    const filtered = matches.filter(m => activeRiskFilters.has(m.risc));
-    content.innerHTML = riskFilterBar() + (filtered.length
-      ? filtered.map(matchCard).join('')
-      : '<div class="glass-card empty-state">Niciun meci cu riscul selectat mai sus.</div>');
+    content.innerHTML = `
+      <div style="margin-bottom:10px;">
+        <label for="match-search-input" class="sr-only">Cauta echipa sau liga</label>
+        <input type="text" id="match-search-input" placeholder="🔍 Cauta echipa sau liga..." value="${searchQuery.replace(/"/g, '&quot;')}"
+               aria-label="Cauta echipa sau liga"
+               style="width:100%;box-sizing:border-box;background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: #fff; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: inherit;"
+               oninput="updateSearchQuery(this.value)">
+      </div>
+      ${riskFilterBar()}
+      <div id="toate-results"></div>`;
+    renderToateResults();
   } else if (currentTab === 'targetodd') {
     content.innerHTML = `<div class="disclaimer-box">Pentru fiecare meci, aleg piata (din toate cele calculate) a carei cota corecta e cea mai apropiata de 1.30-1.40 - nu neaparat cea mai probabila piata. Cand niciuna nu cade exact in interval, arat cea mai apropiata varianta disponibila.</div>`
       + matches.map(targetOddCard).join('');
