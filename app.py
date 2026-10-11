@@ -44,7 +44,6 @@ BOOKMAKER_1X2_COLUMNS = [
 ]
 OU25_PRIORITY = [("B365>2.5", "B365<2.5"), ("Avg>2.5", "Avg<2.5"), ("BbAv>2.5", "BbAv<2.5")]
 
-# Aici este dicționarul care lipsea!
 LEAGUE_NAMES = {
     "E0": "Premier League (Anglia)", "E1": "Championship (Anglia)",
     "E2": "League One (Anglia)", "E3": "League Two (Anglia)", "EC": "National League (Anglia)",
@@ -260,25 +259,21 @@ def predict_from_odds(row):
         "alternativ": None, "alternativ_pct": None,
         "exp_goals_home": round(lam_h, 2), "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
-        "pick_for_ticket": None, "pick_pct": None, "fair_odd": None,
+        "pick_for_ticket": best_market if best_p >= CONFIDENCE_THRESHOLD else (max(fallback, key=lambda kv: kv[1])[0] if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
+        "pick_pct": round(best_p * 100, 1) if best_p >= CONFIDENCE_THRESHOLD else (round(max(fallback, key=lambda kv: kv[1])[1] * 100, 1) if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
+        "fair_odd": round(1 / best_p, 2) if best_p >= CONFIDENCE_THRESHOLD else (round(1 / max(fallback, key=lambda kv: kv[1])[1], 2) if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
         "target_odd_pick": {"pick": target_pick[0], "pct": round(target_pick[1]*100, 1), "odd": round(target_pick[2], 2)}
     }
 
     if best_p >= CONFIDENCE_THRESHOLD:
         result["risc"] = "Scazut" if best_p >= LOW_RISK_THRESHOLD else "Mediu"
-        result["pick_for_ticket"] = best_market
-        result["pick_pct"] = result["principal_pct"]
-        result["fair_odd"] = round(1 / best_p, 2)
         return result
 
-    alt_market, alt_p = max(fallback, key=lambda kv: kv[1])
+    alt_p = max(fallback, key=lambda kv: kv[1])[1]
     if alt_p >= FALLBACK_MIN_CONFIDENCE:
-        result["alternativ"] = alt_market
+        result["alternativ"] = max(fallback, key=lambda kv: kv[1])[0]
         result["alternativ_pct"] = round(alt_p * 100, 1)
         result["risc"] = "Mediu" if alt_p >= 0.65 else "Ridicat"
-        result["pick_for_ticket"] = alt_market
-        result["pick_pct"] = result["alternativ_pct"]
-        result["fair_odd"] = round(1 / alt_p, 2)
         return result
 
     result["risc"] = "Ridicat"
@@ -295,21 +290,6 @@ def compute_betbuilder(lam_h, lam_a, max_g=10, top_n=4, min_pct=0.35):
         scored.append((label, p))
     scored.sort(key=lambda kv: kv[1], reverse=True)
     return [{"combo": lbl, "pct": round(p * 100, 1)} for lbl, p in scored[:top_n] if p >= min_pct]
-
-def build_ticket_for_target(candidates, target):
-    selection, cum_odd, cum_prob = [], 1.0, 1.0
-    for m in candidates:
-        if cum_odd >= target: break
-        selection.append(m)
-        cum_odd *= m["fair_odd"]
-        cum_prob *= m["pick_pct"] / 100
-    if not selection: return None
-    return {
-        "target_odd": target,
-        "combined_odd": round(cum_odd, 2),
-        "combined_probability_pct": round(cum_prob * 100, 2),
-        "selections": [{"league": s["league"], "home": s["home"], "away": s["away"], "pick": s["pick_for_ticket"], "pct": s["pick_pct"]} for s in selection]
-    }
 
 def process_csv_content(csv_text):
     reader = csv.DictReader(io.StringIO(csv_text))
@@ -337,19 +317,15 @@ def process_csv_content(csv_text):
 
     processed.sort(key=lambda m: -(m.get("pick_pct") or 0))
     processed.sort(key=lambda m: m["date"])
-
-    cands = [m for m in processed if m.get("pick_pct", 0)/100 >= MIN_PICK_CONFIDENCE_FOR_TICKET]
-    challenge = build_ticket_for_target(cands, CHALLENGE_TARGET_ODD)
     
-    return processed, challenge, skipped_no_odds
+    return processed, skipped_no_odds
 
 def _build_fixtures_cache(content, source):
-    matches, challenge, skipped = process_csv_content(content)
+    matches, skipped = process_csv_content(content)
     cache_data = {
         "uploaded_at": datetime.now().isoformat(),
         "upload_date": today_str(),
         "matches": matches,
-        "challenge": challenge,
         "skipped_no_odds": skipped,
         "api_active": True,
         "source": source,
@@ -364,7 +340,7 @@ def upload_csv():
     try:
         content = request.files['file'].read().decode('utf-8', errors='ignore')
         c = _build_fixtures_cache(content, "upload_manual")
-        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"], "challenge": bool(c["challenge"])})
+        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"]})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -450,9 +426,11 @@ HTML_TEMPLATE = """
     <div id="status" style="font-size:11px; margin-top:8px; color:var(--text-muted);">Așteptare date...</div>
   </div>
 
+  <!-- Aici am implementat filtrarea vizuala pe tab-uri Azi vs Toate -->
   <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('toate', this)">📋 Meciuri</button>
-    <button class="tab-btn" onclick="switchTab('challenge', this)">🎯 Challenge 1.50</button>
+    <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
+    <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
+    <button class="tab-btn" onclick="switchTab('challenge', this)">🎯 Challenge Azi</button>
     <button class="tab-btn" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
   </div>
 
@@ -460,8 +438,8 @@ HTML_TEMPLATE = """
 </div>
 
 <script>
-let state = { matches: [], challenge: null };
-let currentTab = 'toate';
+let state = { matches: [] };
+let currentTab = 'azi';
 
 const DIXON_COLES_RHO = -0.08;
 function poissonPmf(k, lam){ return Math.exp(-lam) * Math.pow(lam, k) / (Array.from({length: k}, (_, i) => i + 1).reduce((a, b) => a * b, 1) || 1); }
@@ -488,6 +466,11 @@ function getBB(lamH, lamA){
   return scored;
 }
 
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function renderCard(m) {
   return `
     <div class="glass-card">
@@ -509,22 +492,40 @@ function renderCard(m) {
 
 function render() {
   const c = document.getElementById('content');
-  if(!state.matches.length) { c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat azi.</div>'; return; }
+  if(!state.matches.length) { c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat.</div>'; return; }
   
-  if(currentTab === 'toate') {
+  const today = getTodayStr();
+  const todayMatches = state.matches.filter(m => m.date === today);
+  
+  if(currentTab === 'azi') {
+    c.innerHTML = todayMatches.length ? todayMatches.map(renderCard).join('') : `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).<br><br>Încearcă tab-ul <b>Toate Zilele</b>.</div>`;
+  } else if(currentTab === 'toate') {
     c.innerHTML = state.matches.map(renderCard).join('');
   } else if(currentTab === 'challenge') {
-    if(!state.challenge) { c.innerHTML = '<div class="glass-card">Nu s-a putut forma un bilet sigur de 1.50.</div>'; return; }
-    let legs = state.challenge.selections.map(s => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--card-border);"><span><b>${s.home} vs ${s.away}</b><br><span style="color:var(--accent-cyan);">${s.pick}</span></span><span style="font-weight:700;">${s.pct}%</span></div>`).join('');
-    c.innerHTML = `<div class="glass-card" style="border-color:var(--accent-gold);"><div style="font-size:20px;font-weight:800;color:var(--accent-gold);text-align:center;margin-bottom:10px;">COTA ${state.challenge.target_odd}</div>${legs}</div>`;
+    const cands = todayMatches.filter(m => m.pick_pct >= 55.0).sort((a,b) => b.pick_pct - a.pick_pct);
+    let cum_odd = 1.0, sel = [];
+    for(let m of cands) {
+        if(cum_odd >= 1.50) break;
+        sel.push(m); cum_odd *= m.fair_odd;
+    }
+    if(sel.length > 0) {
+        let legs = sel.map(s => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px dashed var(--card-border);"><span><b>${s.home} vs ${s.away}</b><br><span style="color:var(--accent-cyan);">${s.pick_for_ticket}</span></span><span style="font-weight:700;">${s.pick_pct}%</span></div>`).join('');
+        c.innerHTML = `<div class="glass-card" style="border-color:var(--accent-gold);">
+        <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:4px;">Challenge pentru Azi (${today})</div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent-gold);text-align:center;margin-bottom:10px;">COTA ${cum_odd.toFixed(2)}</div>
+        ${legs}
+        </div>`;
+    } else {
+        c.innerHTML = `<div class="glass-card" style="text-align:center;">Nu sunt destule meciuri sigure azi (${today}) pentru a forma o cotă de 1.50.</div>`;
+    }
   } else if(currentTab === 'betbuilder') {
-    const bbMatches = state.matches.filter(m => m.betbuilder && m.betbuilder.length > 0);
+    const bbMatches = todayMatches.filter(m => m.betbuilder && m.betbuilder.length > 0);
     c.innerHTML = bbMatches.length ? bbMatches.map(m => `
       <div class="glass-card">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${m.league} · ${m.date}</div>
         <div style="font-size:14px;font-weight:800;margin-bottom:8px;">${m.home} vs ${m.away}</div>
         ${m.betbuilder.map(b => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>${b.combo}</span><span style="color:var(--accent-cyan);font-weight:700;">${b.pct}%</span></div>`).join('')}
-      </div>`).join('') : '<div class="glass-card" style="text-align:center;">Nu există date pentru BetBuilder.</div>';
+      </div>`).join('') : `<div class="glass-card" style="text-align:center;">Nu există meciuri de top cu BetBuilder azi (${today}).</div>`;
   }
 }
 
