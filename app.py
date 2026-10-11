@@ -21,8 +21,7 @@ app = Flask(__name__)
 CORS(app)
 
 CACHE_FILE = "matches_cache.json"
-STATS_CACHE_FILE = "team_stats_cache.json"
-MAX_ROWS = 600  # Acoperă un weekend întreg de fotbal european
+MAX_ROWS = 600
 
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 
@@ -33,11 +32,7 @@ FALLBACK_MIN_CONFIDENCE = 0.55
 CHALLENGE_TARGET_ODD = 1.50
 MIN_PICK_CONFIDENCE_FOR_TICKET = 0.55
 
-# Toate ligile majore și secundare europene
 TOP_LEAGUES = {"E0", "E1", "E2", "SP1", "SP2", "I1", "I2", "D1", "D2", "F1", "F2", "N1", "B1", "P1", "SC0", "T1", "G1"}
-CORNERS_LINES = [8.5, 9.5, 10.5]
-CARDS_LINES = [3.5, 4.5, 5.5]
-MIN_STATS_SAMPLE = 3
 
 PINNACLE_1X2 = ("PSH", "PSD", "PSA")
 BOOKMAKER_1X2_COLUMNS = [
@@ -49,6 +44,19 @@ BOOKMAKER_1X2_COLUMNS = [
 ]
 OU25_PRIORITY = [("B365>2.5", "B365<2.5"), ("Avg>2.5", "Avg<2.5"), ("BbAv>2.5", "BbAv<2.5")]
 
+# Aici este dicționarul care lipsea!
+LEAGUE_NAMES = {
+    "E0": "Premier League (Anglia)", "E1": "Championship (Anglia)",
+    "E2": "League One (Anglia)", "E3": "League Two (Anglia)", "EC": "National League (Anglia)",
+    "SC0": "Premiership (Scoția)", "SC1": "Championship (Scoția)",
+    "SP1": "La Liga (Spania)", "SP2": "La Liga 2 (Spania)",
+    "D1": "Bundesliga (Germania)", "D2": "Bundesliga 2 (Germania)",
+    "I1": "Serie A (Italia)", "I2": "Serie B (Italia)",
+    "F1": "Ligue 1 (Franța)", "F2": "Ligue 2 (Franța)",
+    "N1": "Eredivisie (Olanda)", "B1": "Jupiler Pro League (Belgia)",
+    "P1": "Primeira Liga (Portugalia)", "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
+}
+
 BETBUILDER_COMBOS = [
     ("1 & Peste 1.5 goluri", lambda h, a: h > a and (h + a) > 1.5),
     ("1 & Peste 2.5 goluri", lambda h, a: h > a and (h + a) > 2.5),
@@ -58,10 +66,10 @@ BETBUILDER_COMBOS = [
     ("2 & GG Da", lambda h, a: h < a and h > 0 and a > 0),
     ("X & Sub 2.5 goluri", lambda h, a: h == a and (h + a) < 2.5),
     ("GG Da & Peste 2.5 goluri", lambda h, a: h > 0 and a > 0 and (h + a) > 2.5),
-    ("Sansa Dubla 1X & Sub 3.5 goluri", lambda h, a: h >= a and (h + a) < 3.5),
-    ("Sansa Dubla X2 & Sub 3.5 goluri", lambda h, a: h <= a and (h + a) < 3.5),
-    ("Sansa Dubla 1X & GG Da", lambda h, a: h >= a and h > 0 and a > 0),
-    ("Sansa Dubla X2 & GG Da", lambda h, a: h <= a and h > 0 and a > 0),
+    ("Șansă Dublă 1X & Sub 3.5 goluri", lambda h, a: h >= a and (h + a) < 3.5),
+    ("Șansă Dublă X2 & Sub 3.5 goluri", lambda h, a: h <= a and (h + a) < 3.5),
+    ("Șansă Dublă 1X & GG Da", lambda h, a: h >= a and h > 0 and a > 0),
+    ("Șansă Dublă X2 & GG Da", lambda h, a: h <= a and h > 0 and a > 0),
     ("1 & GG Nu & Sub 3.5 goluri", lambda h, a: h > a and not (h > 0 and a > 0) and (h + a) < 3.5),
 ]
 
@@ -100,10 +108,6 @@ def _valid_odds_triplet(row, h_key, d_key, a_key):
     return None
 
 def implied_probs_square_root(oh, od, oa):
-    """
-    Metoda Rădăcinii Pătrate (aprox. Shin): Distribuie marja casei mai corect,
-    reducând supraevaluarea favoriților. Mult mai precisă decât normalizarea proporțională.
-    """
     raw_h, raw_d, raw_a = math.sqrt(1 / oh), math.sqrt(1 / od), math.sqrt(1 / oa)
     total = raw_h + raw_d + raw_a
     return raw_h / total, raw_d / total, raw_a / total
@@ -170,13 +174,8 @@ def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_RHO, over_lin
     return p_h, p_d, p_a, p_over
 
 def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
-    """
-    Algoritm de căutare hibrid (Coarse + Fine) optimizat. Scade timpul de procesare
-    și crește precizia xG-ului la 2 zecimale.
-    """
     best, best_err = (1.4, 1.1), 999.0
     
-    # Pas 1: Coarse Search
     for lh in [round(0.4 + i * 0.4, 2) for i in range(10)]:
         for la in [round(0.4 + i * 0.4, 2) for i in range(8)]:
             ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=7, over_line=2.5)
@@ -186,7 +185,6 @@ def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
 
     lh0, la0 = best
     
-    # Pas 2: Fine Search
     for lh_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
         for la_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
             lh = max(0.05, lh0 + lh_delta)
@@ -253,7 +251,6 @@ def predict_from_odds(row):
 
     best_market, best_p = max(markets.items(), key=lambda kv: kv[1])
     
-    # Target Odd Picker
     scored = [(l, p, 1/p) for l, p in {**markets, **dict(fallback)}.items() if p > 0.05]
     in_range = [c for c in scored if 1.30 <= c[2] <= 1.40]
     target_pick = max(in_range, key=lambda c: c[1]) if in_range else min(scored, key=lambda c: abs(c[2] - 1.35))
