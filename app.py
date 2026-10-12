@@ -31,7 +31,6 @@ FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 CONFIDENCE_THRESHOLD = 0.65
 LOW_RISK_THRESHOLD = 0.75
 FALLBACK_MIN_CONFIDENCE = 0.55
-MIN_STATS_SAMPLE = 3
 
 CORNERS_LINES = [8.5, 9.5, 10.5]
 CARDS_LINES = [3.5, 4.5, 5.5]
@@ -58,6 +57,8 @@ LEAGUE_NAMES = {
     "B1": "Jupiler League (Belgia)", "P1": "Primeira Liga (Por)", 
     "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
 }
+
+DIXON_COLES_RHO_BASE = -0.08
 
 def _load_json(path, default):
     try:
@@ -143,8 +144,6 @@ def poisson_pmf(k, lam):
     lam_safe = max(lam, 0.01)
     return math.exp(-lam_safe) * (lam_safe ** k) / math.factorial(k)
 
-DIXON_COLES_RHO = -0.08
-
 def dixon_coles_tau(x, y, lam, mu, rho):
     if x == 0 and y == 0:
         return 1.0 - (lam * mu * rho)
@@ -156,7 +155,7 @@ def dixon_coles_tau(x, y, lam, mu, rho):
         return 1.0 - rho
     return 1.0
 
-def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_RHO, over_line=None):
+def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho, over_line=None):
     p_h = p_d = p_a = p_over = 0.0
     for h in range(max_g):
         for a in range(max_g):
@@ -170,14 +169,14 @@ def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_RHO, over_lin
                 p_over += p
     return p_h, p_d, p_a, p_over
 
-def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
+def calibrate_lambdas(target_h, target_d, target_a, rho, target_over25=None):
     best = (1.4, 1.1)
     best_err = 999.0
     for i in range(10):
         lh = round(0.4 + i * 0.4, 2)
         for j in range(8):
             la = round(0.4 + j * 0.4, 2)
-            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=7, over_line=2.5)
+            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=7, rho=rho, over_line=2.5)
             err = (ph - target_h)**2 + (pd - target_d)**2 + (pa - target_a)**2
             if target_over25 is not None:
                 err += ((p_over25 - target_over25)**2) * 1.5
@@ -190,7 +189,7 @@ def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
         for la_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
             lh = max(0.05, lh0 + lh_delta)
             la = max(0.05, la0 + la_delta)
-            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=9, over_line=2.5)
+            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=9, rho=rho, over_line=2.5)
             err = (ph - target_h)**2 + (pd - target_d)**2 + (pa - target_a)**2
             if target_over25 is not None:
                 err += ((p_over25 - target_over25)**2) * 1.5
@@ -199,7 +198,7 @@ def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
                 best = (lh, la)
     return round(best[0], 2), round(best[1], 2)
 
-def predict_from_odds(row):
+def predict_from_odds(row, rho_league):
     odds_1x2 = extract_1x2_odds(row)
     if not odds_1x2:
         return None
@@ -213,7 +212,7 @@ def predict_from_odds(row):
         sr_under = math.sqrt(1.0/o_under)
         target_over25 = sr_over / (sr_over + sr_under)
 
-    lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a, target_over25)
+    lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a, rho_league, target_over25)
 
     max_g = 10
     p_home = p_draw = p_away = p_btts = 0.0
@@ -222,7 +221,7 @@ def predict_from_odds(row):
     for h in range(max_g):
         for a in range(max_g):
             p = poisson_pmf(h, lam_h) * poisson_pmf(a, lam_a)
-            p = p * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO)
+            p = p * dixon_coles_tau(h, a, lam_h, lam_a, rho_league)
             if h > a: p_home += p
             elif h == a: p_draw += p
             else: p_away += p
@@ -255,7 +254,6 @@ def predict_from_odds(row):
         "Peste 2.5 goluri": p_over[2.5], "Sub 2.5 goluri": max(0.01, 1.0 - p_over[2.5]),
         "GG - Da": p_btts
     }
-    
     fallback = [("Șansă Dublă 1X", p_home + p_draw), ("Șansă Dublă X2", p_draw + p_away)]
 
     best_market = max(markets, key=markets.get)
@@ -267,6 +265,7 @@ def predict_from_odds(row):
         "exp_goals_home": round(lam_h, 2),
         "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
+        "league_rho": rho_league,
         "probs": {
             "over15": round(p_over[1.5] * 100, 1), "over25": round(p_over[2.5] * 100, 1),
             "btts": round(p_btts * 100, 1), "over05_ht": round(p_over05_ht * 100, 1),
@@ -291,21 +290,34 @@ def predict_from_odds(row):
     result["fara_pronostic"] = True
     return result
 
+# 1. PONDERARE CRONOLOGICA
+def _decay_avg(values, alpha=0.85):
+    if not values: return 0.0
+    num, den = 0.0, 0.0
+    # Valori mai recente in coada listei. Le inversam.
+    rev_vals = list(reversed(values))
+    for i, val in enumerate(rev_vals):
+        w = alpha ** i
+        num += val * w
+        den += w
+    return num / den
+
+# 2. IZOLARE TEREN PROPRIU
 def estimate_corners_cards(home_team, away_team, team_stats):
     h = team_stats.get(home_team)
     a = team_stats.get(away_team)
     if not h or not a:
         return None
-    if len(h["corners_for"]) < MIN_STATS_SAMPLE or len(a["corners_for"]) < MIN_STATS_SAMPLE:
+    if len(h.get("cf_h", [])) < 1 or len(a.get("cf_a", [])) < 1:
         return None
 
-    h_cf_avg = sum(h["corners_for"]) / len(h["corners_for"])
-    h_ca_avg = sum(h["corners_against"]) / len(h["corners_against"])
-    a_cf_avg = sum(a["corners_for"]) / len(a["corners_for"])
-    a_ca_avg = sum(a["corners_against"]) / len(a["corners_against"])
+    h_cf_avg = _decay_avg(h["cf_h"])
+    h_ca_avg = _decay_avg(h["ca_h"])
+    a_cf_avg = _decay_avg(a["cf_a"])
+    a_ca_avg = _decay_avg(a["ca_a"])
     
-    h_cards_avg = sum(h["cards"]) / len(h["cards"])
-    a_cards_avg = sum(a["cards"]) / len(a["cards"])
+    h_cards_avg = _decay_avg(h["cards_h"])
+    a_cards_avg = _decay_avg(a["cards_a"])
 
     exp_corners = (h_cf_avg + a_ca_avg) / 2.0 + (a_cf_avg + h_ca_avg) / 2.0
     exp_cards = h_cards_avg + a_cards_avg
@@ -318,7 +330,7 @@ def estimate_corners_cards(home_team, away_team, team_stats):
         "exp_cards": round(exp_cards, 1),
         "corners_over": {str(l): round(over_prob(exp_corners, l) * 100, 1) for l in CORNERS_LINES},
         "cards_over": {str(l): round(over_prob(exp_cards, l) * 100, 1) for l in CARDS_LINES},
-        "sample": min(len(h["corners_for"]), len(a["corners_for"]))
+        "sample": len(h["cf_h"]) + len(a["cf_a"])
     }
 
 def process_csv_content(csv_text):
@@ -334,13 +346,20 @@ def process_csv_content(csv_text):
         away = (row.get("AwayTeam") or "").strip()
         if not home or not away:
             continue
-        pred = predict_from_odds(row)
+        
+        league_code = (row.get("Div") or "").strip()
+        rho_val = DIXON_COLES_RHO_BASE
+        
+        # Extragem Rho Dinamic per liga daca exista in istoric
+        if existing_stats and "__rhos__" in existing_stats:
+            rho_val = existing_stats["__rhos__"].get(league_code, DIXON_COLES_RHO_BASE)
+
+        pred = predict_from_odds(row, rho_val)
         if pred is None:
             skipped_no_odds += 1
             continue
 
         cc = estimate_corners_cards(home, away, existing_stats) if existing_stats else None
-        league_code = (row.get("Div") or "").strip()
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
         processed.append({
@@ -389,6 +408,9 @@ def upload_stats_csv():
         return jsonify({"status": "error", "message": "Niciun fișier selectat!"}), 400
     
     team_stats = _load_json(STATS_CACHE_FILE, {})
+    if "__leagues__" not in team_stats: team_stats["__leagues__"] = {}
+    if "__rhos__" not in team_stats: team_stats["__rhos__"] = {}
+
     for f in files:
         content = f.read().decode('utf-8', errors='ignore')
         reader = csv.DictReader(io.StringIO(content))
@@ -396,24 +418,58 @@ def upload_stats_csv():
             h = (row.get("HomeTeam") or "").strip()
             a = (row.get("AwayTeam") or "").strip()
             if not h or not a: continue
+            
+            div = (row.get("Div") or "").strip()
+            # Preluam golurile pt 3. RHO DINAMIC
+            fthg_s, ftag_s = row.get("FTHG"), row.get("FTAG")
+            if fthg_s and ftag_s:
+                try:
+                    hg, ag = float(fthg_s), float(ftag_s)
+                    if div not in team_stats["__leagues__"]:
+                        team_stats["__leagues__"][div] = {"hg": [], "ag": []}
+                    team_stats["__leagues__"][div]["hg"].append(hg)
+                    team_stats["__leagues__"][div]["ag"].append(ag)
+                except ValueError:
+                    pass
+
             try:
                 hc, ac = float(row.get("HC") or 0), float(row.get("AC") or 0)
                 hy, ay = float(row.get("HY") or 0), float(row.get("AY") or 0)
                 hr, ar = float(row.get("HR") or 0), float(row.get("AR") or 0)
             except (ValueError, TypeError):
                 continue
-            team_stats.setdefault(h, {"corners_for": [], "corners_against": [], "cards": []})
-            team_stats.setdefault(a, {"corners_for": [], "corners_against": [], "cards": []})
-            team_stats[h]["corners_for"].append(hc)
-            team_stats[h]["corners_against"].append(ac)
-            team_stats[h]["cards"].append(hy + hr)
-            team_stats[a]["corners_for"].append(ac)
-            team_stats[a]["corners_against"].append(hc)
-            team_stats[a]["cards"].append(ay + ar)
             
+            # Structura izolata pe Teren Propriu (Home vs Away)
+            if h not in team_stats: team_stats[h] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
+            if a not in team_stats: team_stats[a] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
+            
+            team_stats[h]["cf_h"].append(hc)
+            team_stats[h]["ca_h"].append(ac)
+            team_stats[h]["cards_h"].append(hy + hr)
+            team_stats[a]["cf_a"].append(ac)
+            team_stats[a]["ca_a"].append(hc)
+            team_stats[a]["cards_a"].append(ay + ar)
+            
+    # Calculare Rho Dinamic per liga (Corelatia Pearson a golurilor)
+    for div, goals in team_stats["__leagues__"].items():
+        hg, ag = goals["hg"], goals["ag"]
+        n = len(hg)
+        if n > 20:
+            mean_h, mean_a = sum(hg)/n, sum(ag)/n
+            cov = sum((hg[i]-mean_h)*(ag[i]-mean_a) for i in range(n)) / n
+            var_h = sum((x-mean_h)**2 for x in hg) / n
+            var_a = sum((x-mean_a)**2 for x in ag) / n
+            if var_h > 0 and var_a > 0:
+                corr = cov / math.sqrt(var_h * var_a)
+                rho = max(-0.20, min(0.10, corr)) # Bound matematic
+            else:
+                rho = DIXON_COLES_RHO_BASE
+        else:
+            rho = DIXON_COLES_RHO_BASE
+        team_stats["__rhos__"][div] = round(rho, 3)
+
     _save_json(STATS_CACHE_FILE, team_stats)
     
-    # Recalculăm cache-ul de meciuri cu noile statistici
     cache = _load_json(CACHE_FILE, None)
     if cache and cache.get("matches"):
         for m in cache["matches"]:
@@ -595,16 +651,16 @@ function renderMatchCard(m) {
         Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b><br>
         Peste 4.5: <b style="color:var(--accent-gold)">${cc.cards_over['4.5']}%</b><br>
         Peste 5.5: <b style="color:var(--accent-gold)">${cc.cards_over['5.5']}%</b><br>
-        <i style="font-size:10px;">Eșantion: ${cc.sample} meciuri.</i>`;
+        <i style="font-size:10px;">Model Cronologic Izolat (Eșantion: ${cc.sample} meciuri).</i>`;
       cornersHtml = `
         Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>
         Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b><br>
         Peste 9.5: <b style="color:var(--accent-gold)">${cc.corners_over['9.5']}%</b><br>
         Peste 10.5: <b style="color:var(--accent-gold)">${cc.corners_over['10.5']}%</b><br>
-        <i style="font-size:10px;">Eșantion: ${cc.sample} meciuri.</i>`;
+        <i style="font-size:10px;">Model Cronologic Izolat (Eșantion: ${cc.sample} meciuri).</i>`;
   } else {
       if (state.stats_uploaded) {
-          const noDataMsg = `<span style="color:var(--accent-gold)">⚠️ Nu există date suficiente pentru a oferi pronostic la acest meci. Echipele nu au fost găsite în istoricul încărcat.</span>`;
+          const noDataMsg = `<span style="color:var(--accent-gold)">⚠️ Nu există date suficiente în istoric (necesar min. 1 meci acasă pt gazdă și 1 în deplasare pt oaspete).</span>`;
           cardsHtml = noDataMsg;
           cornersHtml = noDataMsg;
       } else {
@@ -727,7 +783,7 @@ async function fetchAPI(url = '/api/predictions', options = {}) {
     }
   } catch(e) { 
     const s = document.getElementById('status');
-    if(s) s.innerText = 'Așteptare CSV local...';
+    if(s) s.innerText = 'Așteptare date...';
   }
 }
 
