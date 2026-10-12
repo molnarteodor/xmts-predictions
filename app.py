@@ -249,7 +249,6 @@ def predict_from_odds(row, rho_league):
     lam_a_st = lam_a * 0.55
     p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
-    # Cote realiste calculate corect pe baza probabilitatilor si marjei
     odd_1x = round(1.0 / max(0.05, (p_home + p_draw * 0.9)), 2)
     odd_x2 = round(1.0 / max(0.05, (p_away + p_draw * 0.9)), 2)
     odd_o15 = round(1.0 / max(0.05, (p_over[1.5] * 0.95)), 2)
@@ -609,7 +608,7 @@ HTML_TEMPLATE = """
   <div class="tabs-wrapper">
     <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
     <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
+    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete (Azi)</button>
   </div>
 
   <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă datele...</div></div>
@@ -704,14 +703,15 @@ function renderMatchCard(m) {
 }
 
 function renderTicketGenerator() {
-  const matches = state.matches || [];
-  if (!matches.length) return '<div class="glass-card" style="text-align:center;">Nu există meciuri pentru generarea biletelor.</div>';
+  const today = getTodayStr();
+  const matches = (state.matches || []).filter(m => m.date === today);
+  
+  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri programate pentru astăzi (${today}) pentru a genera bilete.</div>`;
 
   let pool = [];
   matches.forEach(m => {
     if (m.market_options) {
       m.market_options.forEach(opt => {
-        // Filtrăm opțiuni variate cu probabilitate realistă și cotă unică
         if (opt.prob >= 0.50 && opt.odds >= 1.20 && opt.odds <= 3.80) {
           pool.push({
             match: `${m.home} - ${m.away}`,
@@ -727,7 +727,6 @@ function renderTicketGenerator() {
     }
   });
 
-  // Amestecăm inteligent și sortăm după valoare unică
   pool.sort((a, b) => b.score - a.score);
 
   let selectedPicks = [];
@@ -742,19 +741,6 @@ function renderTicketGenerator() {
       currentOdds *= item.odds;
     } else {
       break;
-    }
-  }
-
-  // Ajustare de siguranță pentru cote mari
-  if (selectedPicks.length < 3 && currentOdds < selectedTargetOdds * 0.4) {
-    for (let item of pool) {
-      if (selectedPicks.length >= 15) break;
-      if (selectedPicks.some(p => p.match === item.match)) continue;
-      if (!selectedPicks.includes(item)) {
-        selectedPicks.push(item);
-        currentOdds *= item.odds;
-      }
-      if (currentOdds >= selectedTargetOdds) break;
     }
   }
 
@@ -778,8 +764,8 @@ function renderTicketGenerator() {
 
   return `
     <div class="glass-card">
-      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Inteligent de Bilete (Bet Builder)</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Fiecare meci va avea cotă unică și pronostic diferit, fără repetiții inutile.</div>
+      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (Meciurile de Azi)</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Folosește strict meciurile de astăzi (${today}) pentru a compune biletul dorit.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
@@ -788,7 +774,7 @@ function renderTicketGenerator() {
           <span style="font-weight:bold; font-size:13px;">Bilet pentru Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
-        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru a alcătui această cotă.</div>'}
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri azi pentru a atinge această cotă.</div>'}
         <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții: ${selectedPicks.length} (Max 15)</div>
       </div>
     </div>
