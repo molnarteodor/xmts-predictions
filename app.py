@@ -23,6 +23,7 @@ app = Flask(__name__)
 CORS(app)
 
 CACHE_FILE = "matches_cache.json"
+STATS_CACHE_FILE = "team_stats_cache.json"
 MAX_ROWS = 600
 
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
@@ -30,11 +31,10 @@ FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 CONFIDENCE_THRESHOLD = 0.65
 LOW_RISK_THRESHOLD = 0.75
 FALLBACK_MIN_CONFIDENCE = 0.55
+MIN_STATS_SAMPLE = 3
 
-TOP_LEAGUES = {
-    "E0", "E1", "E2", "SP1", "SP2", "I1", "I2", "D1", "D2", 
-    "F1", "F2", "N1", "B1", "P1", "SC0", "T1", "G1"
-}
+CORNERS_LINES = [8.5, 9.5, 10.5]
+CARDS_LINES = [3.5, 4.5, 5.5]
 
 PINNACLE_1X2 = ("PSH", "PSD", "PSA")
 BOOKMAKER_1X2_COLUMNS = [
@@ -72,8 +72,8 @@ def _save_json(path, data):
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"[EROARE] JSON scriere: {e}")
+    except Exception:
+        pass
 
 def parse_uk_date(date_str):
     date_str = (date_str or "").strip()
@@ -173,7 +173,6 @@ def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_RHO, over_lin
 def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
     best = (1.4, 1.1)
     best_err = 999.0
-    
     for i in range(10):
         lh = round(0.4 + i * 0.4, 2)
         for j in range(8):
@@ -187,7 +186,6 @@ def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
                 best = (lh, la)
 
     lh0, la0 = best
-    
     for lh_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
         for la_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
             lh = max(0.05, lh0 + lh_delta)
@@ -199,7 +197,6 @@ def calibrate_lambdas(target_h, target_d, target_a, target_over25=None):
             if err < best_err:
                 best_err = err
                 best = (lh, la)
-            
     return round(best[0], 2), round(best[1], 2)
 
 def predict_from_odds(row):
@@ -245,7 +242,6 @@ def predict_from_odds(row):
         p_over[2.5] = target_over25
     p_over[1.5] = max(p_over[1.5], p_over[2.5])
     
-    # Calcul Probabilitati HT / ST pentru grafica Golden
     lam_h_ht = lam_h * 0.45
     lam_a_ht = lam_a * 0.45
     p_over05_ht = 1.0 - (math.exp(-lam_h_ht) * math.exp(-lam_a_ht))
@@ -255,18 +251,12 @@ def predict_from_odds(row):
     p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
     markets = {
-        "1 (Gazde)": p_home,
-        "X (Egal)": p_draw,
-        "2 (Oaspeți)": p_away,
-        "Peste 2.5 goluri": p_over[2.5],
-        "Sub 2.5 goluri": max(0.01, 1.0 - p_over[2.5]),
+        "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
+        "Peste 2.5 goluri": p_over[2.5], "Sub 2.5 goluri": max(0.01, 1.0 - p_over[2.5]),
         "GG - Da": p_btts
     }
     
-    fallback = [
-        ("Șansă Dublă 1X", p_home + p_draw),
-        ("Șansă Dublă X2", p_draw + p_away)
-    ]
+    fallback = [("Șansă Dublă 1X", p_home + p_draw), ("Șansă Dublă X2", p_draw + p_away)]
 
     best_market = max(markets, key=markets.get)
     best_p = markets[best_market]
@@ -278,10 +268,8 @@ def predict_from_odds(row):
         "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
         "probs": {
-            "over15": round(p_over[1.5] * 100, 1),
-            "over25": round(p_over[2.5] * 100, 1),
-            "btts": round(p_btts * 100, 1),
-            "over05_ht": round(p_over05_ht * 100, 1),
+            "over15": round(p_over[1.5] * 100, 1), "over25": round(p_over[2.5] * 100, 1),
+            "btts": round(p_btts * 100, 1), "over05_ht": round(p_over05_ht * 100, 1),
             "over05_st": round(p_over05_st * 100, 1)
         }
     }
@@ -303,48 +291,71 @@ def predict_from_odds(row):
     result["fara_pronostic"] = True
     return result
 
+def estimate_corners_cards(home_team, away_team, team_stats):
+    h = team_stats.get(home_team)
+    a = team_stats.get(away_team)
+    if not h or not a:
+        return None
+    if len(h["corners_for"]) < MIN_STATS_SAMPLE or len(a["corners_for"]) < MIN_STATS_SAMPLE:
+        return None
+
+    h_cf_avg = sum(h["corners_for"]) / len(h["corners_for"])
+    h_ca_avg = sum(h["corners_against"]) / len(h["corners_against"])
+    a_cf_avg = sum(a["corners_for"]) / len(a["corners_for"])
+    a_ca_avg = sum(a["corners_against"]) / len(a["corners_against"])
+    
+    h_cards_avg = sum(h["cards"]) / len(h["cards"])
+    a_cards_avg = sum(a["cards"]) / len(a["cards"])
+
+    exp_corners = (h_cf_avg + a_ca_avg) / 2.0 + (a_cf_avg + h_ca_avg) / 2.0
+    exp_cards = h_cards_avg + a_cards_avg
+
+    def over_prob(exp_val, line):
+        return sum(poisson_pmf(k, exp_val) for k in range(math.ceil(line), 25))
+
+    return {
+        "exp_corners": round(exp_corners, 1),
+        "exp_cards": round(exp_cards, 1),
+        "corners_over": {str(l): round(over_prob(exp_corners, l) * 100, 1) for l in CORNERS_LINES},
+        "cards_over": {str(l): round(over_prob(exp_cards, l) * 100, 1) for l in CARDS_LINES},
+        "sample": min(len(h["corners_for"]), len(a["corners_for"]))
+    }
+
 def process_csv_content(csv_text):
     reader = csv.DictReader(io.StringIO(csv_text))
     processed = []
     skipped_no_odds = 0
+    existing_stats = _load_json(STATS_CACHE_FILE, {})
 
     for i, row in enumerate(reader):
         if i >= MAX_ROWS:
             break
-            
         home = (row.get("HomeTeam") or "").strip()
         away = (row.get("AwayTeam") or "").strip()
         if not home or not away:
             continue
-
         pred = predict_from_odds(row)
         if pred is None:
             skipped_no_odds += 1
             continue
 
+        cc = estimate_corners_cards(home, away, existing_stats) if existing_stats else None
         league_code = (row.get("Div") or "").strip()
         league_name = LEAGUE_NAMES.get(league_code, league_code)
-        match_date = parse_uk_date(row.get("Date"))
-        match_time = (row.get("Time") or "").strip()
         
         processed.append({
-            "league": league_name,
-            "date": match_date,
-            "time": match_time,
-            "home": home,
-            "away": away,
-            **pred
+            "league": league_name, "date": parse_uk_date(row.get("Date")),
+            "time": (row.get("Time") or "").strip(), "home": home, "away": away,
+            "corners_cards": cc, **pred
         })
 
-    # Sortare descendenta dupa incredere
     processed.sort(key=lambda m: -(m.get("principal_pct") or 0))
-    # Ordonare cronologica
     processed.sort(key=lambda m: m["date"])
-    
     return processed, skipped_no_odds
 
 def _build_fixtures_cache(content, source):
     matches, skipped = process_csv_content(content)
+    existing_stats = _load_json(STATS_CACHE_FILE, {})
     cache_data = {
         "uploaded_at": datetime.now().isoformat(),
         "upload_date": today_str(),
@@ -352,6 +363,7 @@ def _build_fixtures_cache(content, source):
         "skipped_no_odds": skipped,
         "api_active": True,
         "source": source,
+        "stats_uploaded": len(existing_stats) > 0
     }
     _save_json(CACHE_FILE, cache_data)
     return cache_data
@@ -360,29 +372,63 @@ def _build_fixtures_cache(content, source):
 def upload_csv():
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "Fișier lipsă!"}), 400
-    
     file = request.files['file']
     if file.filename == '':
         return jsonify({"status": "error", "message": "Fișier invalid!"}), 400
-        
     try:
         content = file.read().decode('utf-8', errors='ignore')
         c = _build_fixtures_cache(content, "upload_manual")
-        resp = {
-            "status": "success",
-            "count": len(c["matches"]),
-            "skipped": c["skipped_no_odds"]
-        }
-        return jsonify(resp)
+        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"]})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/upload-stats-csv', methods=['POST'])
+def upload_stats_csv():
+    files = request.files.getlist('files')
+    if not files or files[0].filename == '':
+        return jsonify({"status": "error", "message": "Niciun fișier selectat!"}), 400
+    
+    team_stats = _load_json(STATS_CACHE_FILE, {})
+    for f in files:
+        content = f.read().decode('utf-8', errors='ignore')
+        reader = csv.DictReader(io.StringIO(content))
+        for row in reader:
+            h = (row.get("HomeTeam") or "").strip()
+            a = (row.get("AwayTeam") or "").strip()
+            if not h or not a: continue
+            try:
+                hc, ac = float(row.get("HC") or 0), float(row.get("AC") or 0)
+                hy, ay = float(row.get("HY") or 0), float(row.get("AY") or 0)
+                hr, ar = float(row.get("HR") or 0), float(row.get("AR") or 0)
+            except (ValueError, TypeError):
+                continue
+            team_stats.setdefault(h, {"corners_for": [], "corners_against": [], "cards": []})
+            team_stats.setdefault(a, {"corners_for": [], "corners_against": [], "cards": []})
+            team_stats[h]["corners_for"].append(hc)
+            team_stats[h]["corners_against"].append(ac)
+            team_stats[h]["cards"].append(hy + hr)
+            team_stats[a]["corners_for"].append(ac)
+            team_stats[a]["corners_against"].append(hc)
+            team_stats[a]["cards"].append(ay + ar)
+            
+    _save_json(STATS_CACHE_FILE, team_stats)
+    
+    # Recalculăm cache-ul de meciuri cu noile statistici
+    cache = _load_json(CACHE_FILE, None)
+    if cache and cache.get("matches"):
+        for m in cache["matches"]:
+            m["corners_cards"] = estimate_corners_cards(m["home"], m["away"], team_stats)
+        cache["stats_uploaded"] = True
+        _save_json(CACHE_FILE, cache)
+        
+    return jsonify({"status": "success"})
 
 @app.route('/api/refresh-from-github', methods=['POST'])
 def refresh_from_github():
     if not FIXTURES_CSV_URL:
         return jsonify({"status": "error", "message": "Setează FIXTURES_CSV_URL"}), 400
     try:
-        req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
         with urllib.request.urlopen(req, timeout=10) as response:
             csv_data = response.read().decode('utf-8')
             c = _build_fixtures_cache(csv_data, "github_manual")
@@ -396,7 +442,7 @@ def get_predictions():
     if not data or not data.get("matches"):
         if FIXTURES_CSV_URL:
             try:
-                req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla/5.0'})
+                req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
                 with urllib.request.urlopen(req, timeout=10) as response:
                     csv_data = response.read().decode('utf-8')
                     data = _build_fixtures_cache(csv_data, "github_auto")
@@ -431,11 +477,9 @@ HTML_TEMPLATE = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   
-  /* AICI E BUTONUL DE UPLOAD RE-ADAUGAT */
-  .upload-area { border: 1px dashed var(--accent-gold); text-align: center; }
-  .btn { background: var(--accent-cyan); color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; display: inline-block; }
-  .btn-gold { background: var(--accent-gold); color: #000; margin-left: 8px; }
-
+  .upload-area { border: 1px dashed var(--card-border); text-align: center; }
+  .btn { background: var(--accent-cyan); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; display: inline-block; }
+  
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
   .tabs-wrapper::-webkit-scrollbar { display: none; }
   .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -482,13 +526,17 @@ HTML_TEMPLATE = """
     XMTS PREDICTIONS
   </div>
 
-  <!-- Aici este zona de upload pe care o ștersesem -->
   <div class="glass-card upload-area">
-    <div style="margin-bottom:10px; font-weight:700;">📂 Încarcă CSV (Football-Data)</div>
-    <input type="file" id="csvFile" style="display:none;" onchange="uploadCSV()">
-    <label for="csvFile" class="btn">Încarcă Local</label>
-    <button class="btn btn-gold" onclick="syncGithub()">Sync Automat</button>
-    <div id="status" style="font-size:11px; margin-top:8px; color:var(--text-muted);">Așteptare date...</div>
+    <div style="margin-bottom:10px; font-weight:700;">📂 1. Fișiere Istorice (Mai multe simultan)</div>
+    <input type="file" id="statsFiles" style="display:none;" multiple accept=".csv" onchange="uploadStatsCSV()">
+    <label for="statsFiles" class="btn" style="background:#eab308;color:#000;">Încarcă Istoric (E0, SP1...)</label>
+    
+    <div style="margin:15px 0 10px; font-weight:700; border-top:1px dashed var(--card-border); padding-top:15px;">📂 2. Fișier Meciuri (fixtures.csv)</div>
+    <input type="file" id="csvFile" style="display:none;" accept=".csv" onchange="uploadCSV()">
+    <label for="csvFile" class="btn">Încarcă Meciuri</label>
+    <button class="btn" style="background:#3b82f6; margin-left:8px;" onclick="syncGithub()">Sync Automat</button>
+    
+    <div id="status" style="font-size:11px; margin-top:10px; color:var(--text-muted);">Așteptare date...</div>
   </div>
 
   <div class="tabs-wrapper">
@@ -500,7 +548,7 @@ HTML_TEMPLATE = """
 </div>
 
 <script>
-let state = { matches: [] };
+let state = { matches: [], stats_uploaded: false };
 let currentTab = 'azi';
 
 function getTodayStr() {
@@ -522,7 +570,6 @@ function toggleAccordion(header) {
 
 function renderMatchCard(m) {
   const p = m.probs;
-  
   const avgH = m.exp_goals_home;
   const avgA = m.exp_goals_away;
   const cndH = m.exp_goals_away; 
@@ -537,6 +584,35 @@ function renderMatchCard(m) {
   
   const pronostic = m.principal || m.alternativ || "Echilibrat";
   const pronostic_pct = m.principal_pct || m.alternativ_pct || "-";
+
+  let cardsHtml = '';
+  let cornersHtml = '';
+  
+  if (m.corners_cards) {
+      const cc = m.corners_cards;
+      cardsHtml = `
+        Estimat meci: ~<b style="color:#fff;">${cc.exp_cards}</b> cartonașe.<br>
+        Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b><br>
+        Peste 4.5: <b style="color:var(--accent-gold)">${cc.cards_over['4.5']}%</b><br>
+        Peste 5.5: <b style="color:var(--accent-gold)">${cc.cards_over['5.5']}%</b><br>
+        <i style="font-size:10px;">Eșantion: ${cc.sample} meciuri.</i>`;
+      cornersHtml = `
+        Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>
+        Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b><br>
+        Peste 9.5: <b style="color:var(--accent-gold)">${cc.corners_over['9.5']}%</b><br>
+        Peste 10.5: <b style="color:var(--accent-gold)">${cc.corners_over['10.5']}%</b><br>
+        <i style="font-size:10px;">Eșantion: ${cc.sample} meciuri.</i>`;
+  } else {
+      if (state.stats_uploaded) {
+          const noDataMsg = `<span style="color:var(--accent-gold)">⚠️ Nu există date suficiente pentru a oferi pronostic la acest meci. Echipele nu au fost găsite în istoricul încărcat.</span>`;
+          cardsHtml = noDataMsg;
+          cornersHtml = noDataMsg;
+      } else {
+          const needFileMsg = `<i>Datele exacte necesită încărcarea fișierelor istorice (pasul 1).</i>`;
+          cardsHtml = `Estimat global: ~4.5 cartonașe.<br>${needFileMsg}`;
+          cornersHtml = `Estimat global: ~9.5 cornere.<br>${needFileMsg}`;
+      }
+  }
 
   return `
     <div class="glass-card">
@@ -589,17 +665,15 @@ function renderMatchCard(m) {
         <div style="margin-top: 20px;">
           <div class="acc-item">
             <div class="acc-header" onclick="toggleAccordion(this)">
-              <div>🟨 Cartonașe<br><span style="font-size:10px;color:#94a3b8;font-weight:normal;">Linii estimate Poisson</span></div>
-              <div>▼</div>
+              <div>🟨 Cartonașe</div><div>▼</div>
             </div>
-            <div class="acc-body">Estimat meci: ~4.5 cartonașe în total.<br><i>Datele exacte necesită fișier istoric.</i></div>
+            <div class="acc-body" style="line-height:1.6;">${cardsHtml}</div>
           </div>
           <div class="acc-item">
             <div class="acc-header" onclick="toggleAccordion(this)">
-              <div>🚩 Cornere<br><span style="font-size:10px;color:#94a3b8;font-weight:normal;">Linii estimate Poisson</span></div>
-              <div>▼</div>
+              <div>🚩 Cornere</div><div>▼</div>
             </div>
-            <div class="acc-body">Estimat meci: ~9.5 cornere în total.<br><i>Datele exacte necesită fișier istoric.</i></div>
+            <div class="acc-body" style="line-height:1.6;">${cornersHtml}</div>
           </div>
         </div>
       </div>
@@ -609,7 +683,7 @@ function renderMatchCard(m) {
 function render() {
   const c = document.getElementById('content');
   if(!state.matches || !state.matches.length) { 
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat. Trebuie să încarci fișierul CSV.</div>'; 
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat. Trebuie să încarci fișierul CSV de meciuri (Pasul 2).</div>'; 
     return; 
   }
   
@@ -640,15 +714,13 @@ async function fetchAPI(url = '/api/predictions', options = {}) {
     if(s) s.innerText = 'Se procesează algoritmul...';
     
     const res = await fetch(url, options);
-    if(url === '/api/predictions' && !res.ok) throw new Error('Eroare la date.');
+    if(url === '/api/predictions' && !res.ok) throw new Error('Eroare');
     
     const data = await res.json(); 
     if(data.status === 'success' || url === '/api/predictions') {
-        if(url !== '/api/predictions') {
-            return fetchAPI('/api/predictions');
-        }
+        if(url !== '/api/predictions') return fetchAPI('/api/predictions');
         state = data; 
-        if(s) s.innerText = `Încărcat cu succes: ${state.matches ? state.matches.length : 0} meciuri.`; 
+        if(s) s.innerText = `Încărcat cu succes!`; 
         render();
     } else { 
         if(s) s.innerText = 'Eroare: ' + data.message; 
@@ -667,11 +739,20 @@ function uploadCSV() {
   fetchAPI('/api/upload-csv', { method: 'POST', body: fd });
 }
 
+function uploadStatsCSV() {
+  const files = document.getElementById('statsFiles').files;
+  if(files.length === 0) return;
+  const fd = new FormData(); 
+  for(let i=0; i<files.length; i++) {
+    fd.append('files', files[i]);
+  }
+  fetchAPI('/api/upload-stats-csv', { method: 'POST', body: fd });
+}
+
 function syncGithub() { 
   fetchAPI('/api/refresh-from-github', { method: 'POST' }); 
 }
 
-// Pornire initiala
 fetchAPI();
 </script>
 </body>
