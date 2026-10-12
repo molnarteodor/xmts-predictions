@@ -249,32 +249,38 @@ def predict_from_odds(row, rho_league):
     lam_a_st = lam_a * 0.55
     p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
-    # Generam optiuni diversificate si realiste pentru Bet Builder
+    # Cote realiste calculate corect pe baza probabilitatilor si marjei
+    odd_1x = round(1.0 / max(0.05, (p_home + p_draw * 0.9)), 2)
+    odd_x2 = round(1.0 / max(0.05, (p_away + p_draw * 0.9)), 2)
+    odd_o15 = round(1.0 / max(0.05, (p_over[1.5] * 0.95)), 2)
+    odd_btts = round(1.0 / max(0.05, (p_btts * 0.95)), 2)
+    odd_ht05 = round(1.0 / max(0.05, (p_over05_ht * 0.95)), 2)
+
     market_options = []
     
-    if oh > 1.10: market_options.append({"name": "1 (Gazde)", "prob": p_home, "odds": oh})
-    if od > 2.00: market_options.append({"name": "X (Egal)", "prob": p_draw, "odds": od})
-    if oa > 1.10: market_options.append({"name": "2 (Oaspeți)", "prob": p_away, "odds": oa})
+    if oh >= 1.20 and oh <= 4.00:
+        market_options.append({"name": f"1 ({row.get('HomeTeam', 'Gazde')})", "prob": p_home, "odds": oh})
+    if od >= 2.60 and od <= 5.00:
+        market_options.append({"name": "X (Egal)", "prob": p_draw, "odds": od})
+    if oa >= 1.20 and oa <= 4.50:
+        market_options.append({"name": f"2 ({row.get('AwayTeam', 'Oaspeți')})", "prob": p_away, "odds": oa})
     
-    dc_1x = p_home + p_draw
-    if dc_1x >= 0.50 and dc_1x <= 0.90:
-        market_options.append({"name": "Șansă Dublă 1X", "prob": dc_1x, "odds": round(1.0 / max(0.05, dc_1x), 2)})
-        
-    dc_x2 = p_draw + p_away
-    if dc_x2 >= 0.50 and dc_x2 <= 0.90:
-        market_options.append({"name": "Șansă Dublă X2", "prob": dc_x2, "odds": round(1.0 / max(0.05, dc_x2), 2)})
+    if odd_1x >= 1.15 and odd_1x <= 2.20:
+        market_options.append({"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": odd_1x})
+    if odd_x2 >= 1.15 and odd_x2 <= 2.30:
+        market_options.append({"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": odd_x2})
 
-    if p_over[1.5] >= 0.60:
-        market_options.append({"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": round(1.0 / max(0.05, p_over[1.5]), 2)})
+    if odd_o15 >= 1.20 and odd_o15 <= 2.10:
+        market_options.append({"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": odd_o15})
 
-    if p_over[2.5] >= 0.40 and p_over[2.5] <= 0.85:
+    if o_over_val >= 1.35 and o_over_val <= 2.80:
         market_options.append({"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val})
 
-    if p_btts >= 0.45 and p_btts <= 0.80:
-        market_options.append({"name": "GG - Ambele marchează", "prob": p_btts, "odds": round(1.0 / max(0.05, p_btts), 2)})
+    if odd_btts >= 1.40 and odd_btts <= 2.40:
+        market_options.append({"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts})
 
-    if p_over05_ht >= 0.65:
-        market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": round(1.0 / max(0.05, p_over05_ht), 2)})
+    if odd_ht05 >= 1.25 and odd_ht05 <= 2.20:
+        market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": odd_ht05})
 
     markets = {
         "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
@@ -385,18 +391,21 @@ def process_csv_content(csv_text):
 
         cc = estimate_corners_cards(home, away, existing_stats) if existing_stats else None
         
-        # Adaugam optiuni suplimentare de cornere si cartonașe pentru Bet Builder diversificat
         if cc:
             c85 = cc['corners_over']['8.5'] / 100.0
             c95 = cc['corners_over']['9.5'] / 100.0
             cd35 = cc['cards_over']['3.5'] / 100.0
             
-            if c85 >= 0.50:
-                pred["market_options"].append({"name": "Peste 8.5 cornere", "prob": c85, "odds": round(1.0/max(0.05, c85), 2)})
-            if c95 >= 0.45:
-                pred["market_options"].append({"name": "Peste 9.5 cornere", "prob": c95, "odds": round(1.0/max(0.05, c95), 2)})
-            if cd35 >= 0.50:
-                pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": round(1.0/max(0.05, cd35), 2)})
+            odd_c85 = round(1.0 / max(0.05, c85 * 0.95), 2)
+            odd_c95 = round(1.0 / max(0.05, c95 * 0.95), 2)
+            odd_cd35 = round(1.0 / max(0.05, cd35 * 0.95), 2)
+
+            if c85 >= 0.50 and odd_c85 <= 2.20:
+                pred["market_options"].append({"name": "Peste 8.5 cornere", "prob": c85, "odds": odd_c85})
+            if c95 >= 0.45 and odd_c95 <= 2.60:
+                pred["market_options"].append({"name": "Peste 9.5 cornere", "prob": c95, "odds": odd_c95})
+            if cd35 >= 0.50 and odd_cd35 <= 2.20:
+                pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": odd_cd35})
 
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
@@ -632,15 +641,9 @@ function renderMatchCard(m) {
   const p = m.probs;
   const avgH = m.exp_goals_home;
   const avgA = m.exp_goals_away;
-  const cndH = m.exp_goals_away; 
-  const cndA = m.exp_goals_home; 
-
+  
   const val_HT_H = Math.min(100, Math.round(p.over05_ht * (avgH / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
   const val_HT_A = Math.min(100, Math.round(p.over05_ht * (avgA / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
-  const val_ST_H = Math.min(100, Math.round(p.over05_st * (avgH / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
-  const val_ST_A = Math.min(100, Math.round(p.over05_st * (avgA / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
-  const val_o15_H = Math.min(100, Math.round((avgH / 2) * 100)).toFixed(2);
-  const val_o15_A = Math.min(100, Math.round((avgA / 2) * 100)).toFixed(2);
   
   const pronostic = m.principal || m.alternativ || "Echilibrat";
   const pronostic_pct = m.principal_pct || m.alternativ_pct || "-";
@@ -708,8 +711,8 @@ function renderTicketGenerator() {
   matches.forEach(m => {
     if (m.market_options) {
       m.market_options.forEach(opt => {
-        // Filtrăm opțiuni diversificate cu probabilitate solidă
-        if (opt.prob >= 0.52 && opt.odds >= 1.25 && opt.odds <= 3.50) {
+        // Filtrăm opțiuni variate cu probabilitate realistă și cotă unică
+        if (opt.prob >= 0.50 && opt.odds >= 1.20 && opt.odds <= 3.80) {
           pool.push({
             match: `${m.home} - ${m.away}`,
             league: m.league,
@@ -717,36 +720,33 @@ function renderTicketGenerator() {
             market: opt.name,
             odds: opt.odds,
             prob: opt.prob,
-            score: opt.prob * (1.0 / Math.max(0.1, Math.abs(opt.odds - 1.8))) 
+            score: opt.prob * (1.0 / Math.max(0.1, Math.abs(opt.odds - 1.7)))
           });
         }
       });
     }
   });
 
-  // Sortăm descrescător după scorul de siguranță/valoare
+  // Amestecăm inteligent și sortăm după valoare unică
   pool.sort((a, b) => b.score - a.score);
 
   let selectedPicks = [];
   let currentOdds = 1.0;
   
-  // Algoritm adaptiv pentru a atinge cota dorita fara duplicate pe acelasi meci
   for (let item of pool) {
     if (selectedPicks.length >= 15) break;
     if (selectedPicks.some(p => p.match === item.match)) continue;
 
-    // Daca suntem departe de cota tinta, adaugam
     if (currentOdds < selectedTargetOdds) {
       selectedPicks.push(item);
       currentOdds *= item.odds;
     } else {
-      // Daca am depasit deja cota tinta, oprim adaugarea ca sa fim cat mai aproape
       break;
     }
   }
 
-  // Daca pentru cote mari (ex: 250, 500) nu am atins minimul din cauza lipsei de meciuri, relaxam putin conditia
-  if (selectedPicks.length < 3 && currentOdds < selectedTargetOdds * 0.5) {
+  // Ajustare de siguranță pentru cote mari
+  if (selectedPicks.length < 3 && currentOdds < selectedTargetOdds * 0.4) {
     for (let item of pool) {
       if (selectedPicks.length >= 15) break;
       if (selectedPicks.some(p => p.match === item.match)) continue;
@@ -779,17 +779,17 @@ function renderTicketGenerator() {
   return `
     <div class="glass-card">
       <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Inteligent de Bilete (Bet Builder)</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Algoritmul combină pronosticuri variate (1X2, goluri, cornere, cartonașe, șanse duble) în limita a maxim 15 meciuri.</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Fiecare meci va avea cotă unică și pronostic diferit, fără repetiții inutile.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
       <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-top:15px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
-          <span style="font-weight:bold; font-size:13px;">Bilet Recomandat pentru Cotă Țintă: ~${selectedTargetOdds}</span>
+          <span style="font-weight:bold; font-size:13px;">Bilet pentru Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
         ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru a alcătui această cotă.</div>'}
-        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții pe bilet: ${selectedPicks.length} (Max 15)</div>
+        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții: ${selectedPicks.length} (Max 15)</div>
       </div>
     </div>
   `;
