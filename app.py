@@ -27,15 +27,7 @@ CACHE_FILE = "matches_cache.json"
 STATS_CACHE_FILE = "team_stats_cache.json"
 MAX_ROWS = 600
 
-# ==========================================
-# CONFIGURARE GITHUB AUTO-SYNC
-# ==========================================
-# Aici punem baza linkului tau de github (raw content)
-# URL-ul complet catre fixtures.csv trebuie sa fie dat prin Environment Variable in Render
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
-
-# Ligile pentru care vom incerca sa tragem automat istoricul de pe GitHub
-# Presupunem ca fisierele de istoric se afla in acelasi folder cu fixtures.csv pe GitHub
 TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv"]
 
 CONFIDENCE_THRESHOLD = 0.65
@@ -117,25 +109,21 @@ def extract_1x2_odds(row):
     pinnacle = _valid_odds_triplet(row, *PINNACLE_1X2)
     if pinnacle:
         ph, pd, pa = implied_probs_sq(*pinnacle)
-        return ph, pd, pa, "Pinnacle"
+        oh, od, oa = pinnacle
+        return ph, pd, pa, "Pinnacle", oh, od, oa
 
-    probs = []
     for h_key, d_key, a_key, _label in BOOKMAKER_1X2_COLUMNS:
         triplet = _valid_odds_triplet(row, h_key, d_key, a_key)
         if triplet:
-            probs.append(implied_probs_sq(*triplet))
-
-    if probs:
-        n = float(len(probs))
-        sum_h = sum([p[0] for p in probs])
-        sum_d = sum([p[1] for p in probs])
-        sum_a = sum([p[2] for p in probs])
-        return (sum_h / n), (sum_d / n), (sum_a / n), "Medie Case"
+            ph, pd, pa = implied_probs_sq(*triplet)
+            oh, od, oa = triplet
+            return ph, pd, pa, _label, oh, od, oa
 
     avg = _valid_odds_triplet(row, "AvgH", "AvgD", "AvgA")
     if avg:
         ph, pd, pa = implied_probs_sq(*avg)
-        return ph, pd, pa, "Medie Globală"
+        oh, od, oa = avg
+        return ph, pd, pa, "Medie Globală", oh, od, oa
 
     return None
 
@@ -209,15 +197,17 @@ def calibrate_lambdas(target_h, target_d, target_a, rho, target_over25=None):
     return round(best[0], 2), round(best[1], 2)
 
 def predict_from_odds(row, rho_league):
-    odds_1x2 = extract_1x2_odds(row)
-    if not odds_1x2:
+    odds_data = extract_1x2_odds(row)
+    if not odds_data:
         return None
-    p_h, p_d, p_a, bookmaker = odds_1x2
+    p_h, p_d, p_a, bookmaker, oh, od, oa = odds_data
 
     ou = extract_ou25_odds(row)
     target_over25 = None
+    o_over_val, o_under_val = 1.85, 1.85
     if ou:
         o_over, o_under = ou
+        o_over_val, o_under_val = o_over, o_under
         sr_over = math.sqrt(1.0/o_over)
         sr_under = math.sqrt(1.0/o_under)
         target_over25 = sr_over / (sr_over + sr_under)
@@ -259,6 +249,19 @@ def predict_from_odds(row, rho_league):
     lam_a_st = lam_a * 0.55
     p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
+    # Construim lista de opțiuni pentru Bet Builder și Bilete Automate
+    market_options = [
+        {"name": "1 (Gazde)", "prob": p_home, "odds": oh},
+        {"name": "X (Egal)", "prob": p_draw, "odds": od},
+        {"name": "2 (Oaspeți)", "prob": p_away, "odds": oa},
+        {"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": round(1.0 / max(0.05, (p_home + p_draw)), 2)},
+        {"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": round(1.0 / max(0.05, (p_draw + p_away)), 2)},
+        {"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": round(1.0 / max(0.05, p_over[1.5]), 2)},
+        {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val},
+        {"name": "GG - Da", "prob": p_btts, "odds": round(1.0 / max(0.05, p_btts), 2)},
+        {"name": "Peste 0.5 goluri HT", "prob": p_over05_ht, "odds": round(1.0 / max(0.05, p_over05_ht), 2)}
+    ]
+
     markets = {
         "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
         "Peste 2.5 goluri": p_over[2.5], "Sub 2.5 goluri": max(0.01, 1.0 - p_over[2.5]),
@@ -276,6 +279,7 @@ def predict_from_odds(row, rho_league):
         "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
         "league_rho": rho_league,
+        "market_options": market_options,
         "probs": {
             "over15": round(p_over[1.5] * 100, 1), "over25": round(p_over[2.5] * 100, 1),
             "btts": round(p_btts * 100, 1), "over05_ht": round(p_over05_ht * 100, 1),
@@ -366,6 +370,16 @@ def process_csv_content(csv_text):
             continue
 
         cc = estimate_corners_cards(home, away, existing_stats) if existing_stats else None
+        
+        # Adaugam optiuni de cornere si cartonașe în listele de market-options pentru Bet Builder
+        if cc:
+            c85 = cc['corners_over']['8.5'] / 100.0
+            c95 = cc['corners_over']['9.5'] / 100.0
+            cd35 = cc['cards_over']['3.5'] / 100.0
+            pred["market_options"].append({"name": "Peste 8.5 cornere", "prob": c85, "odds": round(1.0/max(0.05, c85), 2)})
+            pred["market_options"].append({"name": "Peste 9.5 cornere", "prob": c95, "odds": round(1.0/max(0.05, c95), 2)})
+            pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": round(1.0/max(0.05, cd35), 2)})
+
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
         processed.append({
@@ -450,15 +464,10 @@ def compute_dynamic_rho(team_stats):
     return team_stats
 
 def fetch_data_from_github_auto():
-    """Functia care se declanseaza automat in spate cand serverul porneste cu memoria goala"""
     if not FIXTURES_CSV_URL:
         return
-    
     try:
-        # Extragem baza link-ului GitHub (folderul in care se afla fixtures.csv)
         base_url = FIXTURES_CSV_URL.rsplit('/', 1)[0]
-        
-        # 1. Tragem istoricul (E0.csv, SP1.csv, etc.)
         team_stats = {"__leagues__": {}, "__rhos__": {}}
         for stat_file in TARGET_STATS_FILES:
             try:
@@ -468,13 +477,11 @@ def fetch_data_from_github_auto():
                     content = resp.read().decode('utf-8')
                     team_stats = update_team_stats_from_csv(content, team_stats)
             except Exception:
-                pass # Ignoram fisierele care nu exista pe GitHub
-        
+                pass
         if len(team_stats) > 2:
             team_stats = compute_dynamic_rho(team_stats)
             _save_json(STATS_CACHE_FILE, team_stats)
             
-        # 2. Tragem fixtures.csv si actualizam meciurile folosind noul istoric
         req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
         with urllib.request.urlopen(req, timeout=10) as response:
             csv_data = response.read().decode('utf-8')
@@ -482,59 +489,21 @@ def fetch_data_from_github_auto():
     except Exception as e:
         print(f"Eroare GitHub Auto-Sync: {e}")
 
-@app.route('/api/upload-csv', methods=['POST'])
-def upload_csv():
-    if 'file' not in request.files: return jsonify({"status": "error"}), 400
-    file = request.files['file']
-    try:
-        content = file.read().decode('utf-8', errors='ignore')
-        c = _build_fixtures_cache(content, "upload_manual")
-        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"]})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/api/upload-stats-csv', methods=['POST'])
-def upload_stats_csv():
-    files = request.files.getlist('files')
-    team_stats = _load_json(STATS_CACHE_FILE, {"__leagues__": {}, "__rhos__": {}})
-    for f in files:
-        content = f.read().decode('utf-8', errors='ignore')
-        team_stats = update_team_stats_from_csv(content, team_stats)
-    
-    team_stats = compute_dynamic_rho(team_stats)
-    _save_json(STATS_CACHE_FILE, team_stats)
-    
-    cache = _load_json(CACHE_FILE, None)
-    if cache and cache.get("matches"):
-        for m in cache["matches"]: m["corners_cards"] = estimate_corners_cards(m["home"], m["away"], team_stats)
-        cache["stats_uploaded"] = True
-        _save_json(CACHE_FILE, cache)
-    return jsonify({"status": "success"})
-
 @app.route('/api/refresh-from-github', methods=['POST'])
 def refresh_from_github():
-    # Acest buton acum face sincronizare totala
     thread = threading.Thread(target=fetch_data_from_github_auto)
     thread.start()
-    return jsonify({"status": "success", "message": "Sincronizare in fundal pornita. Reimprospateaza pagina in 10 secunde."})
+    return jsonify({"status": "success", "message": "Sincronizare pornită."})
 
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
     data = _load_json(CACHE_FILE, None)
-    
-    # Auto-Sync: Daca datele nu exista pe server (serverul a repornit) 
     if not data or not data.get("matches"):
         if FIXTURES_CSV_URL:
-            # Rulam descarcarea de pe GitHub, blocand putin API-ul ca sa apuce sa traga datele
             fetch_data_from_github_auto()
-            # Incarcam datele din nou
             data = _load_json(CACHE_FILE, None)
-            
     return jsonify(data or {"matches": [], "api_active": False})
 
-# ==========================================
-# INTERFAȚĂ FRONTEND (HTML, CSS, JS) 
-# ==========================================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ro">
@@ -559,7 +528,6 @@ HTML_TEMPLATE = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   
-  .upload-area { border: 1px dashed var(--card-border); text-align: center; }
   .btn { background: var(--accent-cyan); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; display: inline-block; }
   
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
@@ -600,6 +568,12 @@ HTML_TEMPLATE = """
   .acc-item { background: #1a1a1a; border: 1px solid var(--accent-gold); border-radius: 10px; margin-bottom: 10px; }
   .acc-header { padding: 12px 15px; display: flex; justify-content: space-between; cursor: pointer; color: #fff; font-weight: bold; }
   .acc-body { padding: 10px 15px; border-top: 1px solid #333; font-size: 12px; color: var(--text-muted); display: none; }
+
+  /* Stiluri pentru sectiunea de bilete */
+  .ticket-config { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 15px; }
+  .odds-btn { background: #222; border: 1px solid var(--card-border); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .odds-btn.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
+  .ticket-match-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -608,24 +582,19 @@ HTML_TEMPLATE = """
     XMTS PREDICTIONS
   </div>
 
-  <div class="glass-card upload-area">
-    <div style="margin-bottom:10px; font-weight:700;">📂 Administrare Manuală</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:15px;">Dacă datele sunt încărcate pe GitHub, serverul se va sincroniza singur. Poți forța sincronizarea din butonul de mai jos.</div>
-    <button class="btn" style="background:#3b82f6; width:100%;" onclick="syncGithub()">🔄 Forțează Sincronizarea cu GitHub</button>
-    <div id="status" style="font-size:12px; margin-top:10px; color:var(--text-muted);">Așteptare date...</div>
-  </div>
-
   <div class="tabs-wrapper">
     <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
     <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
+    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
   </div>
 
-  <div id="content"><div class="glass-card" style="text-align:center;">Așteaptă încărcarea datelor...</div></div>
+  <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă datele...</div></div>
 </div>
 
 <script>
 let state = { matches: [], stats_uploaded: false };
 let currentTab = 'azi';
+let selectedTargetOdds = 10; // Cota implicita pentru generator
 
 function getTodayStr() {
   const d = new Date();
@@ -666,28 +635,11 @@ function renderMatchCard(m) {
   
   if (m.corners_cards) {
       const cc = m.corners_cards;
-      cardsHtml = `
-        Estimat meci: ~<b style="color:#fff;">${cc.exp_cards}</b> cartonașe.<br>
-        Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b><br>
-        Peste 4.5: <b style="color:var(--accent-gold)">${cc.cards_over['4.5']}%</b><br>
-        Peste 5.5: <b style="color:var(--accent-gold)">${cc.cards_over['5.5']}%</b><br>
-        <i style="font-size:10px;">Model Cronologic Izolat (Eșantion: ${cc.sample} meciuri).</i>`;
-      cornersHtml = `
-        Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>
-        Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b><br>
-        Peste 9.5: <b style="color:var(--accent-gold)">${cc.corners_over['9.5']}%</b><br>
-        Peste 10.5: <b style="color:var(--accent-gold)">${cc.corners_over['10.5']}%</b><br>
-        <i style="font-size:10px;">Model Cronologic Izolat (Eșantion: ${cc.sample} meciuri).</i>`;
+      cardsHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_cards}</b> cartonașe.<br>Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b><br>Peste 4.5: <b style="color:var(--accent-gold)">${cc.cards_over['4.5']}%</b>`;
+      cornersHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b><br>Peste 9.5: <b style="color:var(--accent-gold)">${cc.corners_over['9.5']}%</b>`;
   } else {
-      if (state.stats_uploaded) {
-          const noDataMsg = `<span style="color:var(--accent-gold)">⚠️ Nu există date suficiente în istoric (necesar min. 1 meci acasă pt gazdă și 1 în deplasare pt oaspete).</span>`;
-          cardsHtml = noDataMsg;
-          cornersHtml = noDataMsg;
-      } else {
-          const needFileMsg = `<i>Datele exacte necesită prezența fișierelor istorice pe GitHub.</i>`;
-          cardsHtml = `Estimat global: ~4.5 cartonașe.<br>${needFileMsg}`;
-          cornersHtml = `Estimat global: ~9.5 cornere.<br>${needFileMsg}`;
-      }
+      cardsHtml = `Estimare globală cartonașe.`;
+      cornersHtml = `Estimare globală cornere.`;
   }
 
   return `
@@ -711,69 +663,129 @@ function renderMatchCard(m) {
       
       <div class="golden-panel">
         <div class="team-logos">
-          <div class="t-badge">
-            <div class="t-badge-circle">${m.home.substring(0,3).toUpperCase()}</div>
-            <div style="font-size:11px;font-weight:bold;">${m.home.toUpperCase()}</div>
-          </div>
+          <div class="t-badge"><div class="t-badge-circle">${m.home.substring(0,3).toUpperCase()}</div><div style="font-size:11px;font-weight:bold;">${m.home.toUpperCase()}</div></div>
           <div style="font-size:12px;font-weight:bold;color:var(--text-muted);">VS</div>
-          <div class="t-badge">
-            <div class="t-badge-circle">${m.away.substring(0,3).toUpperCase()}</div>
-            <div style="font-size:11px;font-weight:bold;">${m.away.toUpperCase()}</div>
-          </div>
+          <div class="t-badge"><div class="t-badge-circle">${m.away.substring(0,3).toUpperCase()}</div><div style="font-size:11px;font-weight:bold;">${m.away.toUpperCase()}</div></div>
         </div>
 
         <div class="golden-header">STATISTICS</div>
-
         <div class="h2h-row"><div class="h2h-val">${avgH}</div><div class="h2h-label">Expected Goals (xG)</div><div class="h2h-val">${avgA}</div></div>
-        <div class="h2h-row"><div class="h2h-val">${cndH}</div><div class="h2h-label">Goals Conceded (xG)</div><div class="h2h-val">${cndA}</div></div>
         <div class="h2h-row"><div class="h2h-val gold">${val_HT_H}%</div><div class="h2h-label">Team Over 0.5 HT</div><div class="h2h-val gold">${val_HT_A}%</div></div>
-        <div class="h2h-row"><div class="h2h-val gold">${val_ST_H}%</div><div class="h2h-label">Team Over 0.5 ST</div><div class="h2h-val gold">${val_ST_A}%</div></div>
-        <div class="h2h-row"><div class="h2h-val gold">${val_o15_H}%</div><div class="h2h-label">Team Over 1.5 Goals</div><div class="h2h-val gold">${val_o15_A}%</div></div>
 
         <div class="bars-section">
-          <div class="bar-row"><div class="bar-label">Over 1.5:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over15}%;">${p.over15}%</div></div></div>
           <div class="bar-row"><div class="bar-label">Over 2.5:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over25}%;">${p.over25}%</div></div></div>
-          <div class="bar-row"><div class="bar-label">Over 0.5 HT:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over05_ht}%;">${p.over05_ht}%</div></div></div>
-          <div class="bar-row"><div class="bar-label">Over 0.5 ST:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over05_st}%;">${p.over05_st}%</div></div></div>
           <div class="bar-row"><div class="bar-label">Both Score:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.btts}%;">${p.btts}%</div></div></div>
         </div>
 
         <div style="margin-top: 20px;">
-          <div class="acc-item">
-            <div class="acc-header" onclick="toggleAccordion(this)">
-              <div>🟨 Cartonașe</div><div>▼</div>
-            </div>
-            <div class="acc-body" style="line-height:1.6;">${cardsHtml}</div>
-          </div>
-          <div class="acc-item">
-            <div class="acc-header" onclick="toggleAccordion(this)">
-              <div>🚩 Cornere</div><div>▼</div>
-            </div>
-            <div class="acc-body" style="line-height:1.6;">${cornersHtml}</div>
-          </div>
+          <div class="acc-item"><div class="acc-header" onclick="toggleAccordion(this)"><div>🟨 Cartonașe</div><div>▼</div></div><div class="acc-body">${cardsHtml}</div></div>
+          <div class="acc-item"><div class="acc-header" onclick="toggleAccordion(this)"><div>🚩 Cornere</div><div>▼</div></div><div class="acc-body">${cornersHtml}</div></div>
         </div>
       </div>
     </div>`;
 }
 
+function renderTicketGenerator() {
+  const matches = state.matches || [];
+  if (!matches.length) return '<div class="glass-card" style="text-align:center;">Nu există meciuri pentru generarea biletelor.</div>';
+
+  // Colectam cele mai probabile optiuni din toate meciurile (Bet Builder Mode)
+  let pool = [];
+  matches.forEach(m => {
+    if (m.market_options) {
+      m.market_options.forEach(opt => {
+        // Filtrăm doar pronosticurile cu probabilitate solidă (> 55%) și cotă rezonabilă
+        if (opt.prob >= 0.55 && opt.odds >= 1.15 && opt.odds <= 3.50) {
+          pool.push({
+            match: `${m.home} - ${m.away}`,
+            league: m.league,
+            date: m.date,
+            market: opt.name,
+            odds: opt.odds,
+            prob: opt.prob,
+            score: opt.prob * (1.0 / Math.max(0.1, Math.abs(opt.odds - 1.5))) // Prioritizam valoarea sigura
+          });
+        }
+      });
+    }
+  });
+
+  // Sortam dupa scorul de probabilitate/siguranta
+  pool.sort((a, b) => b.score - a.score);
+
+  // Algoritm de constructie bilet pentru cota dorita (max 15 meciuri)
+  let selectedPicks = [];
+  let currentOdds = 1.0;
+  
+  for (let item of pool) {
+    if (selectedPicks.length >= 15) break;
+    // Evitam dublarea aceluiasi meci pe acelasi bilet
+    if (selectedPicks.some(p => p.match === item.match)) continue;
+
+    if (currentOdds < selectedTargetOdds) {
+      selectedPicks.push(item);
+      currentOdds *= item.odds;
+    }
+  }
+
+  let oddsButtons = [5, 10, 20, 50, 100, 250, 500].map(val => 
+    `<button class="odds-btn ${selectedTargetOdds === val ? 'active' : ''}" onclick="setTargetOdds(${val})">Cotă ${val}</button>`
+  ).join('');
+
+  let picksHtml = selectedPicks.map((p, idx) => `
+    <div class="ticket-match-row">
+      <div>
+        <div style="font-weight:bold; color:#fff;">${idx+1}. ${p.match}</div>
+        <div style="font-size:11px; color:var(--text-muted);">${p.league}</div>
+        <div style="font-size:12px; color:var(--accent-cyan); margin-top:2px;">👉 <b>${p.market}</b></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:800; font-size:15px; color:var(--accent-gold);">@${p.odds}</div>
+        <div style="font-size:10px; color:#34d399;">Prob: ${Math.round(p.prob*100)}%</div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="glass-card">
+      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Inteligent de Bilete (Bet Builder)</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Algoritmul combină automat cele mai sigure pronosticuri (1X2, goluri, cornere, cartonașe) în limita a maxim 15 meciuri.</div>
+      
+      <div class="ticket-config">${oddsButtons}</div>
+
+      <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-top:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
+          <span style="font-weight:bold;">Bilet Recomandat pentru Cotă Țintă: ~${selectedTargetOdds}</span>
+          <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
+        </div>
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru a alcătui această cotă. Încearcă o cotă mai mică.</div>'}
+        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții pe bilet: ${selectedPicks.length} (Max 15)</div>
+      </div>
+    </div>
+  `;
+}
+
+function setTargetOdds(val) {
+  selectedTargetOdds = val;
+  render();
+}
+
 function render() {
   const c = document.getElementById('content');
-  if(!state.matches || !state.matches.length) { 
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Nu există date. Asigură-te că ai urcat fixtures.csv pe GitHub.</div>'; 
+  if (!state.matches || !state.matches.length) { 
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Nu există date. Asigură-te că ai urcat fișierele pe GitHub.</div>'; 
     return; 
   }
   
   const today = getTodayStr();
   const todayMatches = state.matches.filter(m => m.date === today);
   
-  if(currentTab === 'azi') {
-    if(todayMatches.length) {
-      c.innerHTML = todayMatches.map(renderMatchCard).join('');
-    } else {
-      c.innerHTML = `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).<br><br>Vezi secțiunea "Toate Zilele".</div>`;
-    }
-  } else if(currentTab === 'toate') {
+  if (currentTab === 'azi') {
+    c.innerHTML = todayMatches.length ? todayMatches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Nu sunt meciuri azi (${today}). Vezi "Toate Zilele".</div>`;
+  } else if (currentTab === 'toate') {
     c.innerHTML = state.matches.map(renderMatchCard).join('');
+  } else if (currentTab === 'bilete') {
+    c.innerHTML = renderTicketGenerator();
   }
 }
 
@@ -784,34 +796,13 @@ function switchTab(t, btn) {
     render(); 
 }
 
-async function fetchAPI(url = '/api/predictions', options = {}) {
+async function fetchAPI() {
   try {
-    const s = document.getElementById('status');
-    if(s) s.innerText = 'Se extrag datele...';
-    
-    const res = await fetch(url, options);
+    const res = await fetch('/api/predictions');
     const data = await res.json(); 
-    
-    if(data.status === 'success' || url === '/api/predictions') {
-        if(url !== '/api/predictions') {
-            // Asteptam putin sa se termine sincronizarea din fundal si reluam datele
-            setTimeout(() => { fetchAPI('/api/predictions'); }, 2000);
-            return;
-        }
-        state = data; 
-        if(s) s.innerText = `Sistem activ. ${state.matches ? state.matches.length : 0} meciuri gasite.`; 
-        render();
-    }
-  } catch(e) { 
-    const s = document.getElementById('status');
-    if(s) s.innerText = 'Sistem pregatit.';
-  }
-}
-
-function syncGithub() { 
-  const s = document.getElementById('status');
-  if(s) s.innerText = 'Se conectează la GitHub... (dureaza 5 secunde)';
-  fetchAPI('/api/refresh-from-github', { method: 'POST' }); 
+    state = data; 
+    render();
+  } catch(e) { console.error(e); }
 }
 
 fetchAPI();
