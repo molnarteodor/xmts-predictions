@@ -31,9 +31,6 @@ CONFIDENCE_THRESHOLD = 0.65
 LOW_RISK_THRESHOLD = 0.75
 FALLBACK_MIN_CONFIDENCE = 0.55
 
-CHALLENGE_TARGET_ODD = 1.50
-MIN_PICK_CONFIDENCE_FOR_TICKET = 0.55
-
 TOP_LEAGUES = {
     "E0", "E1", "E2", "SP1", "SP2", "I1", "I2", "D1", "D2", 
     "F1", "F2", "N1", "B1", "P1", "SC0", "T1", "G1"
@@ -165,12 +162,10 @@ def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_RHO, over_lin
         for a in range(max_g):
             p = poisson_pmf(h, lam_h) * poisson_pmf(a, lam_a)
             p = p * dixon_coles_tau(h, a, lam_h, lam_a, rho)
-            if h > a:
-                p_h += p
-            elif h == a:
-                p_d += p
-            else:
-                p_a += p
+            if h > a: p_h += p
+            elif h == a: p_d += p
+            else: p_a += p
+            
             if over_line is not None and (h + a) > over_line:
                 p_over += p
     return p_h, p_d, p_a, p_over
@@ -231,12 +226,9 @@ def predict_from_odds(row):
         for a in range(max_g):
             p = poisson_pmf(h, lam_h) * poisson_pmf(a, lam_a)
             p = p * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO)
-            if h > a:
-                p_home += p
-            elif h == a:
-                p_draw += p
-            else:
-                p_away += p
+            if h > a: p_home += p
+            elif h == a: p_draw += p
+            else: p_away += p
             
             tot = h + a
             if tot > 1.5: p_over[1.5] += p
@@ -439,6 +431,11 @@ HTML_TEMPLATE = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   
+  /* AICI E BUTONUL DE UPLOAD RE-ADAUGAT */
+  .upload-area { border: 1px dashed var(--accent-gold); text-align: center; }
+  .btn { background: var(--accent-cyan); color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; display: inline-block; }
+  .btn-gold { background: var(--accent-gold); color: #000; margin-left: 8px; }
+
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
   .tabs-wrapper::-webkit-scrollbar { display: none; }
   .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -485,12 +482,21 @@ HTML_TEMPLATE = """
     XMTS PREDICTIONS
   </div>
 
+  <!-- Aici este zona de upload pe care o ștersesem -->
+  <div class="glass-card upload-area">
+    <div style="margin-bottom:10px; font-weight:700;">📂 Încarcă CSV (Football-Data)</div>
+    <input type="file" id="csvFile" style="display:none;" onchange="uploadCSV()">
+    <label for="csvFile" class="btn">Încarcă Local</label>
+    <button class="btn btn-gold" onclick="syncGithub()">Sync Automat</button>
+    <div id="status" style="font-size:11px; margin-top:8px; color:var(--text-muted);">Așteptare date...</div>
+  </div>
+
   <div class="tabs-wrapper">
     <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
     <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
   </div>
 
-  <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă...</div></div>
+  <div id="content"><div class="glass-card" style="text-align:center;">Așteaptă încărcarea datelor...</div></div>
 </div>
 
 <script>
@@ -506,7 +512,7 @@ function toggleGoldenPanel(btn) {
   const panel = btn.nextElementSibling;
   const isHidden = panel.style.display === 'none' || panel.style.display === '';
   panel.style.display = isHidden ? 'block' : 'none';
-  btn.innerText = isHidden ? 'Ascunde Analiza' : 'Deschide Analiză Detaliată';
+  btn.innerText = isHidden ? 'Ascunde Analiză' : 'Deschide Analiză Detaliată';
 }
 
 function toggleAccordion(header) {
@@ -603,7 +609,7 @@ function renderMatchCard(m) {
 function render() {
   const c = document.getElementById('content');
   if(!state.matches || !state.matches.length) { 
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat.</div>'; 
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat. Trebuie să încarci fișierul CSV.</div>'; 
     return; 
   }
   
@@ -614,7 +620,7 @@ function render() {
     if(todayMatches.length) {
       c.innerHTML = todayMatches.map(renderMatchCard).join('');
     } else {
-      c.innerHTML = `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).</div>`;
+      c.innerHTML = `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).<br><br>Vezi secțiunea "Toate Zilele".</div>`;
     }
   } else if(currentTab === 'toate') {
     c.innerHTML = state.matches.map(renderMatchCard).join('');
@@ -628,17 +634,44 @@ function switchTab(t, btn) {
     render(); 
 }
 
-async function fetchAPI() {
+async function fetchAPI(url = '/api/predictions', options = {}) {
   try {
-    const res = await fetch('/api/predictions');
-    if(!res.ok) throw new Error('Eroare');
-    state = await res.json(); 
-    render();
+    const s = document.getElementById('status');
+    if(s) s.innerText = 'Se procesează algoritmul...';
+    
+    const res = await fetch(url, options);
+    if(url === '/api/predictions' && !res.ok) throw new Error('Eroare la date.');
+    
+    const data = await res.json(); 
+    if(data.status === 'success' || url === '/api/predictions') {
+        if(url !== '/api/predictions') {
+            return fetchAPI('/api/predictions');
+        }
+        state = data; 
+        if(s) s.innerText = `Încărcat cu succes: ${state.matches ? state.matches.length : 0} meciuri.`; 
+        render();
+    } else { 
+        if(s) s.innerText = 'Eroare: ' + data.message; 
+    }
   } catch(e) { 
-    document.getElementById('content').innerHTML = '<div class="glass-card" style="text-align:center;">Eroare conexiune server.</div>';
+    const s = document.getElementById('status');
+    if(s) s.innerText = 'Așteptare CSV local...';
   }
 }
 
+function uploadCSV() {
+  const file = document.getElementById('csvFile').files[0];
+  if(!file) return;
+  const fd = new FormData(); 
+  fd.append('file', file);
+  fetchAPI('/api/upload-csv', { method: 'POST', body: fd });
+}
+
+function syncGithub() { 
+  fetchAPI('/api/refresh-from-github', { method: 'POST' }); 
+}
+
+// Pornire initiala
 fetchAPI();
 </script>
 </body>
@@ -652,5 +685,3 @@ def home():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-
-# --- SFÂRȘITUL FIȘIERULUI APP.PY ---
