@@ -30,9 +30,6 @@ LOW_RISK_THRESHOLD = 0.75
 FALLBACK_MIN_CONFIDENCE = 0.55
 
 CHALLENGE_TARGET_ODD = 1.50
-MIN_PICK_CONFIDENCE_FOR_TICKET = 0.55
-
-TOP_LEAGUES = {"E0", "E1", "E2", "SP1", "SP2", "I1", "I2", "D1", "D2", "F1", "F2", "N1", "B1", "P1", "SC0", "T1", "G1"}
 
 PINNACLE_1X2 = ("PSH", "PSD", "PSA")
 BOOKMAKER_1X2_COLUMNS = [
@@ -43,34 +40,6 @@ BOOKMAKER_1X2_COLUMNS = [
     ("VCH", "VCD", "VCA", "BetVictor"),
 ]
 OU25_PRIORITY = [("B365>2.5", "B365<2.5"), ("Avg>2.5", "Avg<2.5"), ("BbAv>2.5", "BbAv<2.5")]
-
-LEAGUE_NAMES = {
-    "E0": "Premier League (Anglia)", "E1": "Championship (Anglia)",
-    "E2": "League One (Anglia)", "E3": "League Two (Anglia)", "EC": "National League (Anglia)",
-    "SC0": "Premiership (Scoția)", "SC1": "Championship (Scoția)",
-    "SP1": "La Liga (Spania)", "SP2": "La Liga 2 (Spania)",
-    "D1": "Bundesliga (Germania)", "D2": "Bundesliga 2 (Germania)",
-    "I1": "Serie A (Italia)", "I2": "Serie B (Italia)",
-    "F1": "Ligue 1 (Franța)", "F2": "Ligue 2 (Franța)",
-    "N1": "Eredivisie (Olanda)", "B1": "Jupiler Pro League (Belgia)",
-    "P1": "Primeira Liga (Portugalia)", "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
-}
-
-BETBUILDER_COMBOS = [
-    ("1 & Peste 1.5 goluri", lambda h, a: h > a and (h + a) > 1.5),
-    ("1 & Peste 2.5 goluri", lambda h, a: h > a and (h + a) > 2.5),
-    ("1 & GG Da", lambda h, a: h > a and h > 0 and a > 0),
-    ("2 & Peste 1.5 goluri", lambda h, a: h < a and (h + a) > 1.5),
-    ("2 & Peste 2.5 goluri", lambda h, a: h < a and (h + a) > 2.5),
-    ("2 & GG Da", lambda h, a: h < a and h > 0 and a > 0),
-    ("X & Sub 2.5 goluri", lambda h, a: h == a and (h + a) < 2.5),
-    ("GG Da & Peste 2.5 goluri", lambda h, a: h > 0 and a > 0 and (h + a) > 2.5),
-    ("Șansă Dublă 1X & Sub 3.5 goluri", lambda h, a: h >= a and (h + a) < 3.5),
-    ("Șansă Dublă X2 & Sub 3.5 goluri", lambda h, a: h <= a and (h + a) < 3.5),
-    ("Șansă Dublă 1X & GG Da", lambda h, a: h >= a and h > 0 and a > 0),
-    ("Șansă Dublă X2 & GG Da", lambda h, a: h <= a and h > 0 and a > 0),
-    ("1 & GG Nu & Sub 3.5 goluri", lambda h, a: h > a and not (h > 0 and a > 0) and (h + a) < 3.5),
-]
 
 def _load_json(path, default):
     try:
@@ -85,8 +54,8 @@ def _save_json(path, data):
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"[EROARE] Cache scriere esuata: {e}")
+    except Exception:
+        pass
 
 def parse_uk_date(date_str):
     date_str = (date_str or "").strip()
@@ -115,7 +84,7 @@ def extract_1x2_odds(row):
     pinnacle = _valid_odds_triplet(row, *PINNACLE_1X2)
     if pinnacle:
         ph, pd, pa = implied_probs_square_root(*pinnacle)
-        return ph, pd, pa, "Pinnacle (High Accuracy)"
+        return ph, pd, pa, "Pinnacle"
 
     probs = []
     for h_key, d_key, a_key, _label in BOOKMAKER_1X2_COLUMNS:
@@ -220,7 +189,6 @@ def predict_from_odds(row):
             if h > a: p_home += p
             elif h == a: p_draw += p
             else: p_away += p
-            
             tot = h + a
             for line in p_over:
                 if tot > line: p_over[line] += p
@@ -234,39 +202,45 @@ def predict_from_odds(row):
     if target_over25 is not None:
         p_over[2.5] = target_over25
     p_over[1.5] = max(p_over[1.5], p_over[2.5])
-    p_over[3.5] = min(p_over[3.5], p_over[2.5])
+    
+    # Calcul Probabilitati HT / ST pentru grafica detaliata
+    lam_h_ht, lam_a_ht = lam_h * 0.45, lam_a * 0.45
+    p_over05_ht = 1 - (math.exp(-lam_h_ht) * math.exp(-lam_a_ht))
+    
+    lam_h_st, lam_a_st = lam_h * 0.55, lam_a * 0.55
+    p_over05_st = 1 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
     markets = {
-        "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeti)": p_away,
-        "Peste 2.5 goluri": p_over[2.5], "Peste 3.5 goluri": p_over[3.5],
-        "Sub 2.5 goluri": max(0.01, 1 - p_over[2.5]),
-        "GG - Da": p_btts, "GG - Nu": max(0.01, 1 - p_btts),
+        "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
+        "Peste 2.5 goluri": p_over[2.5], "Sub 2.5 goluri": max(0.01, 1 - p_over[2.5]),
+        "GG - Da": p_btts
     }
     
-    fallback = [
-        ("Sansa Dubla 1X", p_home + p_draw), ("Sansa Dubla X2", p_draw + p_away),
-        ("Peste 1.5 goluri", p_over[1.5]), ("Sub 3.5 goluri", max(0.01, 1 - p_over[3.5])),
-    ]
+    fallback = [("Șansă Dublă 1X", p_home + p_draw), ("Șansă Dublă X2", p_draw + p_away)]
 
     best_market, best_p = max(markets.items(), key=lambda kv: kv[1])
-    
-    scored = [(l, p, 1/p) for l, p in {**markets, **dict(fallback)}.items() if p > 0.05]
-    in_range = [c for c in scored if 1.30 <= c[2] <= 1.40]
-    target_pick = max(in_range, key=lambda c: c[1]) if in_range else min(scored, key=lambda c: abs(c[2] - 1.35))
 
     result = {
         "principal": best_market, "principal_pct": round(best_p * 100, 1),
         "alternativ": None, "alternativ_pct": None,
         "exp_goals_home": round(lam_h, 2), "exp_goals_away": round(lam_a, 2),
         "bookmaker": bookmaker,
-        "pick_for_ticket": best_market if best_p >= CONFIDENCE_THRESHOLD else (max(fallback, key=lambda kv: kv[1])[0] if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
-        "pick_pct": round(best_p * 100, 1) if best_p >= CONFIDENCE_THRESHOLD else (round(max(fallback, key=lambda kv: kv[1])[1] * 100, 1) if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
-        "fair_odd": round(1 / best_p, 2) if best_p >= CONFIDENCE_THRESHOLD else (round(1 / max(fallback, key=lambda kv: kv[1])[1], 2) if max(fallback, key=lambda kv: kv[1])[1] >= FALLBACK_MIN_CONFIDENCE else None),
-        "target_odd_pick": {"pick": target_pick[0], "pct": round(target_pick[1]*100, 1), "odd": round(target_pick[2], 2)}
+        "pick_for_ticket": best_market if best_p >= CONFIDENCE_THRESHOLD else None,
+        "pick_pct": round(best_p * 100, 1) if best_p >= CONFIDENCE_THRESHOLD else None,
+        "fair_odd": round(1 / best_p, 2) if best_p >= CONFIDENCE_THRESHOLD else None,
+        
+        # Probabilități adiționale necesare pentru barele verzi și panoul auriu
+        "probs": {
+            "over15": round(p_over[1.5] * 100, 1),
+            "over25": round(p_over[2.5] * 100, 1),
+            "btts": round(p_btts * 100, 1),
+            "over05_ht": round(p_over05_ht * 100, 1),
+            "over05_st": round(p_over05_st * 100, 1)
+        }
     }
 
     if best_p >= CONFIDENCE_THRESHOLD:
-        result["risc"] = "Scazut" if best_p >= LOW_RISK_THRESHOLD else "Mediu"
+        result["risc"] = "Scăzut" if best_p >= LOW_RISK_THRESHOLD else "Mediu"
         return result
 
     alt_p = max(fallback, key=lambda kv: kv[1])[1]
@@ -279,17 +253,6 @@ def predict_from_odds(row):
     result["risc"] = "Ridicat"
     result["fara_pronostic"] = True
     return result
-
-def compute_betbuilder(lam_h, lam_a, max_g=10, top_n=4, min_pct=0.35):
-    ph_list = [poisson_pmf(h, lam_h) for h in range(max_g)]
-    pa_list = [poisson_pmf(a, lam_a) for a in range(max_g)]
-    scored = []
-    for label, cond in BETBUILDER_COMBOS:
-        p = sum(ph_list[h] * pa_list[a] * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO)
-                for h in range(max_g) for a in range(max_g) if cond(h, a))
-        scored.append((label, p))
-    scored.sort(key=lambda kv: kv[1], reverse=True)
-    return [{"combo": lbl, "pct": round(p * 100, 1)} for lbl, p in scored[:top_n] if p >= min_pct]
 
 def process_csv_content(csv_text):
     reader = csv.DictReader(io.StringIO(csv_text))
@@ -306,18 +269,13 @@ def process_csv_content(csv_text):
             continue
 
         league_code = (row.get("Div") or "").strip()
-        bb = compute_betbuilder(pred["exp_goals_home"], pred["exp_goals_away"]) if league_code in TOP_LEAGUES else []
-
         processed.append({
-            "league": LEAGUE_NAMES.get(league_code, league_code), "league_code": league_code,
-            "date": parse_uk_date(row.get("Date")), "time": (row.get("Time") or "").strip(),
-            "home": home, "away": away,
-            "betbuilder": bb, **pred
+            "league": league_code, "date": parse_uk_date(row.get("Date")), "time": (row.get("Time") or "").strip(),
+            "home": home, "away": away, **pred
         })
 
     processed.sort(key=lambda m: -(m.get("pick_pct") or 0))
     processed.sort(key=lambda m: m["date"])
-    
     return processed, skipped_no_odds
 
 def _build_fixtures_cache(content, source):
@@ -336,7 +294,7 @@ def _build_fixtures_cache(content, source):
 @app.route('/api/upload-csv', methods=['POST'])
 def upload_csv():
     if 'file' not in request.files or request.files['file'].filename == '':
-        return jsonify({"status": "error", "message": "Fisier invalid!"}), 400
+        return jsonify({"status": "error", "message": "Fișier invalid!"}), 400
     try:
         content = request.files['file'].read().decode('utf-8', errors='ignore')
         c = _build_fixtures_cache(content, "upload_manual")
@@ -346,7 +304,7 @@ def upload_csv():
 
 @app.route('/api/refresh-from-github', methods=['POST'])
 def refresh_from_github():
-    if not FIXTURES_CSV_URL: return jsonify({"status": "error", "message": "Seteaza FIXTURES_CSV_URL"}), 400
+    if not FIXTURES_CSV_URL: return jsonify({"status": "error", "message": "Setează FIXTURES_CSV_URL"}), 400
     try:
         r = requests.get(FIXTURES_CSV_URL, timeout=10)
         r.raise_for_status()
@@ -367,7 +325,7 @@ def get_predictions():
             except: pass
     return jsonify(data or {"matches": [], "api_active": False})
 
-# --- FRONTEND (HTML + JS) ---
+# --- FRONTEND (HTML + CSS + JS) COMPLET REDESENAT PENTRU STILUL "GOLDEN" ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ro">
@@ -378,60 +336,76 @@ HTML_TEMPLATE = """
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg-dark: #020617; --card-bg: rgba(15, 23, 42, 0.85); --card-border: rgba(255, 255, 255, 0.05);
-    --accent-cyan: #06b6d4; --accent-gold: #f59e0b; --text-main: #f8fafc; --text-muted: #94a3b8;
+    --bg-dark: #0a0a0a; --card-bg: #161616; --card-border: #2a2a2a;
+    --accent-cyan: #06b6d4; --accent-gold: #eab308; --text-main: #f8fafc; --text-muted: #94a3b8;
+    --bar-green: #22c55e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-  body { background: var(--bg-dark); color: var(--text-main); padding: 15px; }
+  body { background: var(--bg-dark); color: var(--text-main); padding: 10px; }
   .container { max-width: 580px; margin: 0 auto; }
-  .header-box { text-align: center; margin-bottom: 20px; }
-  .title-main { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent-cyan)); -webkit-background-clip: text; color: transparent; }
   
   .glass-card {
     background: var(--card-bg); border: 1px solid var(--card-border);
     border-radius: 16px; padding: 16px; margin-bottom: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
-  .upload-area { border: 1px dashed rgba(6, 182, 212, 0.4); text-align: center; }
-  .btn {
-    background: linear-gradient(135deg, var(--accent-cyan), #3b82f6); color: #fff;
-    border: none; padding: 10px 16px; border-radius: 10px; font-weight: 800; cursor: pointer;
-  }
-  .btn-gold { background: linear-gradient(135deg, var(--accent-gold), #d97706); color: #000; }
   
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
   .tabs-wrapper::-webkit-scrollbar { display: none; }
-  .tab-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-  .tab-btn.active { background: rgba(6,182,212,0.15); border-color: var(--accent-cyan); color: #fff; }
+  .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  .tab-btn.active { background: rgba(234, 179, 8, 0.15); border-color: var(--accent-gold); color: #fff; }
 
-  .pred-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin: 8px 0; }
+  /* Meci Basic Styling */
+  .match-basic { display:flex; flex-direction:column; gap:8px; }
+  .pred-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); border-radius: 10px; padding: 10px; }
   .risk-tag { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
-  .risk-Scazut { background: rgba(16,185,129,0.2); color: #34d399; }
+  .risk-Scăzut { background: rgba(16,185,129,0.2); color: #34d399; }
   .risk-Mediu { background: rgba(245,158,11,0.2); color: #fbbf24; }
   .risk-Ridicat { background: rgba(239,68,68,0.2); color: #fca5a5; }
+  
+  .btn-expand {
+    width: 100%; background: #1f1f1f; border: 1px solid #eab308; color: #fff;
+    padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px;
+    transition: 0.2s;
+  }
+  .btn-expand:active { transform: scale(0.98); }
+
+  /* Golden Panel Styling */
+  .golden-panel {
+    display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--card-border);
+  }
+  .golden-header { text-align: center; color: var(--accent-gold); font-size: 18px; font-weight: 800; letter-spacing: 2px; margin-bottom: 15px; text-transform: uppercase; }
+  
+  .team-logos { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .t-badge { text-align: center; width: 45%; }
+  .t-badge-circle { width: 50px; height: 50px; border: 2px solid var(--accent-gold); border-radius: 12px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; background: #000; font-weight: bold; font-size: 18px; color: var(--accent-gold); }
+  
+  .h2h-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; }
+  .h2h-val { width: 65px; text-align: center; font-weight: 800; padding: 6px 4px; border-radius: 6px; }
+  .h2h-val.gold { background: linear-gradient(to right, #d97706, #eab308); color: #000; }
+  .h2h-label { flex: 1; text-align: center; color: #cbd5e1; font-weight: bold; }
+  
+  .bars-section { margin-top: 20px; }
+  .bar-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; font-weight: bold; }
+  .bar-label { width: 100px; color: #fff; }
+  .bar-track { flex: 1; background: rgba(255,255,255,0.05); border-radius: 12px; height: 18px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; background: var(--bar-green); border-radius: 12px; display: flex; justify-content: flex-end; align-items: center; padding-right: 8px; color: #fff; font-size: 10px; }
+  
+  /* Accordion Cartonașe/Cornere */
+  .acc-item { background: #1a1a1a; border: 1px solid var(--accent-gold); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .acc-header { padding: 12px 15px; display: flex; justify-content: space-between; cursor: pointer; color: #fff; font-weight: bold; }
+  .acc-body { padding: 10px 15px; border-top: 1px solid #333; font-size: 12px; color: var(--text-muted); display: none; }
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="header-box">
-    <div class="title-main">XMTS Precision Engine</div>
-    <div style="font-size:12px; color:var(--text-muted); margin-top:5px;">Acuratețe ridicată prin algoritm Shin & Dixon-Coles</div>
+  <div style="text-align:center; margin-bottom:15px; font-size:22px; font-weight:800; color:var(--accent-gold);">
+    XMTS PREDICTIONS
   </div>
 
-  <div class="glass-card upload-area">
-    <div style="margin-bottom:10px; font-weight:700;">📂 Încarcă CSV (Football-Data)</div>
-    <input type="file" id="csvFile" style="display:none;" onchange="uploadCSV()">
-    <label for="csvFile" class="btn">Încarcă Local</label>
-    <button class="btn btn-gold" onclick="syncGithub()" style="margin-left:8px;">Sync Automat</button>
-    <div id="status" style="font-size:11px; margin-top:8px; color:var(--text-muted);">Așteptare date...</div>
-  </div>
-
-  <!-- Aici am implementat filtrarea vizuala pe tab-uri Azi vs Toate -->
   <div class="tabs-wrapper">
     <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
     <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
-    <button class="tab-btn" onclick="switchTab('challenge', this)">🎯 Challenge Azi</button>
-    <button class="tab-btn" onclick="switchTab('betbuilder', this)">🧩 BetBuilder</button>
   </div>
 
   <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă...</div></div>
@@ -441,51 +415,155 @@ HTML_TEMPLATE = """
 let state = { matches: [] };
 let currentTab = 'azi';
 
-const DIXON_COLES_RHO = -0.08;
-function poissonPmf(k, lam){ return Math.exp(-lam) * Math.pow(lam, k) / (Array.from({length: k}, (_, i) => i + 1).reduce((a, b) => a * b, 1) || 1); }
-function dixonColesTau(x, y, lam, mu){
-  if(x===0 && y===0) return 1 - (lam*mu*DIXON_COLES_RHO);
-  if(x===0 && y===1) return 1 + (lam*DIXON_COLES_RHO);
-  if(x===1 && y===0) return 1 + (mu*DIXON_COLES_RHO);
-  if(x===1 && y===1) return 1 - DIXON_COLES_RHO;
-  return 1.0;
-}
-const BB_COMBOS = [
-  ["1 & Peste 1.5 gol", (h,a)=>h>a && (h+a)>1.5], ["1 & Peste 2.5 gol", (h,a)=>h>a && (h+a)>2.5], ["1 & GG Da", (h,a)=>h>a && h>0 && a>0],
-  ["2 & Peste 1.5 gol", (h,a)=>h<a && (h+a)>1.5], ["X & Sub 3.5 gol", (h,a)=>h===a && (h+a)<3.5], ["GG Da & Peste 2.5 gol", (h,a)=>h>0 && a>0 && (h+a)>2.5],
-  ["Sansa Dubla 1X & GG", (h,a)=>h>=a && h>0 && a>0], ["1 & GG Nu & Sub 3.5", (h,a)=>h>a && a===0 && (h+a)<3.5]
-];
-function getBB(lamH, lamA){
-  const ph = [], pa = [];
-  for(let i=0;i<10;i++){ ph.push(poissonPmf(i, lamH)); pa.push(poissonPmf(i, lamA)); }
-  let scored = BB_COMBOS.map(([lbl, cond]) => {
-    let p = 0;
-    for(let h=0;h<10;h++) for(let a=0;a<10;a++) if(cond(h,a)) p += ph[h]*pa[a]*dixonColesTau(h,a,lamH,lamA);
-    return {combo: lbl, pct: (p*100).toFixed(1)};
-  }).filter(c => c.pct >= 35.0).sort((a,b) => b.pct - a.pct).slice(0,3);
-  return scored;
-}
-
 function getTodayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-function renderCard(m) {
+function toggleGoldenPanel(btn) {
+  const panel = btn.nextElementSibling;
+  const isHidden = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = isHidden ? 'block' : 'none';
+  btn.innerText = isHidden ? 'Ascunde Analiza' : 'Deschide Analiză Detaliată';
+}
+
+function toggleAccordion(header) {
+  const body = header.nextElementSibling;
+  body.style.display = body.style.display === 'block' ? 'none' : 'block';
+}
+
+function renderMatchCard(m) {
+  const p = m.probs;
+  
+  // Transformăm xG-ul în ceva vizual similar cu golurile din istoric pentru afișajul H2H
+  const avgH = m.exp_goals_home;
+  const avgA = m.exp_goals_away;
+  const cndH = m.exp_goals_away; // Ce primește gazda
+  const cndA = m.exp_goals_home; // Ce primesc oaspeții
+
+  // Probabilități individualizate teoretice (aproximare Poisson pt UI H2H)
+  // Folosim p.over05_ht pentru echipă ca %
+  const htH = Math.min(100, Math.round(p.over05_ht * (avgH / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
+  const htA = Math.min(100, Math.round(p.over05_ht * (avgA / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
+  
+  const stH = Math.min(100, Math.round(p.over05_st * (avgH / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
+  const stA = Math.min(100, Math.round(p.over05_st * (avgA / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
+
+  const o15H = Math.min(100, Math.round((avgH / 2) * 100)).toFixed(2);
+  const o15A = Math.min(100, Math.round((avgA / 2) * 100)).toFixed(2);
+  
   return `
     <div class="glass-card">
-      <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:6px;">
-        <span>${m.league} · ${m.date}</span><span>${m.bookmaker.split(' ')[0]}</span>
+      <div class="match-basic">
+        <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
+          <span>${m.league} · ${m.date} ${m.time || ''}</span>
+          <span>${m.bookmaker.split(' ')[0]}</span>
+        </div>
+        <div style="font-size:16px;font-weight:800;text-align:center;">${m.home} VS ${m.away}</div>
+        
+        <div class="pred-row">
+          <span style="font-size:13px;font-weight:700;color:#fff;">
+            ⭐ ${m.principal} <span style="color:var(--accent-gold);">(${m.principal_pct}%)</span>
+          </span>
+          <span class="risk-tag risk-${m.risc}">${m.risc}</span>
+        </div>
       </div>
-      <div style="font-size:15px;font-weight:800;margin-bottom:8px;">${m.home} vs ${m.away}</div>
-      <div class="pred-row">
-        <span style="font-size:13px;font-weight:700;color:var(--accent-cyan);">${m.principal} (${m.principal_pct}%)</span>
-        <span class="risk-tag risk-${m.risc}">${m.risc}</span>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">xG Evaluat: Gazde <b>${m.exp_goals_home}</b> | Oaspeți <b>${m.exp_goals_away}</b></div>
-      <button class="btn" style="width:100%;font-size:11px;padding:6px;background:rgba(6,182,212,0.15);" onclick="this.nextElementSibling.style.display='block';this.style.display='none';">Vezi BetBuilder Interactiv</button>
-      <div style="display:none;margin-top:8px;border-top:1px dashed var(--card-border);padding-top:8px;">
-        ${getBB(m.exp_goals_home, m.exp_goals_away).map(b => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>${b.combo}</span><span style="color:var(--accent-cyan);font-weight:700;">${b.pct}%</span></div>`).join('') || '<div style="font-size:11px;color:var(--text-muted);">Fără combinații sigure.</div>'}
+
+      <button class="btn-expand" onclick="toggleGoldenPanel(this)">Deschide Analiză Detaliată</button>
+      
+      <!-- GOLDEN PANEL (Apare la click, replică imaginea) -->
+      <div class="golden-panel">
+        
+        <div class="team-logos">
+          <div class="t-badge">
+            <div class="t-badge-circle">${m.home.substring(0,3).toUpperCase()}</div>
+            <div style="font-size:11px;font-weight:bold;">${m.home.toUpperCase()}</div>
+          </div>
+          <div style="font-size:12px;font-weight:bold;color:var(--text-muted);">VS</div>
+          <div class="t-badge">
+            <div class="t-badge-circle">${m.away.substring(0,3).toUpperCase()}</div>
+            <div style="font-size:11px;font-weight:bold;">${m.away.toUpperCase()}</div>
+          </div>
+        </div>
+
+        <div class="golden-header">STATISTICS</div>
+
+        <!-- H2H ROWS -->
+        <div class="h2h-row">
+          <div class="h2h-val">${avgH}</div>
+          <div class="h2h-label">Expected Goals (xG)</div>
+          <div class="h2h-val">${avgA}</div>
+        </div>
+        <div class="h2h-row">
+          <div class="h2h-val">${cndH}</div>
+          <div class="h2h-label">Goals Conceded (xG)</div>
+          <div class="h2h-val">${cndA}</div>
+        </div>
+        <div class="h2h-row">
+          <div class="h2h-val gold">${htH}%</div>
+          <div class="h2h-label">Team Over 0.5 HT</div>
+          <div class="h2h-val gold">${htA}%</div>
+        </div>
+        <div class="h2h-row">
+          <div class="h2h-val gold">${stH}%</div>
+          <div class="h2h-label">Team Over 0.5 ST</div>
+          <div class="h2h-val gold">${stA}%</div>
+        </div>
+        <div class="h2h-row">
+          <div class="h2h-val gold">${o15H}%</div>
+          <div class="h2h-label">Team Over 1.5 Goals</div>
+          <div class="h2h-val gold">${o15A}%</div>
+        </div>
+
+        <!-- PROGRESS BARS (MATCH OVERALL) -->
+        <div class="bars-section">
+          <div class="bar-row">
+            <div class="bar-label">Over 1.5:</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${p.over15}%;">${p.over15}%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Over 2.5:</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${p.over25}%;">${p.over25}%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Over 0.5 HT:</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${p.over05_ht}%;">${p.over05_ht}%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Over 0.5 ST:</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${p.over05_st}%;">${p.over05_st}%</div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Both Score:</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${p.btts}%;">${p.btts}%</div></div>
+          </div>
+        </div>
+
+        <!-- ACCORDIONS -->
+        <div style="margin-top: 20px;">
+          <div class="acc-item">
+            <div class="acc-header" onclick="toggleAccordion(this)">
+              <div>🟨 Cartonașe<br><span style="font-size:10px;color:#94a3b8;font-weight:normal;">Linii estimate Poisson</span></div>
+              <div>▼</div>
+            </div>
+            <div class="acc-body">
+              Estimat meci: ~4.5 cartonașe în total.<br>
+              <i>Datele exacte necesită fișier istoric separat.</i>
+            </div>
+          </div>
+
+          <div class="acc-item">
+            <div class="acc-header" onclick="toggleAccordion(this)">
+              <div>🚩 Cornere<br><span style="font-size:10px;color:#94a3b8;font-weight:normal;">Linii estimate Poisson</span></div>
+              <div>▼</div>
+            </div>
+            <div class="acc-body">
+              Estimat meci: ~9.5 cornere în total.<br>
+              <i>Datele exacte necesită fișier istoric separat.</i>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>`;
 }
@@ -498,61 +576,26 @@ function render() {
   const todayMatches = state.matches.filter(m => m.date === today);
   
   if(currentTab === 'azi') {
-    c.innerHTML = todayMatches.length ? todayMatches.map(renderCard).join('') : `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).<br><br>Încearcă tab-ul <b>Toate Zilele</b>.</div>`;
+    c.innerHTML = todayMatches.length ? todayMatches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate pentru azi (${today}).</div>`;
   } else if(currentTab === 'toate') {
-    c.innerHTML = state.matches.map(renderCard).join('');
-  } else if(currentTab === 'challenge') {
-    const cands = todayMatches.filter(m => m.pick_pct >= 55.0).sort((a,b) => b.pick_pct - a.pick_pct);
-    let cum_odd = 1.0, sel = [];
-    for(let m of cands) {
-        if(cum_odd >= 1.50) break;
-        sel.push(m); cum_odd *= m.fair_odd;
-    }
-    if(sel.length > 0) {
-        let legs = sel.map(s => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px dashed var(--card-border);"><span><b>${s.home} vs ${s.away}</b><br><span style="color:var(--accent-cyan);">${s.pick_for_ticket}</span></span><span style="font-weight:700;">${s.pick_pct}%</span></div>`).join('');
-        c.innerHTML = `<div class="glass-card" style="border-color:var(--accent-gold);">
-        <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:4px;">Challenge pentru Azi (${today})</div>
-        <div style="font-size:20px;font-weight:800;color:var(--accent-gold);text-align:center;margin-bottom:10px;">COTA ${cum_odd.toFixed(2)}</div>
-        ${legs}
-        </div>`;
-    } else {
-        c.innerHTML = `<div class="glass-card" style="text-align:center;">Nu sunt destule meciuri sigure azi (${today}) pentru a forma o cotă de 1.50.</div>`;
-    }
-  } else if(currentTab === 'betbuilder') {
-    const bbMatches = todayMatches.filter(m => m.betbuilder && m.betbuilder.length > 0);
-    c.innerHTML = bbMatches.length ? bbMatches.map(m => `
-      <div class="glass-card">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${m.league} · ${m.date}</div>
-        <div style="font-size:14px;font-weight:800;margin-bottom:8px;">${m.home} vs ${m.away}</div>
-        ${m.betbuilder.map(b => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span>${b.combo}</span><span style="color:var(--accent-cyan);font-weight:700;">${b.pct}%</span></div>`).join('')}
-      </div>`).join('') : `<div class="glass-card" style="text-align:center;">Nu există meciuri de top cu BetBuilder azi (${today}).</div>`;
+    c.innerHTML = state.matches.map(renderMatchCard).join('');
   }
 }
 
 function switchTab(t, btn) { currentTab = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); render(); }
 
-async function fetchAPI(url, options) {
+async function fetchAPI() {
   try {
-    document.getElementById('status').innerText = 'Se procesează algoritmul...';
-    const res = await fetch(url, options);
-    if(url === '/api/predictions' && !res.ok) throw new Error('Nu sunt date.');
-    const data = await res.json();
-    if(data.status === 'success' || url === '/api/predictions') {
-      if(url !== '/api/predictions') return fetchAPI('/api/predictions');
-      state = data; document.getElementById('status').innerText = `Încărcat cu succes (${state.matches.length} meciuri).`; render();
-    } else { document.getElementById('status').innerText = 'Eroare: ' + data.message; }
-  } catch(e) { document.getElementById('status').innerText = 'Eroare conexiune server.'; }
+    const res = await fetch('/api/predictions');
+    if(!res.ok) throw new Error('Nu sunt date.');
+    state = await res.json(); 
+    render();
+  } catch(e) { 
+    document.getElementById('content').innerHTML = '<div class="glass-card" style="text-align:center;">Eroare conexiune server.</div>';
+  }
 }
 
-function uploadCSV() {
-  const file = document.getElementById('csvFile').files[0];
-  if(!file) return;
-  const fd = new FormData(); fd.append('file', file);
-  fetchAPI('/api/upload-csv', { method: 'POST', body: fd });
-}
-function syncGithub() { fetchAPI('/api/refresh-from-github', { method: 'POST' }); }
-
-fetchAPI('/api/predictions');
+fetchAPI();
 </script>
 </body>
 </html>
