@@ -4,6 +4,7 @@ import math
 import csv
 import io
 import urllib.request
+import threading
 from datetime import datetime
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
@@ -26,7 +27,16 @@ CACHE_FILE = "matches_cache.json"
 STATS_CACHE_FILE = "team_stats_cache.json"
 MAX_ROWS = 600
 
+# ==========================================
+# CONFIGURARE GITHUB AUTO-SYNC
+# ==========================================
+# Aici punem baza linkului tau de github (raw content)
+# URL-ul complet catre fixtures.csv trebuie sa fie dat prin Environment Variable in Render
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
+
+# Ligile pentru care vom incerca sa tragem automat istoricul de pe GitHub
+# Presupunem ca fisierele de istoric se afla in acelasi folder cu fixtures.csv pe GitHub
+TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv"]
 
 CONFIDENCE_THRESHOLD = 0.65
 LOW_RISK_THRESHOLD = 0.75
@@ -290,11 +300,9 @@ def predict_from_odds(row, rho_league):
     result["fara_pronostic"] = True
     return result
 
-# 1. PONDERARE CRONOLOGICA
 def _decay_avg(values, alpha=0.85):
     if not values: return 0.0
     num, den = 0.0, 0.0
-    # Valori mai recente in coada listei. Le inversam.
     rev_vals = list(reversed(values))
     for i, val in enumerate(rev_vals):
         w = alpha ** i
@@ -302,7 +310,6 @@ def _decay_avg(values, alpha=0.85):
         den += w
     return num / den
 
-# 2. IZOLARE TEREN PROPRIU
 def estimate_corners_cards(home_team, away_team, team_stats):
     h = team_stats.get(home_team)
     a = team_stats.get(away_team)
@@ -350,7 +357,6 @@ def process_csv_content(csv_text):
         league_code = (row.get("Div") or "").strip()
         rho_val = DIXON_COLES_RHO_BASE
         
-        # Extragem Rho Dinamic per liga daca exista in istoric
         if existing_stats and "__rhos__" in existing_stats:
             rho_val = existing_stats["__rhos__"].get(league_code, DIXON_COLES_RHO_BASE)
 
@@ -387,70 +393,44 @@ def _build_fixtures_cache(content, source):
     _save_json(CACHE_FILE, cache_data)
     return cache_data
 
-@app.route('/api/upload-csv', methods=['POST'])
-def upload_csv():
-    if 'file' not in request.files:
-        return jsonify({"status": "error", "message": "Fișier lipsă!"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"status": "error", "message": "Fișier invalid!"}), 400
-    try:
-        content = file.read().decode('utf-8', errors='ignore')
-        c = _build_fixtures_cache(content, "upload_manual")
-        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"]})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/api/upload-stats-csv', methods=['POST'])
-def upload_stats_csv():
-    files = request.files.getlist('files')
-    if not files or files[0].filename == '':
-        return jsonify({"status": "error", "message": "Niciun fișier selectat!"}), 400
-    
-    team_stats = _load_json(STATS_CACHE_FILE, {})
-    if "__leagues__" not in team_stats: team_stats["__leagues__"] = {}
-    if "__rhos__" not in team_stats: team_stats["__rhos__"] = {}
-
-    for f in files:
-        content = f.read().decode('utf-8', errors='ignore')
-        reader = csv.DictReader(io.StringIO(content))
-        for row in reader:
-            h = (row.get("HomeTeam") or "").strip()
-            a = (row.get("AwayTeam") or "").strip()
-            if not h or not a: continue
-            
-            div = (row.get("Div") or "").strip()
-            # Preluam golurile pt 3. RHO DINAMIC
-            fthg_s, ftag_s = row.get("FTHG"), row.get("FTAG")
-            if fthg_s and ftag_s:
-                try:
-                    hg, ag = float(fthg_s), float(ftag_s)
-                    if div not in team_stats["__leagues__"]:
-                        team_stats["__leagues__"][div] = {"hg": [], "ag": []}
-                    team_stats["__leagues__"][div]["hg"].append(hg)
-                    team_stats["__leagues__"][div]["ag"].append(ag)
-                except ValueError:
-                    pass
-
+def update_team_stats_from_csv(content, team_stats):
+    reader = csv.DictReader(io.StringIO(content))
+    for row in reader:
+        h = (row.get("HomeTeam") or "").strip()
+        a = (row.get("AwayTeam") or "").strip()
+        if not h or not a: continue
+        
+        div = (row.get("Div") or "").strip()
+        fthg_s, ftag_s = row.get("FTHG"), row.get("FTAG")
+        if fthg_s and ftag_s:
             try:
-                hc, ac = float(row.get("HC") or 0), float(row.get("AC") or 0)
-                hy, ay = float(row.get("HY") or 0), float(row.get("AY") or 0)
-                hr, ar = float(row.get("HR") or 0), float(row.get("AR") or 0)
-            except (ValueError, TypeError):
-                continue
-            
-            # Structura izolata pe Teren Propriu (Home vs Away)
-            if h not in team_stats: team_stats[h] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
-            if a not in team_stats: team_stats[a] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
-            
-            team_stats[h]["cf_h"].append(hc)
-            team_stats[h]["ca_h"].append(ac)
-            team_stats[h]["cards_h"].append(hy + hr)
-            team_stats[a]["cf_a"].append(ac)
-            team_stats[a]["ca_a"].append(hc)
-            team_stats[a]["cards_a"].append(ay + ar)
-            
-    # Calculare Rho Dinamic per liga (Corelatia Pearson a golurilor)
+                hg, ag = float(fthg_s), float(ftag_s)
+                if div not in team_stats["__leagues__"]:
+                    team_stats["__leagues__"][div] = {"hg": [], "ag": []}
+                team_stats["__leagues__"][div]["hg"].append(hg)
+                team_stats["__leagues__"][div]["ag"].append(ag)
+            except ValueError:
+                pass
+
+        try:
+            hc, ac = float(row.get("HC") or 0), float(row.get("AC") or 0)
+            hy, ay = float(row.get("HY") or 0), float(row.get("AY") or 0)
+            hr, ar = float(row.get("HR") or 0), float(row.get("AR") or 0)
+        except (ValueError, TypeError):
+            continue
+        
+        if h not in team_stats: team_stats[h] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
+        if a not in team_stats: team_stats[a] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
+        
+        team_stats[h]["cf_h"].append(hc)
+        team_stats[h]["ca_h"].append(ac)
+        team_stats[h]["cards_h"].append(hy + hr)
+        team_stats[a]["cf_a"].append(ac)
+        team_stats[a]["ca_a"].append(hc)
+        team_stats[a]["cards_a"].append(ay + ar)
+    return team_stats
+
+def compute_dynamic_rho(team_stats):
     for div, goals in team_stats["__leagues__"].items():
         hg, ag = goals["hg"], goals["ag"]
         n = len(hg)
@@ -461,49 +441,95 @@ def upload_stats_csv():
             var_a = sum((x-mean_a)**2 for x in ag) / n
             if var_h > 0 and var_a > 0:
                 corr = cov / math.sqrt(var_h * var_a)
-                rho = max(-0.20, min(0.10, corr)) # Bound matematic
+                rho = max(-0.20, min(0.10, corr))
             else:
                 rho = DIXON_COLES_RHO_BASE
         else:
             rho = DIXON_COLES_RHO_BASE
         team_stats["__rhos__"][div] = round(rho, 3)
+    return team_stats
 
+def fetch_data_from_github_auto():
+    """Functia care se declanseaza automat in spate cand serverul porneste cu memoria goala"""
+    if not FIXTURES_CSV_URL:
+        return
+    
+    try:
+        # Extragem baza link-ului GitHub (folderul in care se afla fixtures.csv)
+        base_url = FIXTURES_CSV_URL.rsplit('/', 1)[0]
+        
+        # 1. Tragem istoricul (E0.csv, SP1.csv, etc.)
+        team_stats = {"__leagues__": {}, "__rhos__": {}}
+        for stat_file in TARGET_STATS_FILES:
+            try:
+                url = f"{base_url}/{stat_file}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla'})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    content = resp.read().decode('utf-8')
+                    team_stats = update_team_stats_from_csv(content, team_stats)
+            except Exception:
+                pass # Ignoram fisierele care nu exista pe GitHub
+        
+        if len(team_stats) > 2:
+            team_stats = compute_dynamic_rho(team_stats)
+            _save_json(STATS_CACHE_FILE, team_stats)
+            
+        # 2. Tragem fixtures.csv si actualizam meciurile folosind noul istoric
+        req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            csv_data = response.read().decode('utf-8')
+            _build_fixtures_cache(csv_data, "github_auto")
+    except Exception as e:
+        print(f"Eroare GitHub Auto-Sync: {e}")
+
+@app.route('/api/upload-csv', methods=['POST'])
+def upload_csv():
+    if 'file' not in request.files: return jsonify({"status": "error"}), 400
+    file = request.files['file']
+    try:
+        content = file.read().decode('utf-8', errors='ignore')
+        c = _build_fixtures_cache(content, "upload_manual")
+        return jsonify({"status": "success", "count": len(c["matches"]), "skipped": c["skipped_no_odds"]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/upload-stats-csv', methods=['POST'])
+def upload_stats_csv():
+    files = request.files.getlist('files')
+    team_stats = _load_json(STATS_CACHE_FILE, {"__leagues__": {}, "__rhos__": {}})
+    for f in files:
+        content = f.read().decode('utf-8', errors='ignore')
+        team_stats = update_team_stats_from_csv(content, team_stats)
+    
+    team_stats = compute_dynamic_rho(team_stats)
     _save_json(STATS_CACHE_FILE, team_stats)
     
     cache = _load_json(CACHE_FILE, None)
     if cache and cache.get("matches"):
-        for m in cache["matches"]:
-            m["corners_cards"] = estimate_corners_cards(m["home"], m["away"], team_stats)
+        for m in cache["matches"]: m["corners_cards"] = estimate_corners_cards(m["home"], m["away"], team_stats)
         cache["stats_uploaded"] = True
         _save_json(CACHE_FILE, cache)
-        
     return jsonify({"status": "success"})
 
 @app.route('/api/refresh-from-github', methods=['POST'])
 def refresh_from_github():
-    if not FIXTURES_CSV_URL:
-        return jsonify({"status": "error", "message": "Setează FIXTURES_CSV_URL"}), 400
-    try:
-        req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            csv_data = response.read().decode('utf-8')
-            c = _build_fixtures_cache(csv_data, "github_manual")
-            return jsonify({"status": "success", "count": len(c["matches"])})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    # Acest buton acum face sincronizare totala
+    thread = threading.Thread(target=fetch_data_from_github_auto)
+    thread.start()
+    return jsonify({"status": "success", "message": "Sincronizare in fundal pornita. Reimprospateaza pagina in 10 secunde."})
 
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
     data = _load_json(CACHE_FILE, None)
+    
+    # Auto-Sync: Daca datele nu exista pe server (serverul a repornit) 
     if not data or not data.get("matches"):
         if FIXTURES_CSV_URL:
-            try:
-                req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
-                with urllib.request.urlopen(req, timeout=10) as response:
-                    csv_data = response.read().decode('utf-8')
-                    data = _build_fixtures_cache(csv_data, "github_auto")
-            except Exception:
-                pass
+            # Rulam descarcarea de pe GitHub, blocand putin API-ul ca sa apuce sa traga datele
+            fetch_data_from_github_auto()
+            # Incarcam datele din nou
+            data = _load_json(CACHE_FILE, None)
+            
     return jsonify(data or {"matches": [], "api_active": False})
 
 # ==========================================
@@ -583,16 +609,10 @@ HTML_TEMPLATE = """
   </div>
 
   <div class="glass-card upload-area">
-    <div style="margin-bottom:10px; font-weight:700;">📂 1. Fișiere Istorice (Mai multe simultan)</div>
-    <input type="file" id="statsFiles" style="display:none;" multiple accept=".csv" onchange="uploadStatsCSV()">
-    <label for="statsFiles" class="btn" style="background:#eab308;color:#000;">Încarcă Istoric (E0, SP1...)</label>
-    
-    <div style="margin:15px 0 10px; font-weight:700; border-top:1px dashed var(--card-border); padding-top:15px;">📂 2. Fișier Meciuri (fixtures.csv)</div>
-    <input type="file" id="csvFile" style="display:none;" accept=".csv" onchange="uploadCSV()">
-    <label for="csvFile" class="btn">Încarcă Meciuri</label>
-    <button class="btn" style="background:#3b82f6; margin-left:8px;" onclick="syncGithub()">Sync Automat</button>
-    
-    <div id="status" style="font-size:11px; margin-top:10px; color:var(--text-muted);">Așteptare date...</div>
+    <div style="margin-bottom:10px; font-weight:700;">📂 Administrare Manuală</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:15px;">Dacă datele sunt încărcate pe GitHub, serverul se va sincroniza singur. Poți forța sincronizarea din butonul de mai jos.</div>
+    <button class="btn" style="background:#3b82f6; width:100%;" onclick="syncGithub()">🔄 Forțează Sincronizarea cu GitHub</button>
+    <div id="status" style="font-size:12px; margin-top:10px; color:var(--text-muted);">Așteptare date...</div>
   </div>
 
   <div class="tabs-wrapper">
@@ -664,7 +684,7 @@ function renderMatchCard(m) {
           cardsHtml = noDataMsg;
           cornersHtml = noDataMsg;
       } else {
-          const needFileMsg = `<i>Datele exacte necesită încărcarea fișierelor istorice (pasul 1).</i>`;
+          const needFileMsg = `<i>Datele exacte necesită prezența fișierelor istorice pe GitHub.</i>`;
           cardsHtml = `Estimat global: ~4.5 cartonașe.<br>${needFileMsg}`;
           cornersHtml = `Estimat global: ~9.5 cornere.<br>${needFileMsg}`;
       }
@@ -739,7 +759,7 @@ function renderMatchCard(m) {
 function render() {
   const c = document.getElementById('content');
   if(!state.matches || !state.matches.length) { 
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Niciun meci procesat. Trebuie să încarci fișierul CSV de meciuri (Pasul 2).</div>'; 
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Nu există date. Asigură-te că ai urcat fixtures.csv pe GitHub.</div>'; 
     return; 
   }
   
@@ -767,45 +787,30 @@ function switchTab(t, btn) {
 async function fetchAPI(url = '/api/predictions', options = {}) {
   try {
     const s = document.getElementById('status');
-    if(s) s.innerText = 'Se procesează algoritmul...';
+    if(s) s.innerText = 'Se extrag datele...';
     
     const res = await fetch(url, options);
-    if(url === '/api/predictions' && !res.ok) throw new Error('Eroare');
-    
     const data = await res.json(); 
+    
     if(data.status === 'success' || url === '/api/predictions') {
-        if(url !== '/api/predictions') return fetchAPI('/api/predictions');
+        if(url !== '/api/predictions') {
+            // Asteptam putin sa se termine sincronizarea din fundal si reluam datele
+            setTimeout(() => { fetchAPI('/api/predictions'); }, 2000);
+            return;
+        }
         state = data; 
-        if(s) s.innerText = `Încărcat cu succes!`; 
+        if(s) s.innerText = `Sistem activ. ${state.matches ? state.matches.length : 0} meciuri gasite.`; 
         render();
-    } else { 
-        if(s) s.innerText = 'Eroare: ' + data.message; 
     }
   } catch(e) { 
     const s = document.getElementById('status');
-    if(s) s.innerText = 'Așteptare date...';
+    if(s) s.innerText = 'Sistem pregatit.';
   }
-}
-
-function uploadCSV() {
-  const file = document.getElementById('csvFile').files[0];
-  if(!file) return;
-  const fd = new FormData(); 
-  fd.append('file', file);
-  fetchAPI('/api/upload-csv', { method: 'POST', body: fd });
-}
-
-function uploadStatsCSV() {
-  const files = document.getElementById('statsFiles').files;
-  if(files.length === 0) return;
-  const fd = new FormData(); 
-  for(let i=0; i<files.length; i++) {
-    fd.append('files', files[i]);
-  }
-  fetchAPI('/api/upload-stats-csv', { method: 'POST', body: fd });
 }
 
 function syncGithub() { 
+  const s = document.getElementById('status');
+  if(s) s.innerText = 'Se conectează la GitHub... (dureaza 5 secunde)';
   fetchAPI('/api/refresh-from-github', { method: 'POST' }); 
 }
 
