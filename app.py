@@ -249,18 +249,32 @@ def predict_from_odds(row, rho_league):
     lam_a_st = lam_a * 0.55
     p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
 
-    # Construim lista de opțiuni pentru Bet Builder și Bilete Automate
-    market_options = [
-        {"name": "1 (Gazde)", "prob": p_home, "odds": oh},
-        {"name": "X (Egal)", "prob": p_draw, "odds": od},
-        {"name": "2 (Oaspeți)", "prob": p_away, "odds": oa},
-        {"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": round(1.0 / max(0.05, (p_home + p_draw)), 2)},
-        {"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": round(1.0 / max(0.05, (p_draw + p_away)), 2)},
-        {"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": round(1.0 / max(0.05, p_over[1.5]), 2)},
-        {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val},
-        {"name": "GG - Da", "prob": p_btts, "odds": round(1.0 / max(0.05, p_btts), 2)},
-        {"name": "Peste 0.5 goluri HT", "prob": p_over05_ht, "odds": round(1.0 / max(0.05, p_over05_ht), 2)}
-    ]
+    # Generam optiuni diversificate si realiste pentru Bet Builder
+    market_options = []
+    
+    if oh > 1.10: market_options.append({"name": "1 (Gazde)", "prob": p_home, "odds": oh})
+    if od > 2.00: market_options.append({"name": "X (Egal)", "prob": p_draw, "odds": od})
+    if oa > 1.10: market_options.append({"name": "2 (Oaspeți)", "prob": p_away, "odds": oa})
+    
+    dc_1x = p_home + p_draw
+    if dc_1x >= 0.50 and dc_1x <= 0.90:
+        market_options.append({"name": "Șansă Dublă 1X", "prob": dc_1x, "odds": round(1.0 / max(0.05, dc_1x), 2)})
+        
+    dc_x2 = p_draw + p_away
+    if dc_x2 >= 0.50 and dc_x2 <= 0.90:
+        market_options.append({"name": "Șansă Dublă X2", "prob": dc_x2, "odds": round(1.0 / max(0.05, dc_x2), 2)})
+
+    if p_over[1.5] >= 0.60:
+        market_options.append({"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": round(1.0 / max(0.05, p_over[1.5]), 2)})
+
+    if p_over[2.5] >= 0.40 and p_over[2.5] <= 0.85:
+        market_options.append({"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val})
+
+    if p_btts >= 0.45 and p_btts <= 0.80:
+        market_options.append({"name": "GG - Ambele marchează", "prob": p_btts, "odds": round(1.0 / max(0.05, p_btts), 2)})
+
+    if p_over05_ht >= 0.65:
+        market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": round(1.0 / max(0.05, p_over05_ht), 2)})
 
     markets = {
         "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
@@ -371,14 +385,18 @@ def process_csv_content(csv_text):
 
         cc = estimate_corners_cards(home, away, existing_stats) if existing_stats else None
         
-        # Adaugam optiuni de cornere si cartonașe în listele de market-options pentru Bet Builder
+        # Adaugam optiuni suplimentare de cornere si cartonașe pentru Bet Builder diversificat
         if cc:
             c85 = cc['corners_over']['8.5'] / 100.0
             c95 = cc['corners_over']['9.5'] / 100.0
             cd35 = cc['cards_over']['3.5'] / 100.0
-            pred["market_options"].append({"name": "Peste 8.5 cornere", "prob": c85, "odds": round(1.0/max(0.05, c85), 2)})
-            pred["market_options"].append({"name": "Peste 9.5 cornere", "prob": c95, "odds": round(1.0/max(0.05, c95), 2)})
-            pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": round(1.0/max(0.05, cd35), 2)})
+            
+            if c85 >= 0.50:
+                pred["market_options"].append({"name": "Peste 8.5 cornere", "prob": c85, "odds": round(1.0/max(0.05, c85), 2)})
+            if c95 >= 0.45:
+                pred["market_options"].append({"name": "Peste 9.5 cornere", "prob": c95, "odds": round(1.0/max(0.05, c95), 2)})
+            if cd35 >= 0.50:
+                pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": round(1.0/max(0.05, cd35), 2)})
 
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
@@ -528,8 +546,6 @@ HTML_TEMPLATE = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   
-  .btn { background: var(--accent-cyan); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; display: inline-block; }
-  
   .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
   .tabs-wrapper::-webkit-scrollbar { display: none; }
   .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -569,7 +585,6 @@ HTML_TEMPLATE = """
   .acc-header { padding: 12px 15px; display: flex; justify-content: space-between; cursor: pointer; color: #fff; font-weight: bold; }
   .acc-body { padding: 10px 15px; border-top: 1px solid #333; font-size: 12px; color: var(--text-muted); display: none; }
 
-  /* Stiluri pentru sectiunea de bilete */
   .ticket-config { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 15px; }
   .odds-btn { background: #222; border: 1px solid var(--card-border); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
   .odds-btn.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
@@ -594,7 +609,7 @@ HTML_TEMPLATE = """
 <script>
 let state = { matches: [], stats_uploaded: false };
 let currentTab = 'azi';
-let selectedTargetOdds = 10; // Cota implicita pentru generator
+let selectedTargetOdds = 10;
 
 function getTodayStr() {
   const d = new Date();
@@ -689,13 +704,12 @@ function renderTicketGenerator() {
   const matches = state.matches || [];
   if (!matches.length) return '<div class="glass-card" style="text-align:center;">Nu există meciuri pentru generarea biletelor.</div>';
 
-  // Colectam cele mai probabile optiuni din toate meciurile (Bet Builder Mode)
   let pool = [];
   matches.forEach(m => {
     if (m.market_options) {
       m.market_options.forEach(opt => {
-        // Filtrăm doar pronosticurile cu probabilitate solidă (> 55%) și cotă rezonabilă
-        if (opt.prob >= 0.55 && opt.odds >= 1.15 && opt.odds <= 3.50) {
+        // Filtrăm opțiuni diversificate cu probabilitate solidă
+        if (opt.prob >= 0.52 && opt.odds >= 1.25 && opt.odds <= 3.50) {
           pool.push({
             match: `${m.home} - ${m.away}`,
             league: m.league,
@@ -703,28 +717,44 @@ function renderTicketGenerator() {
             market: opt.name,
             odds: opt.odds,
             prob: opt.prob,
-            score: opt.prob * (1.0 / Math.max(0.1, Math.abs(opt.odds - 1.5))) // Prioritizam valoarea sigura
+            score: opt.prob * (1.0 / Math.max(0.1, Math.abs(opt.odds - 1.8))) 
           });
         }
       });
     }
   });
 
-  // Sortam dupa scorul de probabilitate/siguranta
+  // Sortăm descrescător după scorul de siguranță/valoare
   pool.sort((a, b) => b.score - a.score);
 
-  // Algoritm de constructie bilet pentru cota dorita (max 15 meciuri)
   let selectedPicks = [];
   let currentOdds = 1.0;
   
+  // Algoritm adaptiv pentru a atinge cota dorita fara duplicate pe acelasi meci
   for (let item of pool) {
     if (selectedPicks.length >= 15) break;
-    // Evitam dublarea aceluiasi meci pe acelasi bilet
     if (selectedPicks.some(p => p.match === item.match)) continue;
 
+    // Daca suntem departe de cota tinta, adaugam
     if (currentOdds < selectedTargetOdds) {
       selectedPicks.push(item);
       currentOdds *= item.odds;
+    } else {
+      // Daca am depasit deja cota tinta, oprim adaugarea ca sa fim cat mai aproape
+      break;
+    }
+  }
+
+  // Daca pentru cote mari (ex: 250, 500) nu am atins minimul din cauza lipsei de meciuri, relaxam putin conditia
+  if (selectedPicks.length < 3 && currentOdds < selectedTargetOdds * 0.5) {
+    for (let item of pool) {
+      if (selectedPicks.length >= 15) break;
+      if (selectedPicks.some(p => p.match === item.match)) continue;
+      if (!selectedPicks.includes(item)) {
+        selectedPicks.push(item);
+        currentOdds *= item.odds;
+      }
+      if (currentOdds >= selectedTargetOdds) break;
     }
   }
 
@@ -749,16 +779,16 @@ function renderTicketGenerator() {
   return `
     <div class="glass-card">
       <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Inteligent de Bilete (Bet Builder)</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Algoritmul combină automat cele mai sigure pronosticuri (1X2, goluri, cornere, cartonașe) în limita a maxim 15 meciuri.</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Alege cota dorită. Algoritmul combină pronosticuri variate (1X2, goluri, cornere, cartonașe, șanse duble) în limita a maxim 15 meciuri.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
       <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-top:15px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
-          <span style="font-weight:bold;">Bilet Recomandat pentru Cotă Țintă: ~${selectedTargetOdds}</span>
+          <span style="font-weight:bold; font-size:13px;">Bilet Recomandat pentru Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
-        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru a alcătui această cotă. Încearcă o cotă mai mică.</div>'}
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru a alcătui această cotă.</div>'}
         <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții pe bilet: ${selectedPicks.length} (Max 15)</div>
       </div>
     </div>
