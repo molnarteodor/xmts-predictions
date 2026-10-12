@@ -5,7 +5,7 @@ import csv
 import io
 import urllib.request
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
 
@@ -408,9 +408,23 @@ def process_csv_content(csv_text):
 
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
+        # Verificam daca exista scor final in CSV (FTHG si FTAG)
+        fthg = row.get("FTHG")
+        ftag = row.get("FTAG")
+        has_result = False
+        res_h, res_a = None, None
+        if fthg is not None and ftag is not None and str(fthg).strip() != "" and str(ftag).strip() != "":
+            try:
+                res_h = int(float(fthg))
+                res_a = int(float(ftag))
+                has_result = True
+            except ValueError:
+                pass
+
         processed.append({
             "league": league_name, "date": parse_uk_date(row.get("Date")),
             "time": (row.get("Time") or "").strip(), "home": home, "away": away,
+            "has_result": has_result, "res_home": res_h, "res_away": res_a,
             "corners_cards": cc, **pred
         })
 
@@ -597,6 +611,16 @@ HTML_TEMPLATE = """
   .odds-btn { background: #222; border: 1px solid var(--card-border); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
   .odds-btn.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
   .ticket-match-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+
+  .date-picker-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
+  .date-picker-bar::-webkit-scrollbar { display: none; }
+  .date-chip { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+  .date-chip.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+
+  .result-badge { font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+  .res-win { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; }
+  .res-loss { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+  .res-pending { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
 </style>
 </head>
 <body>
@@ -606,17 +630,18 @@ HTML_TEMPLATE = """
   </div>
 
   <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('azi', this)">🗓️ Azi</button>
-    <button class="tab-btn" onclick="switchTab('toate', this)">📋 Toate Zilele</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete (Azi)</button>
+    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Meciuri & Rezultate</button>
+    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
   </div>
 
+  <div id="dateSelectorContainer"></div>
   <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă datele...</div></div>
 </div>
 
 <script>
 let state = { matches: [], stats_uploaded: false };
-let currentTab = 'azi';
+let currentTab = 'meciuri';
+let selectedDate = getTodayStr();
 let selectedTargetOdds = 10;
 
 function getTodayStr() {
@@ -636,27 +661,50 @@ function toggleAccordion(header) {
   body.style.display = body.style.display === 'block' ? 'none' : 'block';
 }
 
+function evaluatePrediction(m, marketName) {
+  if (!m.has_result) return { status: 'pending', label: 'În desfășurare / Viitor' };
+  
+  const h = m.res_home;
+  const a = m.res_away;
+  const tot = h + a;
+  
+  if (marketName.includes("1 (Gazde)")) return h > a ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("X (Egal)")) return h === a ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("2 (Oaspeți)")) return a > h ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Șansă Dublă 1X")) return h >= a ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Șansă Dublă X2")) return a >= h ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Peste 1.5 goluri")) return tot > 1.5 ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Peste 2.5 goluri")) return tot > 2.5 ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("GG - Ambele")) return (h > 0 && a > 0) ? {status: 'win'} : {status: 'loss'};
+  
+  return { status: 'pending', label: '-' };
+}
+
 function renderMatchCard(m) {
   const p = m.probs;
   const avgH = m.exp_goals_home;
   const avgA = m.exp_goals_away;
   
-  const val_HT_H = Math.min(100, Math.round(p.over05_ht * (avgH / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
-  const val_HT_A = Math.min(100, Math.round(p.over05_ht * (avgA / (avgH + avgA + 0.1)) * 1.5)).toFixed(2);
-  
   const pronostic = m.principal || m.alternativ || "Echilibrat";
   const pronostic_pct = m.principal_pct || m.alternativ_pct || "-";
 
+  const evalRes = evaluatePrediction(m, pronostic);
+  let badgeHtml = '';
+  if (m.has_result) {
+    badgeHtml = evalRes.status === 'win' ? `<span class="result-badge res-win">✔ CÂȘTIGAT (${m.res_home}-${m.res_away})</span>` : `<span class="result-badge res-loss">✖ PIERDUT (${m.res_home}-${m.res_away})</span>`;
+  } else {
+    badgeHtml = `<span class="result-badge res-pending">⏳ Viitor</span>`;
+  }
+
   let cardsHtml = '';
   let cornersHtml = '';
-  
   if (m.corners_cards) {
       const cc = m.corners_cards;
-      cardsHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_cards}</b> cartonașe.<br>Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b><br>Peste 4.5: <b style="color:var(--accent-gold)">${cc.cards_over['4.5']}%</b>`;
-      cornersHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b><br>Peste 9.5: <b style="color:var(--accent-gold)">${cc.corners_over['9.5']}%</b>`;
+      cardsHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_cards}</b> cartonașe.<br>Peste 3.5: <b style="color:var(--accent-gold)">${cc.cards_over['3.5']}%</b>`;
+      cornersHtml = `Estimat meci: ~<b style="color:#fff;">${cc.exp_corners}</b> cornere.<br>Peste 8.5: <b style="color:var(--accent-gold)">${cc.corners_over['8.5']}%</b>`;
   } else {
-      cardsHtml = `Estimare globală cartonașe.`;
-      cornersHtml = `Estimare globală cornere.`;
+      cardsHtml = `Fără date istorice cartonașe.`;
+      cornersHtml = `Fără date istorice cornere.`;
   }
 
   return `
@@ -664,11 +712,11 @@ function renderMatchCard(m) {
       <div class="match-basic">
         <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
           <span>${m.league} · ${m.date} ${m.time || ''}</span>
-          <span>${m.bookmaker.split(' ')[0]}</span>
+          <span>${badgeHtml}</span>
         </div>
-        <div style="font-size:16px;font-weight:800;text-align:center;">${m.home} VS ${m.away}</div>
+        <div style="font-size:16px;font-weight:800;text-align:center; margin-top:4px;">${m.home} VS ${m.away}</div>
         
-        <div class="pred-row">
+        <div class="pred-row" style="margin-top:6px;">
           <span style="font-size:13px;font-weight:700;color:#fff;">
             ⭐ ${pronostic} <span style="color:var(--accent-gold);">(${pronostic_pct}%)</span>
           </span>
@@ -687,7 +735,6 @@ function renderMatchCard(m) {
 
         <div class="golden-header">STATISTICS</div>
         <div class="h2h-row"><div class="h2h-val">${avgH}</div><div class="h2h-label">Expected Goals (xG)</div><div class="h2h-val">${avgA}</div></div>
-        <div class="h2h-row"><div class="h2h-val gold">${val_HT_H}%</div><div class="h2h-label">Team Over 0.5 HT</div><div class="h2h-val gold">${val_HT_A}%</div></div>
 
         <div class="bars-section">
           <div class="bar-row"><div class="bar-label">Over 2.5:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over25}%;">${p.over25}%</div></div></div>
@@ -702,11 +749,30 @@ function renderMatchCard(m) {
     </div>`;
 }
 
+function renderDateSelector() {
+  const matches = state.matches || [];
+  // Extragem ultimele 7 zile unice care au meciuri
+  const datesSet = [...new Set(matches.map(m => m.date))].sort().reverse();
+  if (!datesSet.includes(selectedDate) && datesSet.length > 0) {
+    selectedDate = datesSet[0];
+  }
+
+  let chips = datesSet.slice(0, 10).map(d => `
+    <button class="date-chip ${selectedDate === d ? 'active' : ''}" onclick="selectDate('${d}')">${d === getTodayStr() ? 'Astăzi ('+d+')' : d}</button>
+  `).join('');
+
+  return `<div class="date-picker-bar">${chips || '<span style="font-size:12px;color:var(--text-muted)">Nicio dată disponibilă</span>'}</div>`;
+}
+
+function selectDate(d) {
+  selectedDate = d;
+  render();
+}
+
 function renderTicketGenerator() {
-  const today = getTodayStr();
-  const matches = (state.matches || []).filter(m => m.date === today);
+  const matches = (state.matches || []).filter(m => m.date === selectedDate && !m.has_result);
   
-  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri programate pentru astăzi (${today}) pentru a genera bilete.</div>`;
+  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri viitoare pentru data selectată (${selectedDate}) pentru a genera bilete.</div>`;
 
   let pool = [];
   matches.forEach(m => {
@@ -764,18 +830,18 @@ function renderTicketGenerator() {
 
   return `
     <div class="glass-card">
-      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (Meciurile de Azi)</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Folosește strict meciurile de astăzi (${today}) pentru a compune biletul dorit.</div>
+      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (${selectedDate})</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Construiește biletul inteligent pentru meciurile neterminate din data selectată.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
       <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-top:15px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
-          <span style="font-weight:bold; font-size:13px;">Bilet pentru Cotă Țintă: ~${selectedTargetOdds}</span>
+          <span style="font-weight:bold; font-size:13px;">Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
-        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri azi pentru a atinge această cotă.</div>'}
-        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Număr selecții: ${selectedPicks.length} (Max 15)</div>
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru această cotă în data selectată.</div>'}
+        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Selecții: ${selectedPicks.length} (Max 15)</div>
       </div>
     </div>
   `;
@@ -787,19 +853,21 @@ function setTargetOdds(val) {
 }
 
 function render() {
+  const dateContainer = document.getElementById('dateSelectorContainer');
   const c = document.getElementById('content');
+  
   if (!state.matches || !state.matches.length) { 
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Nu există date. Asigură-te că ai urcat fișierele pe GitHub.</div>'; 
+    dateContainer.innerHTML = '';
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Nu există date. Sincronizează cu GitHub.</div>'; 
     return; 
   }
   
-  const today = getTodayStr();
-  const todayMatches = state.matches.filter(m => m.date === today);
+  dateContainer.innerHTML = renderDateSelector();
   
-  if (currentTab === 'azi') {
-    c.innerHTML = todayMatches.length ? todayMatches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Nu sunt meciuri azi (${today}). Vezi "Toate Zilele".</div>`;
-  } else if (currentTab === 'toate') {
-    c.innerHTML = state.matches.map(renderMatchCard).join('');
+  const filteredMatches = state.matches.filter(m => m.date === selectedDate);
+  
+  if (currentTab === 'meciuri') {
+    c.innerHTML = filteredMatches.length ? filteredMatches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${selectedDate}. Alege altă zi din bară.</div>`;
   } else if (currentTab === 'bilete') {
     c.innerHTML = renderTicketGenerator();
   }
