@@ -24,12 +24,12 @@ CORS(app)
 
 CACHE_FILE = "matches_cache.json"
 MAX_ROWS = 600
-
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 
 CONFIDENCE_THRESHOLD = 0.65
 LOW_RISK_THRESHOLD = 0.75
 FALLBACK_MIN_CONFIDENCE = 0.55
+CHALLENGE_TARGET_ODD = 1.50
 
 TOP_LEAGUES = {"E0", "E1", "E2", "SP1", "SP2", "I1", "I2", "D1", "D2", "F1", "F2", "N1", "B1", "P1", "SC0", "T1", "G1"}
 
@@ -44,15 +44,14 @@ BOOKMAKER_1X2_COLUMNS = [
 OU25_PRIORITY = [("B365>2.5", "B365<2.5"), ("Avg>2.5", "Avg<2.5"), ("BbAv>2.5", "BbAv<2.5")]
 
 LEAGUE_NAMES = {
-    "E0": "Premier League (Anglia)", "E1": "Championship (Anglia)",
-    "E2": "League One (Anglia)", "E3": "League Two (Anglia)", "EC": "National League (Anglia)",
-    "SC0": "Premiership (Scoția)", "SC1": "Championship (Scoția)",
-    "SP1": "La Liga (Spania)", "SP2": "La Liga 2 (Spania)",
-    "D1": "Bundesliga (Germania)", "D2": "Bundesliga 2 (Germania)",
-    "I1": "Serie A (Italia)", "I2": "Serie B (Italia)",
-    "F1": "Ligue 1 (Franța)", "F2": "Ligue 2 (Franța)",
-    "N1": "Eredivisie (Olanda)", "B1": "Jupiler Pro League (Belgia)",
-    "P1": "Primeira Liga (Portugalia)", "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
+    "E0": "Premier League", "E1": "Championship", "E2": "League One", "E3": "League Two", "EC": "National League",
+    "SC0": "Premiership Scotia", "SC1": "Championship Scotia",
+    "SP1": "La Liga", "SP2": "La Liga 2",
+    "D1": "Bundesliga", "D2": "Bundesliga 2",
+    "I1": "Serie A", "I2": "Serie B",
+    "F1": "Ligue 1", "F2": "Ligue 2",
+    "N1": "Eredivisie", "B1": "Jupiler Pro League",
+    "P1": "Primeira Liga", "T1": "Super Lig", "G1": "Super League",
 }
 
 def _load_json(path, default):
@@ -60,16 +59,16 @@ def _load_json(path, default):
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-    except Exception as e:
-        print(f"[WARN] Eroare la citirea {path}: {e}")
+    except Exception:
+        pass
     return default
 
 def _save_json(path, data):
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"[EROARE] Cache scriere eșuată la {path}: {e}")
+    except Exception:
+        pass
 
 def parse_uk_date(date_str):
     date_str = (date_str or "").strip()
@@ -102,7 +101,7 @@ def extract_1x2_odds(row):
     pinnacle = _valid_odds_triplet(row, *PINNACLE_1X2)
     if pinnacle:
         ph, pd, pa = implied_probs_square_root(*pinnacle)
-        return ph, pd, pa, "Pinnacle (High Accuracy)"
+        return ph, pd, pa, "Pinnacle"
 
     probs = []
     for h_key, d_key, a_key, _label in BOOKMAKER_1X2_COLUMNS:
@@ -112,15 +111,15 @@ def extract_1x2_odds(row):
 
     if probs:
         n = len(probs)
-        sum_h = sum([p[0] for p in probs])
-        sum_d = sum([p[1] for p in probs])
-        sum_a = sum([p[2] for p in probs])
-        return (sum_h / n), (sum_d / n), (sum_a / n), "Medie Case"
+        h_sum = sum(p[0] for p in probs)
+        d_sum = sum(p[1] for p in probs)
+        a_sum = sum(p[2] for p in probs)
+        return h_sum/n, d_sum/n, a_sum/n, "Medie Case"
 
     avg = _valid_odds_triplet(row, "AvgH", "AvgD", "AvgA")
     if avg:
         ph, pd, pa = implied_probs_square_root(*avg)
-        return ph, pd, pa, "Medie Globală"
+        return ph, pd, pa, "Medie Globala"
 
     return None
 
@@ -136,16 +135,4 @@ def extract_ou25_odds(row):
     return None
 
 def poisson_pmf(k, lam):
-    lam = max(lam, 0.01)
-    return math.exp(-lam) * (lam ** k) / math.factorial(k)
-
-DIXON_COLES_RHO = -0.08
-
-def dixon_coles_tau(x, y, lam, mu, rho):
-    if x == 0 and y == 0: return 1.0 - (lam * mu * rho)
-    elif x == 0 and y == 1: return 1.0 + (lam * rho)
-    elif x == 1 and y == 0: return 1.0 + (mu * rho)
-    elif x == 1 and y == 1: return 1.0 - rho
-    return 1.0
-
-def _match_probs_from_lambdas(lam_h, lam_a, max_g, rho=DIXON_COLES_
+    lam = max(lam
