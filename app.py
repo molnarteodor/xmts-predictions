@@ -287,23 +287,20 @@ def predict_from_odds(row, rho_league):
     if odd_ht05 >= 1.25 and odd_ht05 <= 2.20:
         market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": odd_ht05})
 
-    # Colectam toate pietele posibile cu probabilitatile lor reale
-    all_possible_markets = {
+    # Pentru pronosticul principal, excludem Peste 1.5 ca să lăsăm loc de diversificare (1X2, GG, Over 2.5, Șansă Dublă)
+    filtered_for_main = {
         f"1 ({row.get('HomeTeam', 'Gazde')})": p_home,
         "X (Egal)": p_draw,
         f"2 ({row.get('AwayTeam', 'Oaspeți')})": p_away,
         "Șansă Dublă 1X": p_home + p_draw,
         "Șansă Dublă X2": p_draw + p_away,
-        "Peste 1.5 goluri": p_over[1.5],
         "Peste 2.5 goluri": p_over[2.5],
         "Sub 2.5 goluri": p_under[2.5],
-        "GG - Ambele marchează": p_btts,
-        "Peste 0.5 goluri HT": p_over05_ht
+        "GG - Ambele marchează": p_btts
     }
 
-    # Alegem market-ul cu cea mai mare probabilitate reală
-    best_market = max(all_possible_markets, key=all_possible_markets.get)
-    best_p = all_possible_markets[best_market]
+    best_market = max(filtered_for_main, key=filtered_for_main.get)
+    best_p = filtered_for_main[best_market]
 
     result = {
         "principal": best_market,
@@ -683,7 +680,6 @@ function evaluatePrediction(m, marketName) {
   if (marketName.includes("2 (Oaspeți)")) return a > h ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Șansă Dublă 1X")) return h >= a ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Șansă Dublă X2")) return a >= h ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Peste 1.5")) return tot > 1.5 ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Peste 2.5")) return tot > 2.5 ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Sub 2.5")) return tot <= 2.5 ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("GG")) return (h > 0 && a > 0) ? {status: 'win'} : {status: 'loss'};
