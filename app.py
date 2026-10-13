@@ -126,7 +126,6 @@ def extract_1x2_odds(row):
         oh, od, oa = avg
         return ph, pd, pa, "Medie Globală", oh, od, oa
 
-    # Daca meciul nu are cote in CSV (cum e cazul meciurilor din CL introduse fara cote), setam cote implicite standard 2.00
     return 0.35, 0.30, 0.35, "Estimare Model", 2.10, 3.40, 3.20
 
 def extract_ou25_odds(row):
@@ -402,6 +401,7 @@ def process_csv_content(csv_text):
             except ValueError:
                 pass
 
+        # Detectam CL fie dupa codul Div, fie daca numele ligii contine Champions League
         is_cl = (league_code == "CL" or "Champions League" in league_name)
 
         processed.append({
@@ -626,7 +626,7 @@ HTML_TEMPLATE = """
 let state = { matches: [], stats_uploaded: false };
 let currentTab = 'meciuri';
 let selectedDate = getTodayStr();
-let selectedClDate = '2026-10-13'; // Data implicită pentru următoarea etapă de CL
+let selectedClDate = ''; 
 let selectedTargetOdds = 10;
 
 function getTodayStr() {
@@ -742,12 +742,19 @@ function renderDateSelector() {
   const matches = (state.matches || []).filter(m => currentTab === 'cl' ? m.is_cl : !m.is_cl);
   const datesSet = [...new Set(matches.map(m => m.date))].sort();
   
-  let activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
-  if (!datesSet.includes(activeD) && datesSet.length > 0) {
-    if (currentTab === 'cl') selectedClDate = datesSet[0];
-    else selectedDate = datesSet[0];
-    activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  if (datesSet.length > 0) {
+    if (currentTab === 'cl') {
+      if (!selectedClDate || !datesSet.includes(selectedClDate)) {
+        selectedClDate = datesSet[0];
+      }
+    } else {
+      if (!selectedDate || !datesSet.includes(selectedDate)) {
+        selectedDate = datesSet.includes(getTodayStr()) ? getTodayStr() : datesSet[0];
+      }
+    }
   }
+
+  let activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
 
   let chips = datesSet.map(d => `
     <button class="date-chip ${activeD === d ? 'active' : ''}" onclick="selectDate('${d}')">${d}</button>
@@ -764,10 +771,11 @@ function selectDate(d) {
 
 function renderTicketGenerator() {
   const activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
-  const matches = (state.matches || []).filter(m => m.date === activeD && !m.has_result);
+  const matches = (state.matches || []).filter(m => {
+    if (currentTab === 'cl') return m.is_cl && m.date === activeD && !m.has_result;
+    return !m.is_cl && m.date === activeD && !m.has_result;
+  });
   
-  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri viitoare pentru data selectată (${activeD}) pentru a genera bilete.</div>`;
-
   let pool = [];
   matches.forEach(m => {
     if (m.market_options) {
@@ -824,8 +832,8 @@ function renderTicketGenerator() {
 
   return `
     <div class="glass-card">
-      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (${activeD})</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Construiește biletul inteligent pentru data selectată.</div>
+      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (${activeD || 'General'})</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Construiește biletul inteligent.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
@@ -834,7 +842,7 @@ function renderTicketGenerator() {
           <span style="font-weight:bold; font-size:13px;">Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
-        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri pentru această cotă în data selectată.</div>'}
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri viitoare pentru această cotă în data selectată.</div>'}
         <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px;">Selecții: ${selectedPicks.length} (Max 15)</div>
       </div>
     </div>
@@ -865,7 +873,7 @@ function render() {
   });
   
   if (currentTab === 'meciuri' || currentTab === 'cl') {
-    c.innerHTML = matches.length ? matches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${activeD}. Alege altă etapă/zi din bară.</div>`;
+    c.innerHTML = matches.length ? matches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${activeD || 'selectată'}. Alege altă etapă/zi din bară.</div>`;
   } else if (currentTab === 'bilete') {
     c.innerHTML = renderTicketGenerator();
   }
