@@ -25,10 +25,10 @@ CORS(app)
 
 CACHE_FILE = "matches_cache.json"
 STATS_CACHE_FILE = "team_stats_cache.json"
-MAX_ROWS = 600
+MAX_ROWS = 800
 
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
-TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv"]
+TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv", "CL.csv"]
 
 CONFIDENCE_THRESHOLD = 0.50
 LOW_RISK_THRESHOLD = 0.65
@@ -58,6 +58,7 @@ LEAGUE_NAMES = {
     "F2": "Ligue 2 (Franța)", "N1": "Eredivisie (Olanda)", 
     "B1": "Jupiler League (Belgia)", "P1": "Primeira Liga (Por)", 
     "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
+    "CL": "UEFA Champions League"
 }
 
 DIXON_COLES_RHO_BASE = -0.08
@@ -125,7 +126,8 @@ def extract_1x2_odds(row):
         oh, od, oa = avg
         return ph, pd, pa, "Medie Globală", oh, od, oa
 
-    return None
+    # Daca meciul nu are cote in CSV (cum e cazul meciurilor din CL introduse fara cote), setam cote implicite standard 2.00
+    return 0.35, 0.30, 0.35, "Estimare Model", 2.10, 3.40, 3.20
 
 def extract_ou25_odds(row):
     for over_key, under_key in OU25_PRIORITY:
@@ -136,7 +138,7 @@ def extract_ou25_odds(row):
                 return o_over, o_under
         except (ValueError, TypeError):
             continue
-    return None
+    return 1.85, 1.85
 
 def poisson_pmf(k, lam):
     lam_safe = max(lam, 0.01)
@@ -203,14 +205,10 @@ def predict_from_odds(row, rho_league):
     p_h, p_d, p_a, bookmaker, oh, od, oa = odds_data
 
     ou = extract_ou25_odds(row)
-    target_over25 = None
-    o_over_val, o_under_val = 1.85, 1.85
-    if ou:
-        o_over, o_under = ou
-        o_over_val, o_under_val = o_over, o_under
-        sr_over = math.sqrt(1.0/o_over)
-        sr_under = math.sqrt(1.0/o_under)
-        target_over25 = sr_over / (sr_over + sr_under)
+    o_over_val, o_under_val = ou
+    sr_over = math.sqrt(1.0/o_over_val)
+    sr_under = math.sqrt(1.0/o_under_val)
+    target_over25 = sr_over / (sr_over + sr_under)
 
     lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a, rho_league, target_over25)
 
@@ -248,46 +246,22 @@ def predict_from_odds(row, rho_league):
     lam_a_ht = lam_a * 0.45
     p_over05_ht = 1.0 - (math.exp(-lam_h_ht) * math.exp(-lam_a_ht))
     
-    lam_h_st = lam_h * 0.55
-    lam_a_st = lam_a * 0.55
-    p_over05_st = 1.0 - (math.exp(-lam_h_st) * math.exp(-lam_a_st))
-
     odd_1x = round(1.0 / max(0.05, (p_home + p_draw * 0.9)), 2)
     odd_x2 = round(1.0 / max(0.05, (p_away + p_draw * 0.9)), 2)
     odd_o15 = round(1.0 / max(0.05, (p_over[1.5] * 0.95)), 2)
     odd_btts = round(1.0 / max(0.05, (p_btts * 0.95)), 2)
-    odd_ht05 = round(1.0 / max(0.05, (p_over05_ht * 0.95)), 2)
 
-    market_options = []
-    
-    if oh >= 1.20 and oh <= 4.00:
-        market_options.append({"name": f"1 ({row.get('HomeTeam', 'Gazde')})", "prob": p_home, "odds": oh})
-    if od >= 2.60 and od <= 5.00:
-        market_options.append({"name": "X (Egal)", "prob": p_draw, "odds": od})
-    if oa >= 1.20 and oa <= 4.50:
-        market_options.append({"name": f"2 ({row.get('AwayTeam', 'Oaspeți')})", "prob": p_away, "odds": oa})
-    
-    if odd_1x >= 1.15 and odd_1x <= 2.20:
-        market_options.append({"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": odd_1x})
-    if odd_x2 >= 1.15 and odd_x2 <= 2.30:
-        market_options.append({"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": odd_x2})
+    market_options = [
+        {"name": f"1 ({row.get('HomeTeam', 'Gazde')})", "prob": p_home, "odds": oh},
+        {"name": "X (Egal)", "prob": p_draw, "odds": od},
+        {"name": f"2 ({row.get('AwayTeam', 'Oaspeți')})", "prob": p_away, "odds": oa},
+        {"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": odd_1x},
+        {"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": odd_x2},
+        {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val},
+        {"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under_val},
+        {"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts}
+    ]
 
-    if odd_o15 >= 1.20 and odd_o15 <= 2.10:
-        market_options.append({"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": odd_o15})
-
-    if o_over_val >= 1.35 and o_over_val <= 2.80:
-        market_options.append({"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val})
-        
-    if o_under_val >= 1.35 and o_under_val <= 2.80:
-        market_options.append({"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under_val})
-
-    if odd_btts >= 1.40 and odd_btts <= 2.40:
-        market_options.append({"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts})
-
-    if odd_ht05 >= 1.25 and odd_ht05 <= 2.20:
-        market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": odd_ht05})
-
-    # Pentru pronosticul principal, excludem Peste 1.5 ca să lăsăm loc de diversificare (1X2, GG, Over 2.5, Șansă Dublă)
     filtered_for_main = {
         f"1 ({row.get('HomeTeam', 'Gazde')})": p_home,
         "X (Egal)": p_draw,
@@ -428,8 +402,10 @@ def process_csv_content(csv_text):
             except ValueError:
                 pass
 
+        is_cl = (league_code == "CL" or "Champions League" in league_name)
+
         processed.append({
-            "league": league_name, "date": parse_uk_date(row.get("Date")),
+            "league": league_name, "is_cl": is_cl, "date": parse_uk_date(row.get("Date")),
             "time": (row.get("Time") or "").strip(), "home": home, "away": away,
             "has_result": has_result, "res_home": res_h, "res_away": res_a,
             "corners_cards": cc, **pred
@@ -637,7 +613,8 @@ HTML_TEMPLATE = """
   </div>
 
   <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Meciuri & Rezultate</button>
+    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Meciuri Naționale</button>
+    <button class="tab-btn" onclick="switchTab('cl', this)" style="border-color:var(--accent-cyan); color:var(--accent-cyan);">🏆 Champions League</button>
     <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
   </div>
 
@@ -649,6 +626,7 @@ HTML_TEMPLATE = """
 let state = { matches: [], stats_uploaded: false };
 let currentTab = 'meciuri';
 let selectedDate = getTodayStr();
+let selectedClDate = '2026-10-13'; // Data implicită pentru următoarea etapă de CL
 let selectedTargetOdds = 10;
 
 function getTodayStr() {
@@ -761,28 +739,34 @@ function renderMatchCard(m) {
 }
 
 function renderDateSelector() {
-  const matches = state.matches || [];
-  const datesSet = [...new Set(matches.map(m => m.date))].sort().reverse();
-  if (!datesSet.includes(selectedDate) && datesSet.length > 0) {
-    selectedDate = datesSet[0];
+  const matches = (state.matches || []).filter(m => currentTab === 'cl' ? m.is_cl : !m.is_cl);
+  const datesSet = [...new Set(matches.map(m => m.date))].sort();
+  
+  let activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  if (!datesSet.includes(activeD) && datesSet.length > 0) {
+    if (currentTab === 'cl') selectedClDate = datesSet[0];
+    else selectedDate = datesSet[0];
+    activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
   }
 
-  let chips = datesSet.slice(0, 10).map(d => `
-    <button class="date-chip ${selectedDate === d ? 'active' : ''}" onclick="selectDate('${d}')">${d === getTodayStr() ? 'Astăzi ('+d+')' : d}</button>
+  let chips = datesSet.map(d => `
+    <button class="date-chip ${activeD === d ? 'active' : ''}" onclick="selectDate('${d}')">${d}</button>
   `).join('');
 
   return `<div class="date-picker-bar">${chips || '<span style="font-size:12px;color:var(--text-muted)">Nicio dată disponibilă</span>'}</div>`;
 }
 
 function selectDate(d) {
-  selectedDate = d;
+  if (currentTab === 'cl') selectedClDate = d;
+  else selectedDate = d;
   render();
 }
 
 function renderTicketGenerator() {
-  const matches = (state.matches || []).filter(m => m.date === selectedDate && !m.has_result);
+  const activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  const matches = (state.matches || []).filter(m => m.date === activeD && !m.has_result);
   
-  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri viitoare pentru data selectată (${selectedDate}) pentru a genera bilete.</div>`;
+  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Nu există meciuri viitoare pentru data selectată (${activeD}) pentru a genera bilete.</div>`;
 
   let pool = [];
   matches.forEach(m => {
@@ -840,8 +824,8 @@ function renderTicketGenerator() {
 
   return `
     <div class="glass-card">
-      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (${selectedDate})</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Construiește biletul inteligent pentru meciurile neterminate din data selectată.</div>
+      <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete (${activeD})</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Construiește biletul inteligent pentru data selectată.</div>
       
       <div class="ticket-config">${oddsButtons}</div>
 
@@ -874,10 +858,14 @@ function render() {
   
   dateContainer.innerHTML = renderDateSelector();
   
-  const filteredMatches = state.matches.filter(m => m.date === selectedDate);
+  const activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  const matches = (state.matches || []).filter(m => {
+    if (currentTab === 'cl') return m.is_cl && m.date === activeD;
+    return !m.is_cl && m.date === activeD;
+  });
   
-  if (currentTab === 'meciuri') {
-    c.innerHTML = filteredMatches.length ? filteredMatches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${selectedDate}. Alege altă zi din bară.</div>`;
+  if (currentTab === 'meciuri' || currentTab === 'cl') {
+    c.innerHTML = matches.length ? matches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${activeD}. Alege altă etapă/zi din bară.</div>`;
   } else if (currentTab === 'bilete') {
     c.innerHTML = renderTicketGenerator();
   }
