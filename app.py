@@ -30,9 +30,9 @@ MAX_ROWS = 600
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
 TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv"]
 
-CONFIDENCE_THRESHOLD = 0.65
-LOW_RISK_THRESHOLD = 0.75
-FALLBACK_MIN_CONFIDENCE = 0.55
+CONFIDENCE_THRESHOLD = 0.50
+LOW_RISK_THRESHOLD = 0.65
+FALLBACK_MIN_CONFIDENCE = 0.45
 
 CORNERS_LINES = [8.5, 9.5, 10.5]
 CARDS_LINES = [3.5, 4.5, 5.5]
@@ -217,6 +217,7 @@ def predict_from_odds(row, rho_league):
     max_g = 10
     p_home = p_draw = p_away = p_btts = 0.0
     p_over = {1.5: 0.0, 2.5: 0.0, 3.5: 0.0}
+    p_under = {2.5: 0.0}
 
     for h in range(max_g):
         for a in range(max_g):
@@ -229,6 +230,7 @@ def predict_from_odds(row, rho_league):
             tot = h + a
             if tot > 1.5: p_over[1.5] += p
             if tot > 2.5: p_over[2.5] += p
+            if tot <= 2.5: p_under[2.5] += p
             if tot > 3.5: p_over[3.5] += p
             if h > 0 and a > 0: p_btts += p
 
@@ -239,6 +241,7 @@ def predict_from_odds(row, rho_league):
 
     if target_over25 is not None:
         p_over[2.5] = target_over25
+        p_under[2.5] = max(0.01, 1.0 - target_over25)
     p_over[1.5] = max(p_over[1.5], p_over[2.5])
     
     lam_h_ht = lam_h * 0.45
@@ -274,6 +277,9 @@ def predict_from_odds(row, rho_league):
 
     if o_over_val >= 1.35 and o_over_val <= 2.80:
         market_options.append({"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val})
+        
+    if o_under_val >= 1.35 and o_under_val <= 2.80:
+        market_options.append({"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under_val})
 
     if odd_btts >= 1.40 and odd_btts <= 2.40:
         market_options.append({"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts})
@@ -281,15 +287,23 @@ def predict_from_odds(row, rho_league):
     if odd_ht05 >= 1.25 and odd_ht05 <= 2.20:
         market_options.append({"name": "Peste 0.5 goluri în prima repriză", "prob": p_over05_ht, "odds": odd_ht05})
 
-    markets = {
-        "1 (Gazde)": p_home, "X (Egal)": p_draw, "2 (Oaspeți)": p_away,
-        "Peste 2.5 goluri": p_over[2.5], "Sub 2.5 goluri": max(0.01, 1.0 - p_over[2.5]),
-        "GG - Da": p_btts
+    # Colectam toate pietele posibile cu probabilitatile lor reale
+    all_possible_markets = {
+        f"1 ({row.get('HomeTeam', 'Gazde')})": p_home,
+        "X (Egal)": p_draw,
+        f"2 ({row.get('AwayTeam', 'Oaspeți')})": p_away,
+        "Șansă Dublă 1X": p_home + p_draw,
+        "Șansă Dublă X2": p_draw + p_away,
+        "Peste 1.5 goluri": p_over[1.5],
+        "Peste 2.5 goluri": p_over[2.5],
+        "Sub 2.5 goluri": p_under[2.5],
+        "GG - Ambele marchează": p_btts,
+        "Peste 0.5 goluri HT": p_over05_ht
     }
-    fallback = [("Șansă Dublă 1X", p_home + p_draw), ("Șansă Dublă X2", p_draw + p_away)]
 
-    best_market = max(markets, key=markets.get)
-    best_p = markets[best_market]
+    # Alegem market-ul cu cea mai mare probabilitate reală
+    best_market = max(all_possible_markets, key=all_possible_markets.get)
+    best_p = all_possible_markets[best_market]
 
     result = {
         "principal": best_market,
@@ -300,27 +314,24 @@ def predict_from_odds(row, rho_league):
         "league_rho": rho_league,
         "market_options": market_options,
         "probs": {
-            "over15": round(p_over[1.5] * 100, 1), "over25": round(p_over[2.5] * 100, 1),
-            "btts": round(p_btts * 100, 1), "over05_ht": round(p_over05_ht * 100, 1),
-            "over05_st": round(p_over05_st * 100, 1)
+            "home": round(p_home * 100, 1),
+            "draw": round(p_draw * 100, 1),
+            "away": round(p_away * 100, 1),
+            "over15": round(p_over[1.5] * 100, 1),
+            "over25": round(p_over[2.5] * 100, 1),
+            "under25": round(p_under[2.5] * 100, 1),
+            "btts": round(p_btts * 100, 1),
+            "over05_ht": round(p_over05_ht * 100, 1)
         }
     }
 
-    if best_p >= CONFIDENCE_THRESHOLD:
-        result["risc"] = "Scăzut" if best_p >= LOW_RISK_THRESHOLD else "Mediu"
-        return result
+    if best_p >= LOW_RISK_THRESHOLD:
+        result["risc"] = "Scăzut"
+    elif best_p >= CONFIDENCE_THRESHOLD:
+        result["risc"] = "Mediu"
+    else:
+        result["risc"] = "Ridicat"
 
-    alt_market = max(fallback, key=lambda kv: kv[1])
-    alt_p = alt_market[1]
-    
-    if alt_p >= FALLBACK_MIN_CONFIDENCE:
-        result["alternativ"] = alt_market[0]
-        result["alternativ_pct"] = round(alt_p * 100, 1)
-        result["risc"] = "Mediu" if alt_p >= 0.65 else "Ridicat"
-        return result
-
-    result["risc"] = "Ridicat"
-    result["fara_pronostic"] = True
     return result
 
 def _decay_avg(values, alpha=0.85):
@@ -408,7 +419,6 @@ def process_csv_content(csv_text):
 
         league_name = LEAGUE_NAMES.get(league_code, league_code)
         
-        # Verificam daca exista scor final in CSV (FTHG si FTAG)
         fthg = row.get("FTHG")
         ftag = row.get("FTAG")
         has_result = False
@@ -662,7 +672,7 @@ function toggleAccordion(header) {
 }
 
 function evaluatePrediction(m, marketName) {
-  if (!m.has_result) return { status: 'pending', label: 'În desfășurare / Viitor' };
+  if (!m.has_result) return { status: 'pending' };
   
   const h = m.res_home;
   const a = m.res_away;
@@ -673,11 +683,12 @@ function evaluatePrediction(m, marketName) {
   if (marketName.includes("2 (Oaspeți)")) return a > h ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Șansă Dublă 1X")) return h >= a ? {status: 'win'} : {status: 'loss'};
   if (marketName.includes("Șansă Dublă X2")) return a >= h ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Peste 1.5 goluri")) return tot > 1.5 ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Peste 2.5 goluri")) return tot > 2.5 ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("GG - Ambele")) return (h > 0 && a > 0) ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Peste 1.5")) return tot > 1.5 ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Peste 2.5")) return tot > 2.5 ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("Sub 2.5")) return tot <= 2.5 ? {status: 'win'} : {status: 'loss'};
+  if (marketName.includes("GG")) return (h > 0 && a > 0) ? {status: 'win'} : {status: 'loss'};
   
-  return { status: 'pending', label: '-' };
+  return { status: 'pending' };
 }
 
 function renderMatchCard(m) {
@@ -685,8 +696,8 @@ function renderMatchCard(m) {
   const avgH = m.exp_goals_home;
   const avgA = m.exp_goals_away;
   
-  const pronostic = m.principal || m.alternativ || "Echilibrat";
-  const pronostic_pct = m.principal_pct || m.alternativ_pct || "-";
+  const pronostic = m.principal || "Echilibrat";
+  const pronostic_pct = m.principal_pct || "-";
 
   const evalRes = evaluatePrediction(m, pronostic);
   let badgeHtml = '';
@@ -733,10 +744,14 @@ function renderMatchCard(m) {
           <div class="t-badge"><div class="t-badge-circle">${m.away.substring(0,3).toUpperCase()}</div><div style="font-size:11px;font-weight:bold;">${m.away.toUpperCase()}</div></div>
         </div>
 
-        <div class="golden-header">STATISTICS</div>
+        <div class="golden-header">STATISTICS (PROBABILITĂȚI)</div>
         <div class="h2h-row"><div class="h2h-val">${avgH}</div><div class="h2h-label">Expected Goals (xG)</div><div class="h2h-val">${avgA}</div></div>
 
         <div class="bars-section">
+          <div class="bar-row"><div class="bar-label">1 (Gazde):</div><div class="bar-track"><div class="bar-fill" style="width: ${p.home}%;">${p.home}%</div></div></div>
+          <div class="bar-row"><div class="bar-label">X (Egal):</div><div class="bar-track"><div class="bar-fill" style="width: ${p.draw}%; background:#3b82f6;">${p.draw}%</div></div></div>
+          <div class="bar-row"><div class="bar-label">2 (Oaspeți):</div><div class="bar-track"><div class="bar-fill" style="width: ${p.away}%; background:#a855f7;">${p.away}%</div></div></div>
+          <div class="bar-row"><div class="bar-label">Over 1.5:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over15}%;">${p.over15}%</div></div></div>
           <div class="bar-row"><div class="bar-label">Over 2.5:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.over25}%;">${p.over25}%</div></div></div>
           <div class="bar-row"><div class="bar-label">Both Score:</div><div class="bar-track"><div class="bar-fill" style="width: ${p.btts}%;">${p.btts}%</div></div></div>
         </div>
@@ -751,7 +766,6 @@ function renderMatchCard(m) {
 
 function renderDateSelector() {
   const matches = state.matches || [];
-  // Extragem ultimele 7 zile unice care au meciuri
   const datesSet = [...new Set(matches.map(m => m.date))].sort().reverse();
   if (!datesSet.includes(selectedDate) && datesSet.length > 0) {
     selectedDate = datesSet[0];
