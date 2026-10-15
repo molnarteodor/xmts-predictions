@@ -25,14 +25,14 @@ CORS(app)
 
 CACHE_FILE = "matches_cache.json"
 STATS_CACHE_FILE = "team_stats_cache.json"
-MAX_ROWS = 800
+MAX_ROWS = 1000
 
 FIXTURES_CSV_URL = os.environ.get("FIXTURES_CSV_URL", "")
-TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv", "CL.csv"]
+# Adaugam EL.csv in lista de fisiere urmarite
+TARGET_STATS_FILES = ["E0.csv", "SP1.csv", "I1.csv", "D1.csv", "F1.csv", "E1.csv", "SP2.csv", "I2.csv", "D2.csv", "CL.csv", "EL1.csv"]
 
 CONFIDENCE_THRESHOLD = 0.50
 LOW_RISK_THRESHOLD = 0.65
-FALLBACK_MIN_CONFIDENCE = 0.45
 
 CORNERS_LINES = [8.5, 9.5, 10.5]
 CARDS_LINES = [3.5, 4.5, 5.5]
@@ -58,7 +58,7 @@ LEAGUE_NAMES = {
     "F2": "Ligue 2 (Franța)", "N1": "Eredivisie (Olanda)", 
     "B1": "Jupiler League (Belgia)", "P1": "Primeira Liga (Por)", 
     "T1": "Super Lig (Turcia)", "G1": "Super League (Grecia)",
-    "CL": "UEFA Champions League"
+    "CL": "UEFA Champions League", "EL": "UEFA Europa League"
 }
 
 DIXON_COLES_RHO_BASE = -0.08
@@ -81,12 +81,26 @@ def _save_json(path, data):
 
 def parse_uk_date(date_str):
     date_str = (date_str or "").strip()
-    for fmt in ("%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d"):
+    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d"):
         try:
+            # Daca contine si ora, extragem doar data
+            if " " in date_str and ":" in date_str and fmt == "%d/%m/%Y %H:%M":
+                dt = datetime.strptime(date_str, "%d/%m/%Y %H:%M")
+                return dt.strftime("%Y-%m-%d")
             return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
     return date_str
+
+def parse_uk_time(date_str):
+    date_str = (date_str or "").strip()
+    if " " in date_str and ":" in date_str:
+        try:
+            dt = datetime.strptime(date_str, "%d/%m/%Y %H:%M")
+            return dt.strftime("%H:%M")
+        except ValueError:
+            pass
+    return ""
 
 def _valid_odds_triplet(row, h_key, d_key, a_key):
     try:
@@ -126,7 +140,7 @@ def extract_1x2_odds(row):
         oh, od, oa = avg
         return ph, pd, pa, "Medie Globală", oh, od, oa
 
-    return 0.35, 0.30, 0.35, "Estimare Model", 2.10, 3.40, 3.20
+    return 0.38, 0.28, 0.34, "Estimare Model", 2.15, 3.30, 3.10
 
 def extract_ou25_odds(row):
     for over_key, under_key in OU25_PRIORITY:
@@ -247,24 +261,25 @@ def predict_from_odds(row, rho_league):
     
     odd_1x = round(1.0 / max(0.05, (p_home + p_draw * 0.9)), 2)
     odd_x2 = round(1.0 / max(0.05, (p_away + p_draw * 0.9)), 2)
-    odd_o15 = round(1.0 / max(0.05, (p_over[1.5] * 0.95)), 2)
-    odd_btts = round(1.0 / max(0.05, (p_btts * 0.95)), 2)
+
+    home_name = (row.get("HomeTeam") or row.get("Home Team") or "Gazde").strip()
+    away_name = (row.get("AwayTeam") or row.get("Away Team") or "Oaspeți").strip()
 
     market_options = [
-        {"name": f"1 ({row.get('HomeTeam', 'Gazde')})", "prob": p_home, "odds": oh},
+        {"name": f"1 ({home_name})", "prob": p_home, "odds": oh},
         {"name": "X (Egal)", "prob": p_draw, "odds": od},
-        {"name": f"2 ({row.get('AwayTeam', 'Oaspeți')})", "prob": p_away, "odds": oa},
+        {"name": f"2 ({away_name})", "prob": p_away, "odds": oa},
         {"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": odd_1x},
         {"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": odd_x2},
         {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val},
         {"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under_val},
-        {"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts}
+        {"name": "GG - Ambele marchează", "prob": p_btts, "odds": 1.90}
     ]
 
     filtered_for_main = {
-        f"1 ({row.get('HomeTeam', 'Gazde')})": p_home,
+        f"1 ({home_name})": p_home,
         "X (Egal)": p_draw,
-        f"2 ({row.get('AwayTeam', 'Oaspeți')})": p_away,
+        f"2 ({away_name})": p_away,
         "Șansă Dublă 1X": p_home + p_draw,
         "Șansă Dublă X2": p_draw + p_away,
         "Peste 2.5 goluri": p_over[2.5],
@@ -344,7 +359,7 @@ def estimate_corners_cards(home_team, away_team, team_stats):
         "sample": len(h["cf_h"]) + len(a["cf_a"])
     }
 
-def process_csv_content(csv_text):
+def process_csv_content(csv_text, filename=""):
     reader = csv.DictReader(io.StringIO(csv_text))
     processed = []
     skipped_no_odds = 0
@@ -353,14 +368,20 @@ def process_csv_content(csv_text):
     for i, row in enumerate(reader):
         if i >= MAX_ROWS:
             break
-        home = (row.get("HomeTeam") or "").strip()
-        away = (row.get("AwayTeam") or "").strip()
+        
+        # Suport pentru ambele formate (Football-Data clasic sau Open Football cu Home Team)
+        home = (row.get("HomeTeam") or row.get("Home Team") or "").strip()
+        away = (row.get("AwayTeam") or row.get("Away Team") or "").strip()
         if not home or not away:
             continue
         
         league_code = (row.get("Div") or "").strip()
+        if not league_code and "EL" in filename.upper():
+            league_code = "EL"
+        elif not league_code and "CL" in filename.upper():
+            league_code = "CL"
+
         rho_val = DIXON_COLES_RHO_BASE
-        
         if existing_stats and "__rhos__" in existing_stats:
             rho_val = existing_stats["__rhos__"].get(league_code, DIXON_COLES_RHO_BASE)
 
@@ -388,26 +409,34 @@ def process_csv_content(csv_text):
                 pred["market_options"].append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": odd_cd35})
 
         league_name = LEAGUE_NAMES.get(league_code, league_code)
-        
+        if "EL" in filename.upper() and league_code == "EL":
+            league_name = "UEFA Europa League"
+
+        raw_date = row.get("Date") or row.get("Match Date") or ""
+        match_date = parse_uk_date(raw_date)
+        match_time = parse_uk_time(raw_date) or (row.get("Time") or "").strip()
+
+        # Verificam scorul final (suport pentru FTHG sau coloane cu scor direct in format open data)
         fthg = row.get("FTHG")
         ftag = row.get("FTAG")
-        has_result = False
+        has_res = False
         res_h, res_a = None, None
+
         if fthg is not None and ftag is not None and str(fthg).strip() != "" and str(ftag).strip() != "":
             try:
                 res_h = int(float(fthg))
                 res_a = int(float(ftag))
-                has_result = True
+                has_res = True
             except ValueError:
                 pass
 
-        # Detectam CL fie dupa codul Div, fie daca numele ligii contine Champions League
-        is_cl = (league_code == "CL" or "Champions League" in league_name)
+        is_cl = (league_code == "CL" or "CL" in filename.upper() or "Champions League" in league_name)
+        is_el = (league_code == "EL" or "EL" in filename.upper() or "Europa League" in league_name)
 
         processed.append({
-            "league": league_name, "is_cl": is_cl, "date": parse_uk_date(row.get("Date")),
-            "time": (row.get("Time") or "").strip(), "home": home, "away": away,
-            "has_result": has_result, "res_home": res_h, "res_away": res_a,
+            "league": league_name, "is_cl": is_cl, "is_el": is_el, "date": match_date,
+            "time": match_time, "home": home, "away": away,
+            "has_result": has_res, "res_home": res_h, "res_away": res_a,
             "corners_cards": cc, **pred
         })
 
@@ -415,16 +444,33 @@ def process_csv_content(csv_text):
     processed.sort(key=lambda m: m["date"])
     return processed, skipped_no_odds
 
-def _build_fixtures_cache(content, source):
-    matches, skipped = process_csv_content(content)
+def _build_fixtures_cache(base_url):
+    all_matches = []
+    total_skipped = 0
     existing_stats = _load_json(STATS_CACHE_FILE, {})
+
+    for stat_file in TARGET_STATS_FILES:
+        try:
+            url = f"{base_url}/{stat_file}" if base_url else stat_file
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla'})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read().decode('utf-8')
+                matches, skipped = process_csv_content(content, filename=stat_file)
+                all_matches.extend(matches)
+                total_skipped += skipped
+        except Exception as e:
+            print(f"Eroare citire {stat_file}: {e}")
+
+    all_matches.sort(key=lambda m: -(m.get("principal_pct") or 0))
+    all_matches.sort(key=lambda m: m["date"])
+
     cache_data = {
         "uploaded_at": datetime.now().isoformat(),
         "upload_date": today_str(),
-        "matches": matches,
-        "skipped_no_odds": skipped,
+        "matches": all_matches,
+        "skipped_no_odds": total_skipped,
         "api_active": True,
-        "source": source,
+        "source": "github_multi",
         "stats_uploaded": len(existing_stats) > 0
     }
     _save_json(CACHE_FILE, cache_data)
@@ -433,8 +479,8 @@ def _build_fixtures_cache(content, source):
 def update_team_stats_from_csv(content, team_stats):
     reader = csv.DictReader(io.StringIO(content))
     for row in reader:
-        h = (row.get("HomeTeam") or "").strip()
-        a = (row.get("AwayTeam") or "").strip()
+        h = (row.get("HomeTeam") or row.get("Home Team") or "").strip()
+        a = (row.get("AwayTeam") or row.get("Away Team") or "").strip()
         if not h or not a: continue
         
         div = (row.get("Div") or "").strip()
@@ -448,23 +494,6 @@ def update_team_stats_from_csv(content, team_stats):
                 team_stats["__leagues__"][div]["ag"].append(ag)
             except ValueError:
                 pass
-
-        try:
-            hc, ac = float(row.get("HC") or 0), float(row.get("AC") or 0)
-            hy, ay = float(row.get("HY") or 0), float(row.get("AY") or 0)
-            hr, ar = float(row.get("HR") or 0), float(row.get("AR") or 0)
-        except (ValueError, TypeError):
-            continue
-        
-        if h not in team_stats: team_stats[h] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
-        if a not in team_stats: team_stats[a] = {"cf_h":[], "ca_h":[], "cards_h":[], "cf_a":[], "ca_a":[], "cards_a":[]}
-        
-        team_stats[h]["cf_h"].append(hc)
-        team_stats[h]["ca_h"].append(ac)
-        team_stats[h]["cards_h"].append(hy + hr)
-        team_stats[a]["cf_a"].append(ac)
-        team_stats[a]["ca_a"].append(hc)
-        team_stats[a]["cards_a"].append(ay + ar)
     return team_stats
 
 def compute_dynamic_rho(team_stats):
@@ -505,10 +534,7 @@ def fetch_data_from_github_auto():
             team_stats = compute_dynamic_rho(team_stats)
             _save_json(STATS_CACHE_FILE, team_stats)
             
-        req = urllib.request.Request(FIXTURES_CSV_URL, headers={'User-Agent': 'Mozilla'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            csv_data = response.read().decode('utf-8')
-            _build_fixtures_cache(csv_data, "github_auto")
+        _build_fixtures_cache(base_url)
     except Exception as e:
         print(f"Eroare GitHub Auto-Sync: {e}")
 
@@ -523,7 +549,8 @@ def get_predictions():
     data = _load_json(CACHE_FILE, None)
     if not data or not data.get("matches"):
         if FIXTURES_CSV_URL:
-            fetch_data_from_github_auto()
+            base_url = FIXTURES_CSV_URL.rsplit('/', 1)[0]
+            _build_fixtures_cache(base_url)
             data = _load_json(CACHE_FILE, None)
     return jsonify(data or {"matches": [], "api_active": False})
 
@@ -538,7 +565,7 @@ HTML_TEMPLATE = """
 <style>
   :root {
     --bg-dark: #0a0a0a; --card-bg: #161616; --card-border: #2a2a2a;
-    --accent-cyan: #06b6d4; --accent-gold: #eab308; --text-main: #f8fafc; 
+    --accent-cyan: #06b6d4; --accent-gold: #eab308; --accent-orange: #f97316; --text-main: #f8fafc; 
     --text-muted: #94a3b8; --bar-green: #22c55e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -551,9 +578,9 @@ HTML_TEMPLATE = """
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   
-  .tabs-wrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
+  .tabs-wrapper { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
   .tabs-wrapper::-webkit-scrollbar { display: none; }
-  .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 10px 14px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  .tab-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 12px; border-radius: 10px; font-weight: 600; white-space: nowrap; cursor: pointer; font-size: 12px; }
   .tab-btn.active { background: rgba(234, 179, 8, 0.15); border-color: var(--accent-gold); color: #fff; }
 
   .match-basic { display:flex; flex-direction:column; gap:8px; }
@@ -613,9 +640,10 @@ HTML_TEMPLATE = """
   </div>
 
   <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Meciuri Naționale</button>
-    <button class="tab-btn" onclick="switchTab('cl', this)" style="border-color:var(--accent-cyan); color:var(--accent-cyan);">🏆 Champions League</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
+    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Naționale</button>
+    <button class="tab-btn" onclick="switchTab('cl', this)" style="border-color:var(--accent-cyan); color:var(--accent-cyan);">🏆 UCL</button>
+    <button class="tab-btn" onclick="switchTab('el', this)" style="border-color:var(--accent-orange); color:var(--accent-orange);">🇪🇺 UEL</button>
+    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Bilete</button>
   </div>
 
   <div id="dateSelectorContainer"></div>
@@ -626,7 +654,8 @@ HTML_TEMPLATE = """
 let state = { matches: [], stats_uploaded: false };
 let currentTab = 'meciuri';
 let selectedDate = getTodayStr();
-let selectedClDate = ''; 
+let selectedClDate = '';
+let selectedElDate = '';
 let selectedTargetOdds = 10;
 
 function getTodayStr() {
@@ -739,14 +768,19 @@ function renderMatchCard(m) {
 }
 
 function renderDateSelector() {
-  const matches = (state.matches || []).filter(m => currentTab === 'cl' ? m.is_cl : !m.is_cl);
+  const matches = (state.matches || []).filter(m => {
+    if (currentTab === 'cl') return m.is_cl;
+    if (currentTab === 'el') return m.is_el;
+    return !m.is_cl && !m.is_el;
+  });
+  
   const datesSet = [...new Set(matches.map(m => m.date))].sort();
   
   if (datesSet.length > 0) {
     if (currentTab === 'cl') {
-      if (!selectedClDate || !datesSet.includes(selectedClDate)) {
-        selectedClDate = datesSet[0];
-      }
+      if (!selectedClDate || !datesSet.includes(selectedClDate)) selectedClDate = datesSet[0];
+    } else if (currentTab === 'el') {
+      if (!selectedElDate || !datesSet.includes(selectedElDate)) selectedElDate = datesSet[0];
     } else {
       if (!selectedDate || !datesSet.includes(selectedDate)) {
         selectedDate = datesSet.includes(getTodayStr()) ? getTodayStr() : datesSet[0];
@@ -754,7 +788,7 @@ function renderDateSelector() {
     }
   }
 
-  let activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  let activeD = (currentTab === 'cl') ? selectedClDate : (currentTab === 'el' ? selectedElDate : selectedDate);
 
   let chips = datesSet.map(d => `
     <button class="date-chip ${activeD === d ? 'active' : ''}" onclick="selectDate('${d}')">${d}</button>
@@ -765,15 +799,17 @@ function renderDateSelector() {
 
 function selectDate(d) {
   if (currentTab === 'cl') selectedClDate = d;
+  else if (currentTab === 'el') selectedElDate = d;
   else selectedDate = d;
   render();
 }
 
 function renderTicketGenerator() {
-  const activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  const activeD = (currentTab === 'cl') ? selectedClDate : (currentTab === 'el' ? selectedElDate : selectedDate);
   const matches = (state.matches || []).filter(m => {
     if (currentTab === 'cl') return m.is_cl && m.date === activeD && !m.has_result;
-    return !m.is_cl && m.date === activeD && !m.has_result;
+    if (currentTab === 'el') return m.is_el && m.date === activeD && !m.has_result;
+    return !m.is_cl && !m.is_el && m.date === activeD && !m.has_result;
   });
   
   let pool = [];
@@ -866,13 +902,14 @@ function render() {
   
   dateContainer.innerHTML = renderDateSelector();
   
-  const activeD = (currentTab === 'cl') ? selectedClDate : selectedDate;
+  const activeD = (currentTab === 'cl') ? selectedClDate : (currentTab === 'el' ? selectedElDate : selectedDate);
   const matches = (state.matches || []).filter(m => {
     if (currentTab === 'cl') return m.is_cl && m.date === activeD;
-    return !m.is_cl && m.date === activeD;
+    if (currentTab === 'el') return m.is_el && m.date === activeD;
+    return !m.is_cl && !m.is_el && m.date === activeD;
   });
   
-  if (currentTab === 'meciuri' || currentTab === 'cl') {
+  if (currentTab === 'meciuri' || currentTab === 'cl' || currentTab === 'el') {
     c.innerHTML = matches.length ? matches.map(renderMatchCard).join('') : `<div class="glass-card" style="text-align:center;">Niciun meci în data de ${activeD || 'selectată'}. Alege altă etapă/zi din bară.</div>`;
   } else if (currentTab === 'bilete') {
     c.innerHTML = renderTicketGenerator();
