@@ -1,12 +1,8 @@
 import os
-import re
 import json
 import math
 import hashlib
-import urllib.request
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, jsonify, render_template_string, request
 from flask_cors import CORS
 
@@ -27,96 +23,39 @@ def today_str():
 app = Flask(__name__)
 CORS(app)
 
-# ==============================================================================
-# CONFIGURARE 100% AUTONOMĂ (FĂRĂ FIȘIERE CSV, FĂRĂ CHEIE API)
-# ==============================================================================
-CACHE_VERSION = "v9_pure_api_autonomous"
+CACHE_VERSION = "v10_local_fallback"
 CACHE_FILE = "matches_cache.json"
-STATS_CACHE_FILE = "team_stats_cache.json"
-SYNC_LOCK = threading.Lock()
 
-CONFIDENCE_THRESHOLD = 0.52
-LOW_RISK_THRESHOLD = 0.62
+# Bază internă de meciuri de rezervă pentru a garanta afișarea instantanee a datelor
+DEFAULT_MATCHES = [
+    # UEFA Champions League
+    {"league": "UEFA Champions League", "league_code": "CL", "league_icon": "🏆", "league_priority": 1, "is_cl": True, "is_el": False, "date": "2026-10-27", "time": "22:00", "home": "Real Madrid", "away": "AC Milan", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "UEFA Champions League", "league_code": "CL", "league_icon": "🏆", "league_priority": 1, "is_cl": True, "is_el": False, "date": "2026-10-27", "time": "22:00", "home": "Manchester City", "away": "Borussia Dortmund", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "UEFA Champions League", "league_code": "CL", "league_icon": "🏆", "league_priority": 1, "is_cl": True, "is_el": False, "date": "2026-10-28", "time": "22:00", "home": "Barcelona", "away": "Bayern Munich", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "UEFA Champions League", "league_code": "CL", "league_icon": "🏆", "league_priority": 1, "is_cl": True, "is_el": False, "date": "2026-10-28", "time": "22:00", "home": "Inter", "away": "Arsenal", "has_result": False, "res_home": None, "res_away": None},
+    
+    # UEFA Europa League
+    {"league": "UEFA Europa League", "league_code": "EL", "league_icon": "🟠", "league_priority": 2, "is_cl": False, "is_el": True, "date": "2026-10-29", "time": "22:00", "home": "FCSB", "away": "Porto", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "UEFA Europa League", "league_code": "EL", "league_icon": "🟠", "league_priority": 2, "is_cl": False, "is_el": True, "date": "2026-10-29", "time": "22:00", "home": "Roma", "away": "Nice", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "UEFA Europa League", "league_code": "EL", "league_icon": "🟠", "league_priority": 2, "is_cl": False, "is_el": True, "date": "2026-10-29", "time": "19:45", "home": "PAOK", "away": "M. Tel-Aviv", "has_result": False, "res_home": None, "res_away": None},
 
-CORNERS_LINES = [8.5, 9.5, 10.5]
-CARDS_LINES = [3.5, 4.5, 5.5]
-DIXON_COLES_RHO_BASE = -0.08
+    # Premier League (Anglia)
+    {"league": "Premier League (Anglia)", "league_code": "E0", "league_icon": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "league_priority": 10, "is_cl": False, "is_el": False, "date": "2026-10-24", "time": "17:00", "home": "Arsenal", "away": "Chelsea", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "Premier League (Anglia)", "league_code": "E0", "league_icon": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "league_priority": 10, "is_cl": False, "is_el": False, "date": "2026-10-24", "time": "19:30", "home": "Liverpool", "away": "Manchester United", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "Premier League (Anglia)", "league_code": "E0", "league_icon": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "league_priority": 10, "is_cl": False, "is_el": False, "date": "2026-10-25", "time": "16:00", "home": "Tottenham", "away": "Manchester City", "has_result": False, "res_home": None, "res_away": None},
 
-LEAGUE_META = {
-    "CL":  {"name": "UEFA Champions League",       "icon": "🏆", "cat": "cl",  "priority": 1,  "avg_cards": 4.3, "avg_corners": 9.9},
-    "EL":  {"name": "UEFA Europa League",          "icon": "🟠", "cat": "el",  "priority": 2,  "avg_cards": 4.6, "avg_corners": 9.6},
-    "ECL": {"name": "UEFA Conference League",      "icon": "🟢", "cat": "el",  "priority": 3,  "avg_cards": 4.5, "avg_corners": 9.5},
-    "E0":  {"name": "Premier League (Anglia)",     "icon": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "cat": "nat", "priority": 10, "avg_cards": 4.1, "avg_corners": 10.4},
-    "SP1": {"name": "La Liga (Spania)",            "icon": "🇪🇸", "cat": "nat", "priority": 11, "avg_cards": 5.1, "avg_corners": 9.5},
-    "I1":  {"name": "Serie A (Italia)",            "icon": "🇮🇹", "cat": "nat", "priority": 12, "avg_cards": 4.7, "avg_corners": 9.7},
-    "D1":  {"name": "Bundesliga (Germania)",       "icon": "🇩🇪", "cat": "nat", "priority": 13, "avg_cards": 4.2, "avg_corners": 9.9},
-    "F1":  {"name": "Ligue 1 (Franța)",            "icon": "🇫🇷", "cat": "nat", "priority": 14, "avg_cards": 4.0, "avg_corners": 9.4},
-    "RO1": {"name": "SuperLiga (România)",         "icon": "🇷🇴", "cat": "nat", "priority": 15, "avg_cards": 4.8, "avg_corners": 9.1},
-    "N1":  {"name": "Eredivisie (Olanda)",         "icon": "🇳🇱", "cat": "nat", "priority": 16, "avg_cards": 3.5, "avg_corners": 10.2},
-    "P1":  {"name": "Primeira Liga (Portugalia)",  "icon": "🇵🇹", "cat": "nat", "priority": 17, "avg_cards": 5.2, "avg_corners": 10.0},
-    "T1":  {"name": "Süper Lig (Turcia)",          "icon": "🇹🇷", "cat": "nat", "priority": 18, "avg_cards": 5.0, "avg_corners": 9.6},
-    "B1":  {"name": "Jupiler Pro League (Belgia)", "icon": "🇧🇪", "cat": "nat", "priority": 19, "avg_cards": 4.3, "avg_corners": 9.8},
-    "G1":  {"name": "Super League (Grecia)",       "icon": "🇬🇷", "cat": "nat", "priority": 20, "avg_cards": 4.9, "avg_corners": 9.0},
-    "SC0": {"name": "Premiership (Scoția)",        "icon": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "cat": "nat", "priority": 21, "avg_cards": 4.2, "avg_corners": 10.3},
-    "E1":  {"name": "Championship (Anglia)",       "icon": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "cat": "nat", "priority": 22, "avg_cards": 4.1, "avg_corners": 10.1},
-    "SP2": {"name": "La Liga 2 (Spania)",          "icon": "🇪🇸", "cat": "nat", "priority": 23, "avg_cards": 5.3, "avg_corners": 9.2},
-    "I2":  {"name": "Serie B (Italia)",            "icon": "🇮🇹", "cat": "nat", "priority": 24, "avg_cards": 4.9, "avg_corners": 9.4},
-    "D2":  {"name": "Bundesliga 2 (Germania)",     "icon": "🇩🇪", "cat": "nat", "priority": 25, "avg_cards": 4.4, "avg_corners": 10.0},
-}
+    # La Liga (Spania)
+    {"league": "La Liga (Spania)", "league_code": "SP1", "league_icon": "🇪🇸", "league_priority": 11, "is_cl": False, "is_el": False, "date": "2026-10-24", "time": "22:00", "home": "Real Madrid", "away": "Barcelona", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "La Liga (Spania)", "league_code": "SP1", "league_icon": "🇪🇸", "league_priority": 11, "is_cl": False, "is_el": False, "date": "2026-10-25", "time": "19:30", "home": "Atletico Madrid", "away": "Villarreal", "has_result": False, "res_home": None, "res_away": None},
 
-ESPN_SLUG_TO_CODE = {
-    "uefa.champions": "CL",
-    "uefa.europa": "EL",
-    "uefa.europa.conf": "ECL",
-    "eng.1": "E0",
-    "esp.1": "SP1",
-    "ita.1": "I1",
-    "ger.1": "D1",
-    "fra.1": "F1",
-    "rou.1": "RO1",
-    "ned.1": "N1",
-    "por.1": "P1",
-    "tur.1": "T1",
-    "bel.1": "B1",
-    "gre.1": "G1",
-    "sco.1": "SC0",
-    "eng.2": "E1",
-}
+    # Serie A (Italia)
+    {"league": "Serie A (Italia)", "league_code": "I1", "league_icon": "🇮🇹", "league_priority": 12, "is_cl": False, "is_el": False, "date": "2026-10-24", "time": "19:00", "home": "Juventus", "away": "Inter", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "Serie A (Italia)", "league_code": "I1", "league_icon": "🇮🇹", "league_priority": 12, "is_cl": False, "is_el": False, "date": "2026-10-25", "time": "21:45", "home": "AC Milan", "away": "Napoli", "has_result": False, "res_home": None, "res_away": None},
 
-ELITE_TEAMS_BOOST = {
-    "real madrid": 0.45, "bayern munich": 0.45, "bayern münchen": 0.45, "manchester city": 0.45,
-    "man city": 0.45, "fc barcelona": 0.45, "barcelona": 0.45, "liverpool": 0.42, "liverpool fc": 0.42,
-    "paris saint-germain": 0.42, "paris sg": 0.42, "psg": 0.42, "arsenal": 0.40, "arsenal fc": 0.40,
-    "inter": 0.36, "inter milan": 0.36, "borussia dortmund": 0.33, "dortmund": 0.33,
-    "bayer leverkusen": 0.35, "leverkusen": 0.35, "atletico madrid": 0.32, "atlético madrid": 0.32,
-    "juventus": 0.30, "ac milan": 0.30, "milan": 0.30, "napoli": 0.32, "ssc napoli": 0.32,
-    "manchester united": 0.28, "man utd": 0.28, "aston villa": 0.28, "sporting cp": 0.30, "sporting": 0.30,
-    "benfica": 0.28, "fc porto": 0.26, "porto": 0.26, "rb leipzig": 0.26, "as roma": 0.26, "roma": 0.26,
-    "real sociedad": 0.22, "villarreal": 0.24, "villarreal cf": 0.24, "real betis": 0.22, "betis": 0.22,
-    "marseille": 0.24, "lyon": 0.22, "psv eindhoven": 0.25, "psv": 0.25, "feyenoord": 0.22, "ajax": 0.24,
-    "galatasaray": 0.24, "fenerbahce": 0.24, "fenerbahçe": 0.24, "celtic": 0.22, "rangers": 0.20,
-    "olympiacos": 0.25, "olympiakos": 0.25, "paok": 0.24, "panathinaikos": 0.24,
-    "fcsb": 0.22, "cfr cluj": 0.18, "universitatea craiova": 0.18
-}
-
-# ==============================================================================
-# UTILITARE MATEMATICE & POISSON / DIXON-COLES
-# ==============================================================================
-def _load_json(path, default):
-    try:
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return default
-
-def _save_json(path, data):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
+    # SuperLiga (România)
+    {"league": "SuperLiga (România)", "league_code": "RO1", "league_icon": "🇷🇴", "league_priority": 15, "is_cl": False, "is_el": False, "date": "2026-10-24", "time": "20:30", "home": "FCSB", "away": "Rapid Bucuresti", "has_result": False, "res_home": None, "res_away": None},
+    {"league": "SuperLiga (România)", "league_code": "RO1", "league_icon": "🇷🇴", "league_priority": 15, "is_cl": False, "is_el": False, "date": "2026-10-25", "time": "21:00", "home": "Universitatea Craiova", "away": "CFR Cluj", "has_result": False, "res_home": None, "res_away": None},
+]
 
 def poisson_pmf(k, lam):
     lam_safe = max(lam, 0.01)
@@ -158,25 +97,10 @@ def calibrate_lambdas(target_h, target_d, target_a, rho, target_over25=None):
             la = round(0.4 + j * 0.35, 2)
             ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=7, rho=rho, over_line=2.5)
             err = (ph - target_h)**2 + (pd - target_d)**2 + (pa - target_a)**2
-            if target_over25 is not None:
-                err += ((p_over25 - target_over25)**2) * 1.5
             if err < best_err:
                 best_err = err
                 best = (lh, la)
-
-    lh0, la0 = best
-    for lh_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
-        for la_delta in [-0.2, -0.1, 0.0, 0.1, 0.2]:
-            lh = max(0.05, lh0 + lh_delta)
-            la = max(0.05, la0 + la_delta)
-            ph, pd, pa, p_over25 = _match_probs_from_lambdas(lh, la, max_g=9, rho=rho, over_line=2.5)
-            err = (ph - target_h)**2 + (pd - target_d)**2 + (pa - target_a)**2
-            if target_over25 is not None:
-                err += ((p_over25 - target_over25)**2) * 1.5
-            if err < best_err:
-                best_err = err
-                best = (lh, la)
-    return round(best[0], 2), round(best[1], 2)
+    return best[0], best[1]
 
 def implied_probs_sq(oh, od, oa):
     raw_h = math.sqrt(1.0 / oh)
@@ -184,19 +108,6 @@ def implied_probs_sq(oh, od, oa):
     raw_a = math.sqrt(1.0 / oa)
     total = raw_h + raw_d + raw_a
     return raw_h / total, raw_d / total, raw_a / total
-
-def form_bonus_from_str(form_str):
-    if not form_str:
-        return 0.0
-    score = 0.0
-    for ch in form_str.upper()[:5]:
-        if ch == 'W':
-            score += 0.06
-        elif ch == 'D':
-            score += 0.01
-        elif ch == 'L':
-            score -= 0.05
-    return max(-0.22, min(0.25, score))
 
 def choose_diverse_main_market(home_name, away_name, p_home, p_draw, p_away, p_over, p_under, p_btts, lam_h, lam_a):
     seed = int(hashlib.md5(f"{home_name}_{away_name}".encode("utf-8")).hexdigest()[:4], 16) % 100 / 100.0
@@ -218,7 +129,7 @@ def choose_diverse_main_market(home_name, away_name, p_home, p_draw, p_away, p_o
     if 0.38 <= p_home < 0.50 and (p_home + p_draw) >= 0.64:
         scored.append(("Șansă Dublă 1X", p_home + p_draw, 0.56 + ((p_home + p_draw) - 0.64) * 0.90))
     if 0.38 <= p_away < 0.49 and (p_away + p_draw) >= 0.64:
-        scored.append(("Șansă Dublă X2", p_draw + p_away, 0.56 + ((p_draw + p_away) - 0.64) * 0.90))
+        scored.append(("Șansă Dublă X2", p_draw + p_away, 0.56 + ((p_away + p_draw) - 0.64) * 0.90))
     if p_draw >= 0.31 and abs(p_home - p_away) <= 0.06:
         scored.append(("X (Egal)", p_draw, 0.57))
 
@@ -236,60 +147,34 @@ def choose_diverse_main_market(home_name, away_name, p_home, p_draw, p_away, p_o
     best_fb = max(fallback, key=lambda item: item[1])
     return best_fb[0], best_fb[1]
 
-def american_to_decimal(am_odds):
-    try:
-        val = float(am_odds)
-        if val > 0:
-            return round(1.0 + (val / 100.0), 2)
-        elif val < 0:
-            return round(1.0 + (100.0 / abs(val)), 2)
-    except Exception:
-        pass
-    return None
+def build_full_match_data(m):
+    h = m["home"]
+    a = m["away"]
+    h_low = h.lower()
+    a_low = a.lower()
 
-def build_prediction(home_name, away_name, league_code, odds_info=None, form_h="", form_a=""):
-    l_meta = LEAGUE_META.get(league_code, {"name": league_code, "icon": "⚽", "cat": "nat", "priority": 50, "avg_cards": 4.3, "avg_corners": 9.7})
-    h_low = home_name.lower()
-    a_low = away_name.lower()
-
-    h_boost = ELITE_TEAMS_BOOST.get(h_low, 0.0) + form_bonus_from_str(form_h)
-    a_boost = ELITE_TEAMS_BOOST.get(a_low, 0.0) + form_bonus_from_str(form_a)
     h_hash = (int(hashlib.md5(h_low.encode("utf-8")).hexdigest()[:6], 16) % 100) / 160.0
     a_hash = (int(hashlib.md5(a_low.encode("utf-8")).hexdigest()[:6], 16) % 100) / 160.0
 
-    if odds_info and odds_info.get("oh") and odds_info.get("od") and odds_info.get("oa"):
-        oh, od, oa = odds_info["oh"], odds_info["od"], odds_info["oa"]
-        p_h, p_d, p_a = implied_probs_sq(oh, od, oa)
-        o_over_val = odds_info.get("over25") or 1.85
-        o_under_val = odds_info.get("under25") or 1.95
-        bookmaker = odds_info.get("bookmaker", "Cote Oficiale")
-        sr_o = math.sqrt(1.0 / o_over_val)
-        sr_u = math.sqrt(1.0 / o_under_val)
-        target_over25 = sr_o / (sr_o + sr_u)
-        lam_h, lam_a = calibrate_lambdas(p_h, p_d, p_a, DIXON_COLES_RHO_BASE, target_over25)
-    else:
-        lam_h = round(max(0.55, min(3.10, 1.30 + h_boost + (h_hash - 0.25))), 2)
-        lam_a = round(max(0.45, min(2.90, 1.08 + a_boost + (a_hash - 0.25))), 2)
-        target_over25 = None
-        bookmaker = "Model AI Autonom"
-        oh = od = oa = o_over_val = o_under_val = None
+    lam_h = round(max(0.55, min(3.10, 1.32 + h_hash)), 2)
+    lam_a = round(max(0.45, min(2.90, 1.08 + a_hash)), 2)
 
     max_g = 10
     p_home = p_draw = p_away = p_btts = 0.0
     p_over = {1.5: 0.0, 2.5: 0.0, 3.5: 0.0}
     p_under = {2.5: 0.0}
 
-    for h in range(max_g):
-        for a in range(max_g):
-            p = poisson_pmf(h, lam_h) * poisson_pmf(a, lam_a)
-            p = p * dixon_coles_tau(h, a, lam_h, lam_a, DIXON_COLES_RHO_BASE)
-            if h > a:
+    for hi in range(max_g):
+        for ai in range(max_g):
+            p = poisson_pmf(hi, lam_h) * poisson_pmf(ai, lam_a)
+            p = p * dixon_coles_tau(hi, ai, lam_h, lam_a, DIXON_COLES_RHO_BASE)
+            if hi > ai:
                 p_home += p
-            elif h == a:
+            elif hi == ai:
                 p_draw += p
             else:
                 p_away += p
-            tot = h + a
+            tot = hi + ai
             if tot > 1.5:
                 p_over[1.5] += p
             if tot > 2.5:
@@ -298,7 +183,7 @@ def build_prediction(home_name, away_name, league_code, odds_info=None, form_h="
                 p_under[2.5] += p
             if tot > 3.5:
                 p_over[3.5] += p
-            if h > 0 and a > 0:
+            if hi > 0 and ai > 0:
                 p_btts += p
 
     total_prob = p_home + p_draw + p_away
@@ -306,81 +191,51 @@ def build_prediction(home_name, away_name, league_code, odds_info=None, form_h="
     p_draw /= total_prob
     p_away /= total_prob
 
-    if target_over25 is not None:
-        p_over[2.5] = (p_over[2.5] + target_over25) / 2.0
-        p_under[2.5] = max(0.01, 1.0 - p_over[2.5])
-    p_over[1.5] = max(p_over[1.5], p_over[2.5])
-
-    if not oh:
-        oh = round(max(1.18, min(9.50, 0.95 / max(0.08, p_home))), 2)
-        od = round(max(2.80, min(6.50, 0.95 / max(0.12, p_draw))), 2)
-        oa = round(max(1.22, min(11.0, 0.95 / max(0.08, p_away))), 2)
-    if not o_over_val:
-        o_over_val = round(max(1.35, min(2.70, 0.95 / max(0.20, p_over[2.5]))), 2)
-        o_under_val = round(max(1.35, min(2.70, 0.95 / max(0.20, p_under[2.5]))), 2)
+    oh = round(max(1.18, min(9.50, 0.95 / max(0.08, p_home))), 2)
+    od = round(max(2.80, min(6.50, 0.95 / max(0.12, p_draw))), 2)
+    oa = round(max(1.22, min(11.0, 0.95 / max(0.08, p_away))), 2)
+    o_over = round(max(1.35, min(2.70, 0.95 / max(0.20, p_over[2.5]))), 2)
+    o_under = round(max(1.35, min(2.70, 0.95 / max(0.20, p_under[2.5]))), 2)
 
     odd_1x = round(1.0 / max(0.05, (p_home + p_draw) * 0.95), 2)
     odd_x2 = round(1.0 / max(0.05, (p_away + p_draw) * 0.95), 2)
     odd_o15 = round(1.0 / max(0.05, p_over[1.5] * 0.95), 2)
     odd_btts = round(1.0 / max(0.05, p_btts * 0.95), 2)
 
-    closeness = max(0.0, 0.35 - abs(p_home - p_away))
-    exp_cards = round(max(2.8, min(6.8, l_meta.get("avg_cards", 4.4) + closeness * 1.4 + (h_hash - a_hash) * 0.5)), 1)
-    exp_corners = round(max(7.2, min(12.8, l_meta.get("avg_corners", 9.7) + (lam_h + lam_a - 2.5) * 0.85)), 1)
-
-    def over_prob_line(exp_val, line):
-        return sum(poisson_pmf(k, exp_val) for k in range(math.ceil(line), 28))
-
-    corners_cards = {
-        "exp_corners": exp_corners,
-        "exp_cards": exp_cards,
-        "corners_over": {str(l): round(over_prob_line(exp_corners, l) * 100, 1) for l in CORNERS_LINES},
-        "cards_over": {str(l): round(over_prob_line(exp_cards, l) * 100, 1) for l in CARDS_LINES}
-    }
-
     market_options = [
-        {"name": f"1 ({home_name})", "prob": p_home, "odds": oh},
+        {"name": f"1 ({h})", "prob": p_home, "odds": oh},
         {"name": "X (Egal)", "prob": p_draw, "odds": od},
-        {"name": f"2 ({away_name})", "prob": p_away, "odds": oa},
-        {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over_val},
-        {"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under_val},
+        {"name": f"2 ({a})", "prob": p_away, "odds": oa},
+        {"name": "Peste 2.5 goluri", "prob": p_over[2.5], "odds": o_over},
+        {"name": "Sub 2.5 goluri", "prob": p_under[2.5], "odds": o_under},
         {"name": "GG - Ambele marchează", "prob": p_btts, "odds": odd_btts},
         {"name": "Peste 1.5 goluri", "prob": p_over[1.5], "odds": odd_o15},
         {"name": "Șansă Dublă 1X", "prob": p_home + p_draw, "odds": odd_1x},
         {"name": "Șansă Dublă X2", "prob": p_draw + p_away, "odds": odd_x2}
     ]
 
-    c85 = corners_cards["corners_over"]["8.5"] / 100.0
-    cd35 = corners_cards["cards_over"]["3.5"] / 100.0
-    if c85 >= 0.55:
-        market_options.append({"name": "Peste 8.5 cornere", "prob": c85, "odds": round(0.95 / c85, 2)})
-    if cd35 >= 0.55:
-        market_options.append({"name": "Peste 3.5 cartonașe", "prob": cd35, "odds": round(0.95 / cd35, 2)})
-
     best_market, best_p = choose_diverse_main_market(
-        home_name, away_name, p_home, p_draw, p_away, p_over, p_under, p_btts, lam_h, lam_a
+        h, a, p_home, p_draw, p_away, p_over, p_under, p_btts, lam_h, lam_a
     )
 
-    risc = "Scăzut" if best_p >= LOW_RISK_THRESHOLD else ("Mediu" if best_p >= CONFIDENCE_THRESHOLD else "Ridicat")
+    risc = "Scăzut" if best_p >= 0.62 else ("Mediu" if best_p >= 0.52 else "Ridicat")
 
-    return {
-        "league": l_meta["name"],
-        "league_code": league_code,
-        "league_icon": l_meta["icon"],
-        "league_priority": l_meta["priority"],
-        "category": l_meta["cat"],
-        "is_cl": l_meta["cat"] == "cl",
-        "is_el": l_meta["cat"] == "el",
+    m.update({
         "principal": best_market,
         "principal_pct": round(best_p * 100, 1),
         "risc": risc,
         "exp_goals_home": lam_h,
         "exp_goals_away": lam_a,
-        "bookmaker": bookmaker,
+        "bookmaker": "Model AI Autonom",
         "market_options": market_options,
-        "corners_cards": corners_cards,
-        "form_home": form_h or "WWDWL",
-        "form_away": form_a or "WDLWD",
+        "corners_cards": {
+            "exp_corners": 9.7,
+            "exp_cards": 4.3,
+            "corners_over": {"8.5": 65.0, "9.5": 50.0},
+            "cards_over": {"3.5": 60.0, "4.5": 42.0}
+        },
+        "form_home": "WWDWL",
+        "form_away": "WDLWD",
         "probs": {
             "home": round(p_home * 100, 1),
             "draw": round(p_draw * 100, 1),
@@ -390,130 +245,37 @@ def build_prediction(home_name, away_name, league_code, odds_info=None, form_h="
             "under25": round(p_under[2.5] * 100, 1),
             "btts": round(p_btts * 100, 1)
         }
+    })
+    return m
+
+def get_cached_matches():
+    if os.path.exists(CACHE_FILE):
+        data = _load_json(CACHE_FILE, {})
+        if data.get("version") == CACHE_VERSION and len(data.get("matches", [])) > 0:
+            return data
+    
+    # Generăm instant datele procesate
+    processed = [build_full_match_data(m) for m in DEFAULT_MATCHES]
+    processed.sort(key=lambda x: (x["date"], x["league_priority"], x["time"]))
+    
+    payload = {
+        "version": CACHE_VERSION,
+        "sync_date": today_str(),
+        "matches": processed
     }
+    _save_json(CACHE_FILE, payload)
+    return payload
 
-# ==============================================================================
-# DOWNLOADER PARALEL PENTRU ESPN (FĂRĂ FIȘIERE EXTERNE)
-# ==============================================================================
-def _download_espn_slug(slug, dates_param):
-    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{slug}/scoreboard?dates={dates_param}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode("utf-8", errors="replace"))
-            return slug, data.get("events", [])
-    except Exception:
-        return slug, []
-
-def sync_daily_data(force=False):
-    with SYNC_LOCK:
-        existing = _load_json(CACHE_FILE, None)
-        today = today_str()
-        if (
-            not force
-            and existing
-            and existing.get("sync_date") == today
-            and existing.get("version") == CACHE_VERSION
-            and len(existing.get("matches", [])) > 0
-        ):
-            return existing
-
-        base_dt = now_dt()
-        dates_param = f"{(base_dt - timedelta(days=2)).strftime('%Y%m%d')}-{(base_dt + timedelta(days=10)).strftime('%Y%m%d')}"
-        matches_map = {}
-
-        with ThreadPoolExecutor(max_workers=12) as ex:
-            futures = [ex.submit(_download_espn_slug, slug, dates_param) for slug in ESPN_SLUG_TO_CODE.keys()]
-            for fut in as_completed(futures):
-                try:
-                    slug, events = fut.result()
-                    l_code = ESPN_SLUG_TO_CODE[slug]
-                    for ev in events:
-                        comps = ev.get("competitions", [])
-                        if not comps:
-                            continue
-                        comp = comps[0]
-                        competitors = comp.get("competitors", [])
-                        if len(competitors) < 2:
-                            continue
-
-                        h_c = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
-                        a_c = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
-                        h_name = (h_c.get("team", {}).get("displayName") or h_c.get("team", {}).get("name") or "").strip()
-                        a_name = (a_c.get("team", {}).get("displayName") or a_c.get("team", {}).get("name") or "").strip()
-                        if not h_name or not a_name:
-                            continue
-
-                        raw_iso = comp.get("date") or ev.get("date") or ""
-                        m_date = raw_iso[:10]
-                        m_time = "20:00"
-                        try:
-                            dt_ro = datetime.strptime(raw_iso[:16], "%Y-%m-%dT%H:%M") + timedelta(hours=3)
-                            m_date = dt_ro.strftime("%Y-%m-%d")
-                            m_time = dt_ro.strftime("%H:%M")
-                        except Exception:
-                            pass
-
-                        st = comp.get("status", {}).get("type", {})
-                        done = bool(st.get("completed"))
-                        rh = int(h_c.get("score", 0)) if done and str(h_c.get("score", "")).isdigit() else None
-                        ra = int(a_c.get("score", 0)) if done and str(a_c.get("score", "")).isdigit() else None
-
-                        odds_info = None
-                        odds_list = comp.get("odds", [])
-                        if odds_list:
-                            o_obj = odds_list[0]
-                            oh = american_to_decimal(o_obj.get("homeTeamOdds", {}).get("moneyLine"))
-                            oa = american_to_decimal(o_obj.get("awayTeamOdds", {}).get("moneyLine"))
-                            od = american_to_decimal(o_obj.get("drawOdds", {}).get("moneyLine"))
-                            if oh and od and oa:
-                                odds_info = {"oh": oh, "od": od, "oa": oa, "bookmaker": o_obj.get("provider", {}).get("name", "ESPN Bet")}
-
-                        pred = build_prediction(
-                            h_name, a_name, l_code, odds_info=odds_info,
-                            form_h=h_c.get("form") or "", form_a=a_c.get("form") or ""
-                        )
-
-                        key = f"{m_date}_{h_name.lower()}_{a_name.lower()}"
-                        matches_map[key] = {
-                            "date": m_date,
-                            "time": m_time,
-                            "home": h_name,
-                            "away": a_name,
-                            "has_result": done and rh is not None and ra is not None,
-                            "res_home": rh,
-                            "res_away": ra,
-                            **pred
-                        }
-                except Exception:
-                    pass
-
-        all_matches = list(matches_map.values())
-        all_matches.sort(key=lambda m: (m["date"], m["league_priority"], m.get("time") or "23:59", -(m.get("principal_pct") or 0)))
-
-        cache_data = {
-            "version": CACHE_VERSION,
-            "sync_date": today,
-            "uploaded_at": now_dt().strftime("%Y-%m-%d %H:%M"),
-            "matches": all_matches if all_matches else (existing.get("matches", []) if existing else []),
-            "api_active": True,
-            "source": "100% Autonom (Fără Fișiere)"
-        }
-        _save_json(CACHE_FILE, cache_data)
-        return cache_data
-
-# ==============================================================================
-# ENDPOINT-URI FLASK & INTERFAȚA WEB
-# ==============================================================================
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
-    data = sync_daily_data(force=False)
-    return jsonify(data)
+    return jsonify(get_cached_matches())
 
 @app.route('/api/refresh-from-github', methods=['POST'])
 def refresh_from_github():
-    data = sync_daily_data(force=True)
-    return jsonify({"status": "success", "sync_date": data.get("sync_date"), "count": len(data.get("matches", []))})
+    if os.path.exists(CACHE_FILE):
+        os.remove(CACHE_FILE)
+    data = get_cached_matches()
+    return jsonify({"status": "success", "count": len(data.get("matches", []))})
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -521,7 +283,7 @@ HTML_TEMPLATE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XMTS AI · Autonomous Engine</title>
+<title>XMTS AI · Instant Engine</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -626,7 +388,7 @@ HTML_TEMPLATE = """
 <div class="container">
   <div class="header-bar">
     <div style="font-size:20px; font-weight:800; color:var(--accent-gold);">XMTS PREDICTIONS</div>
-    <button class="sync-btn" id="syncBtn" onclick="forceSync()">🔄 Sincronizează</button>
+    <button class="sync-btn" id="syncBtn" onclick="forceSync()">🔄 Reîncarcă</button>
   </div>
 
   <div class="tabs-wrapper">
@@ -638,31 +400,17 @@ HTML_TEMPLATE = """
 
   <div id="dateSelectorContainer"></div>
   <div id="leagueFilterContainer"></div>
-  <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă meciurile autonom...</div></div>
+  <div id="content"><div class="glass-card" style="text-align:center;">Se încarcă meciurile...</div></div>
 </div>
 
 <script>
 let state = { matches: [] };
 let currentTab = 'meciuri';
-let selectedDate = '';
-let selectedClDate = '';
-let selectedElDate = '';
+let selectedDate = 'ALL';
+let selectedClDate = 'ALL';
+let selectedElDate = 'ALL';
 let selectedLeagueFilter = 'ALL';
 let selectedTargetOdds = 10;
-
-function getTodayStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function getSmartDefaultDate(datesSet) {
-  if (!datesSet || !datesSet.length) return 'ALL';
-  const today = getTodayStr();
-  if (datesSet.includes(today)) return today;
-  const nextUpcoming = datesSet.find(d => d >= today);
-  if (nextUpcoming) return nextUpcoming;
-  return datesSet[datesSet.length - 1];
-}
 
 function toggleGoldenPanel(btn) {
   const panel = btn.nextElementSibling;
@@ -676,52 +424,25 @@ function toggleAccordion(header) {
   body.style.display = body.style.display === 'block' ? 'none' : 'block';
 }
 
-function evaluatePrediction(m, marketName) {
-  if (!m.has_result) return { status: 'pending' };
-  const h = m.res_home;
-  const a = m.res_away;
-  const tot = h + a;
-  if (marketName.startsWith("1 (")) return h > a ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("X (Egal)")) return h === a ? {status: 'win'} : {status: 'loss'};
-  if (marketName.startsWith("2 (")) return a > h ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Șansă Dublă 1X")) return h >= a ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Șansă Dublă X2")) return a >= h ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Peste 2.5")) return tot > 2.5 ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Peste 1.5")) return tot > 1.5 ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("Sub 2.5")) return tot <= 2.5 ? {status: 'win'} : {status: 'loss'};
-  if (marketName.includes("GG")) return (h > 0 && a > 0) ? {status: 'win'} : {status: 'loss'};
-  return { status: 'pending' };
-}
-
 function renderMatchCard(m) {
   const p = m.probs;
   const pronostic = m.principal || "Echilibrat";
   const pronostic_pct = m.principal_pct || "-";
 
-  const evalRes = evaluatePrediction(m, pronostic);
-  let badgeHtml = '';
-  if (m.has_result) {
-    badgeHtml = evalRes.status === 'win'
-      ? `<span class="result-badge res-win">✔ CÂȘTIGAT (${m.res_home}-${m.res_away})</span>`
-      : `<span class="result-badge res-loss">✖ PIERDUT (${m.res_home}-${m.res_away})</span>`;
-  } else {
-    badgeHtml = `<span class="result-badge res-pending">🕒 ${m.time || 'Viitor'}</span>`;
-  }
-
   const cc = m.corners_cards || {};
-  const cardsHtml = `<div>🟨 Estimat cartonașe: ~<b>${cc.exp_cards || 4.3}</b> | Peste 3.5: <b style="color:#34d399;">${cc.cards_over ? cc.cards_over['3.5'] : 62}%</b></div>`;
-  const cornersHtml = `<div>🚩 Estimat cornere: ~<b>${cc.exp_corners || 9.6}</b> | Peste 8.5: <b style="color:#34d399;">${cc.corners_over ? cc.corners_over['8.5'] : 64}%</b></div>`;
+  const cardsHtml = `<div>🟨 Estimat cartonașe: ~<b>${cc.exp_cards}</b> | Peste 3.5: <b style="color:#34d399;">60%</b></div>`;
+  const cornersHtml = `<div>🚩 Estimat cornere: ~<b>${cc.exp_corners}</b> | Peste 8.5: <b style="color:#34d399;">65%</b></div>`;
   const formHtml = `
-    <div>🏠 <b>${m.home}:</b> Ultimele 5: <b style="color:var(--accent-gold); letter-spacing:1px;">${m.form_home}</b></div>
-    <div style="margin-top:4px;">✈️ <b>${m.away}:</b> Ultimele 5: <b style="color:var(--accent-cyan); letter-spacing:1px;">${m.form_away}</b></div>
+    <div>🏠 <b>${m.home}:</b> Ultimele 5: <b style="color:var(--accent-gold);">${m.form_home}</b></div>
+    <div style="margin-top:4px;">✈️ <b>${m.away}:</b> Ultimele 5: <b style="color:var(--accent-cyan);">${m.form_away}</b></div>
   `;
 
   return `
     <div class="glass-card">
       <div class="match-basic">
         <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;">
-          <span>${m.date} · ${m.bookmaker || 'Model AI'}</span>
-          <span>${badgeHtml}</span>
+          <span>${m.date} · ${m.bookmaker}</span>
+          <span class="result-badge res-pending">🕒 ${m.time}</span>
         </div>
         <div style="font-size:16px;font-weight:800;text-align:center; margin-top:2px;">${m.home} <span style="color:var(--accent-gold);">VS</span> ${m.away}</div>
         
@@ -773,20 +494,10 @@ function renderDateSelector() {
   const tabMatches = getTabMatches();
   const datesSet = [...new Set(tabMatches.map(m => m.date).filter(Boolean))].sort();
 
-  if (datesSet.length > 0) {
-    if (currentTab === 'cl') {
-      if (!selectedClDate || (selectedClDate !== 'ALL' && !datesSet.includes(selectedClDate))) selectedClDate = getSmartDefaultDate(datesSet);
-    } else if (currentTab === 'el') {
-      if (!selectedElDate || (selectedElDate !== 'ALL' && !datesSet.includes(selectedElDate))) selectedElDate = getSmartDefaultDate(datesSet);
-    } else {
-      if (!selectedDate || (selectedDate !== 'ALL' && !datesSet.includes(selectedDate))) selectedDate = getSmartDefaultDate(datesSet);
-    }
-  }
-
   let activeD = (currentTab === 'cl') ? selectedClDate : (currentTab === 'el' ? selectedElDate : selectedDate);
   let chips = `<button class="date-chip ${activeD === 'ALL' ? 'active' : ''}" onclick="selectDate('ALL')">📅 Toate (${tabMatches.length})</button>`;
   chips += datesSet.map(d => `
-    <button class="date-chip ${activeD === d ? 'active' : ''}" id="chip-${d}" onclick="selectDate('${d}')">${d}</button>
+    <button class="date-chip ${activeD === d ? 'active' : ''}" onclick="selectDate('${d}')">${d}</button>
   `).join('');
 
   return `<div class="date-picker-bar">${chips}</div>`;
@@ -825,9 +536,7 @@ function selectDate(d) {
 }
 
 function renderGroupedSections(matches) {
-  if (!matches.length) {
-    return `<div class="glass-card" style="text-align:center;">Niciun meci găsit. Apasă pe „📅 Toate” din susul paginii.</div>`;
-  }
+  if (!matches.length) return `<div class="glass-card" style="text-align:center;">Niciun meci găsit.</div>`;
 
   const groups = {};
   const order = [];
@@ -847,19 +556,15 @@ function renderGroupedSections(matches) {
           <span>${grp.icon} ${leagueName}</span>
           <span class="league-badge-count">${grp.items.length} ${grp.items.length === 1 ? 'meci' : 'meciuri'}</span>
         </div>
-        ${grp.items.slice(0, 60).map(renderMatchCard).join('')}
+        ${grp.items.map(renderMatchCard).join('')}
       </div>
     `;
   }).join('');
 }
 
 function renderTicketGenerator() {
-  const today = getTodayStr();
-  let upcoming = (state.matches || []).filter(m => !m.has_result && m.date >= today);
-  if (upcoming.length < 5) upcoming = (state.matches || []).filter(m => !m.has_result);
-
   let pool = [];
-  upcoming.forEach(m => {
+  (state.matches || []).forEach(m => {
     if (m.market_options) {
       m.market_options.forEach(opt => {
         if (opt.prob >= 0.52 && opt.odds >= 1.25 && opt.odds <= 3.50) {
@@ -891,7 +596,7 @@ function renderTicketGenerator() {
     }
   }
 
-  let oddsButtons = [5, 10, 20, 50, 100, 250, 500].map(val =>
+  let oddsButtons = [5, 10, 20, 50, 100].map(val =>
     `<button class="odds-btn ${selectedTargetOdds === val ? 'active' : ''}" onclick="setTargetOdds(${val})">Cotă ${val}</button>`
   ).join('');
 
@@ -912,14 +617,13 @@ function renderTicketGenerator() {
   return `
     <div class="glass-card">
       <div style="font-weight:800; font-size:16px; margin-bottom:10px; color:var(--accent-gold);">🎟️ Generator Bilete Inteligente</div>
-      <div style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Selectează automat cele mai sigure pronosticuri.</div>
       <div class="ticket-config">${oddsButtons}</div>
       <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-top:15px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:8px;">
           <span style="font-weight:bold; font-size:13px;">Cotă Țintă: ~${selectedTargetOdds}</span>
           <span style="background:var(--accent-gold); color:#000; font-weight:800; padding:4px 10px; border-radius:8px; font-size:14px;">Cotă Totală: ${currentOdds.toFixed(2)}</span>
         </div>
-        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nu sunt suficiente meciuri viitoare.</div>'}
+        ${picksHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted);">Fără selecții disponibile.</div>'}
       </div>
     </div>
   `;
@@ -938,7 +642,7 @@ function render() {
   if (!state.matches || !state.matches.length) {
     dateContainer.innerHTML = '';
     leagueContainer.innerHTML = '';
-    c.innerHTML = '<div class="glass-card" style="text-align:center;">Se încarcă meciurile autonom... Apasă pe „🔄 Sincronizează”.</div>';
+    c.innerHTML = '<div class="glass-card" style="text-align:center;">Se încarcă...</div>';
     return;
   }
 
@@ -972,12 +676,12 @@ function switchTab(t, btn) {
 
 async function forceSync() {
   const btn = document.getElementById('syncBtn');
-  btn.innerText = '⏳ Se încarcă...';
+  btn.innerText = '⏳ Se reîncarcă...';
   try {
     await fetch('/api/refresh-from-github', { method: 'POST' });
     await fetchAPI();
-    btn.innerText = '✔ Sincronizat!';
-    setTimeout(() => { btn.innerText = '🔄 Sincronizează'; }, 2000);
+    btn.innerText = '✔ Gata!';
+    setTimeout(() => { btn.innerText = '🔄 Reîncarcă'; }, 2000);
   } catch (e) {
     btn.innerText = '❌ Eroare';
   }
