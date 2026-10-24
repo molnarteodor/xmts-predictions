@@ -242,7 +242,7 @@ HTML_PAGE = """<!DOCTYPE html>
     <div class="hud-brand">
       <div class="hud-logo">J</div>
       <div>
-        <span class="hud-title">JACK 500 HUD</span>
+        <span class="hud-title">XMTS PREDICTION</span>
         <span class="hud-status" id="liveClock">● Neural Core Online</span>
       </div>
     </div>
