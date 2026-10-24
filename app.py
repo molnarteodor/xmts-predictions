@@ -4,7 +4,7 @@ from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-PROJECT_FILE = "project_500_state.json"
+PROJECT_FILE = "jack_500_state.json"
 
 DEFAULT_PROJECT = {
     "initial_bankroll": 500.0,
@@ -38,14 +38,14 @@ def api_project():
             return jsonify(body)
     return jsonify(load_project())
 
-HTML_PAGE = '''<!DOCTYPE html>
+HTML_PAGE = """<!DOCTYPE html>
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>XMTS Pro App</title>
+<title>JACK 500 · Pro Tipster Engine</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -64,7 +64,7 @@ HTML_PAGE = '''<!DOCTYPE html>
   html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
   .app-shell { display: flex; flex-direction: column; height: 100dvh; max-width: 520px; margin: 0 auto; background: var(--bg); position: relative; }
 
-  /* TOP APP BAR */
+  /* TOP BAR */
   .top-bar {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 16px; background: rgba(18, 21, 30, 0.92);
@@ -72,10 +72,10 @@ HTML_PAGE = '''<!DOCTYPE html>
   }
   .brand { display: flex; align-items: center; gap: 8px; }
   .brand-logo {
-    width: 30px; height: 30px; border-radius: 9px;
+    width: 32px; height: 32px; border-radius: 10px;
     background: linear-gradient(135deg, var(--gold), #d97706);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 800; color: #000; font-size: 14px;
+    font-weight: 800; color: #000; font-size: 15px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
   }
   .brand-title { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; }
   .brand-sub { font-size: 10px; color: var(--green); font-weight: 700; display: block; }
@@ -85,7 +85,7 @@ HTML_PAGE = '''<!DOCTYPE html>
     cursor: pointer; display: flex; align-items: center; gap: 5px;
   }
 
-  /* DATE & LEAGUE BARS */
+  /* SUB-BARS */
   .sub-bars { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 12px 6px; }
   .h-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
   .h-scroll::-webkit-scrollbar { display: none; }
@@ -97,10 +97,9 @@ HTML_PAGE = '''<!DOCTYPE html>
   .chip.active { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 800; }
   .chip-gold.active { background: var(--gold); color: #000; border-color: var(--gold); }
 
-  /* MAIN SCROLLABLE VIEWPORT */
+  /* SCROLL VIEWPORT */
   .viewport { flex: 1; overflow-y: auto; padding: 12px; padding-bottom: 88px; -webkit-overflow-scrolling: touch; }
 
-  /* LEAGUE HEADER */
   .sec-head {
     display: flex; justify-content: space-between; align-items: center;
     background: linear-gradient(90deg, rgba(245,158,11,0.15), rgba(26,31,44,0.8));
@@ -108,7 +107,6 @@ HTML_PAGE = '''<!DOCTYPE html>
     padding: 8px 12px; margin: 12px 0 8px; font-size: 12px; font-weight: 800;
   }
 
-  /* MATCH CARD */
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 16px; padding: 14px; margin-bottom: 10px;
@@ -148,11 +146,21 @@ HTML_PAGE = '''<!DOCTYPE html>
   .prob-cell { background: var(--surface2); padding: 7px; border-radius: 8px; text-align: center; }
   .prob-cell b { display: block; color: var(--gold); font-size: 13px; margin-top: 2px; }
 
-  /* PROJECT 500 RON DASHBOARD */
+  /* JACK HERO DASHBOARD */
   .hero-card {
-    background: linear-gradient(145deg, #162032, #0f1522);
-    border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 18px; padding: 16px; margin-bottom: 12px;
+    background: linear-gradient(135deg, #1b1207, #0e111a);
+    border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 18px; padding: 16px; margin-bottom: 12px;
+    position: relative; overflow: hidden;
   }
+  .jack-profile { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; position: relative; z-index: 2; }
+  .jack-avatar {
+    width: 60px; height: 60px; border-radius: 50%; border: 2.5px solid var(--gold);
+    background: #12151e url('/jack_avatar.png') center/cover no-repeat;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3); flex-shrink: 0;
+  }
+  .jack-quote { font-style: italic; font-size: 11px; color: var(--gold); background: rgba(245,158,11,0.08); padding: 7px 11px; border-radius: 8px; border-left: 2px solid var(--gold); margin-top: 4px; line-height: 1.4; }
+
   .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
   .kpi-box { background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 12px; padding: 9px; text-align: center; }
   .kpi-lbl { font-size: 10px; color: var(--muted); }
@@ -164,12 +172,13 @@ HTML_PAGE = '''<!DOCTYPE html>
     background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
     padding: 12px; margin-bottom: 8px;
   }
-  .bet-actions { display: flex; gap: 6px; margin-top: 8px; }
-  .b-btn { flex: 1; padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 11px; font-weight: 800; cursor: pointer; background: var(--surface2); color: #fff; }
+  .bet-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .b-btn { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid var(--border); font-size: 11px; font-weight: 800; cursor: pointer; background: var(--surface2); color: #fff; min-width: 65px; }
   .b-win { background: rgba(16,185,129,0.2); border-color: var(--green); color: #34d399; }
   .b-loss { background: rgba(239,68,68,0.2); border-color: var(--red); color: #f87171; }
+  .b-edit { background: rgba(6,182,212,0.18); border-color: var(--cyan); color: #38bdf8; }
 
-  /* BOTTOM TAB BAR (NATIVE APP NAV) */
+  /* BOTTOM NAVIGATION */
   .bottom-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 520px; height: 68px;
@@ -190,10 +199,10 @@ HTML_PAGE = '''<!DOCTYPE html>
 <div class="app-shell">
   <div class="top-bar">
     <div class="brand">
-      <div class="brand-logo">X</div>
+      <div class="brand-logo">J</div>
       <div>
-        <span class="brand-title">XMTS PRO</span>
-        <span class="brand-sub" id="liveClock">● Sincronizat Azi</span>
+        <span class="brand-title">JACK 500</span>
+        <span class="brand-sub" id="liveClock">● Master Tipster AI</span>
       </div>
     </div>
     <div class="bank-pill" onclick="switchNav('proiect')">
@@ -216,7 +225,7 @@ HTML_PAGE = '''<!DOCTYPE html>
       <span class="ico">🏆</span><span>Europa</span>
     </button>
     <button class="nav-item" id="nav-proiect" onclick="switchNav('proiect')">
-      <span class="ico">📈</span><span>Proiect 500</span>
+      <span class="ico">🧠</span><span>Jack 500</span>
     </button>
     <button class="nav-item" id="nav-bilete" onclick="switchNav('bilete')">
       <span class="ico">🎟️</span><span>Bilete</span>
@@ -242,11 +251,11 @@ const LEAGUES = [
 ];
 
 const ELITE_BOOST = {
-  "real madrid": 0.42, "barcelona": 0.42, "manchester city": 0.42, "bayern munich": 0.42,
-  "liverpool": 0.38, "arsenal": 0.38, "inter": 0.35, "psg": 0.38, "paris saint-germain": 0.38,
-  "bayer leverkusen": 0.32, "borussia dortmund": 0.30, "atletico madrid": 0.30, "juventus": 0.28,
-  "ac milan": 0.28, "napoli": 0.30, "sporting cp": 0.30, "benfica": 0.28, "fc porto": 0.26,
-  "fcsb": 0.22, "cfr cluj": 0.18, "universitatea craiova": 0.18, "galatasaray": 0.25, "fenerbahce": 0.25
+  "real madrid": 0.45, "barcelona": 0.45, "manchester city": 0.45, "bayern munich": 0.45,
+  "liverpool": 0.40, "arsenal": 0.40, "inter": 0.36, "psg": 0.40, "paris saint-germain": 0.40,
+  "bayer leverkusen": 0.34, "borussia dortmund": 0.32, "atletico madrid": 0.32, "juventus": 0.30,
+  "ac milan": 0.30, "napoli": 0.32, "sporting cp": 0.30, "benfica": 0.28, "fc porto": 0.28,
+  "fcsb": 0.24, "cfr cluj": 0.20, "universitatea craiova": 0.20, "galatasaray": 0.26, "fenerbahce": 0.26
 };
 
 let currentNav = "meciuri";
@@ -290,9 +299,9 @@ function formScore(formStr) {
   if (!formStr) return 0;
   let s = 0;
   for (let ch of formStr.toUpperCase().slice(-5)) {
-    if (ch === "W") s += 0.07;
+    if (ch === "W") s += 0.08;
     else if (ch === "D") s += 0.01;
-    else if (ch === "L") s -= 0.06;
+    else if (ch === "L") s -= 0.07;
   }
   return s;
 }
@@ -303,6 +312,7 @@ function poissonPmf(k, lam) {
   return Math.exp(-lam) * Math.pow(lam, k) / fact;
 }
 
+/* ================= MASTER TIPSTER ANALYSIS ENGINE ================= */
 function analyzeMatch(ev, leagueObj) {
   const comp = ev.competitions[0];
   const competitors = comp.competitors;
@@ -323,8 +333,6 @@ function analyzeMatch(ev, leagueObj) {
 
   const hForm = home.form || "WWDWL";
   const aForm = away.form || "WDLWD";
-  const hRec = (home.records && home.records[0] && home.records[0].summary) || "";
-  const aRec = (away.records && away.records[0] && away.records[0].summary) || "";
 
   const hBoost = (ELITE_BOOST[hName.toLowerCase()] || 0) + formScore(hForm);
   const aBoost = (ELITE_BOOST[aName.toLowerCase()] || 0) + formScore(aForm);
@@ -334,8 +342,8 @@ function analyzeMatch(ev, leagueObj) {
   for (let i = 0; i < pair.length; i++) seed = (seed * 31 + pair.charCodeAt(i)) % 1000;
   const micro = (seed % 20 - 10) / 100;
 
-  const lamH = Math.max(0.65, Math.min(2.95, 1.38 + hBoost - aBoost * 0.35 + micro));
-  const lamA = Math.max(0.50, Math.min(2.65, 1.10 + aBoost - hBoost * 0.35 - micro * 0.5));
+  const lamH = Math.max(0.65, Math.min(3.10, 1.40 + hBoost - aBoost * 0.35 + micro));
+  const lamA = Math.max(0.50, Math.min(2.70, 1.05 + aBoost - hBoost * 0.35 - micro * 0.5));
 
   let pH = 0, pD = 0, pA = 0, pO15 = 0, pO25 = 0, pGG = 0;
   for (let h = 0; h <= 7; h++) {
@@ -351,37 +359,36 @@ function analyzeMatch(ev, leagueObj) {
   }
   const tot = pH + pD + pA;
   pH /= tot; pD /= tot; pA /= tot;
-  const pU25 = 1 - pO25;
 
-  const odd1 = Math.max(1.22, Math.min(6.50, +(0.94 / pH).toFixed(2)));
-  const oddX = Math.max(2.90, Math.min(5.80, +(0.94 / pD).toFixed(2)));
-  const odd2 = Math.max(1.25, Math.min(7.50, +(0.94 / pA).toFixed(2)));
+  const p1X = pH + pD;
+  const pX2 = pA + pD;
+
+  const odd1 = Math.max(1.20, Math.min(6.50, +(0.94 / pH).toFixed(2)));
+  const odd2 = Math.max(1.22, Math.min(7.50, +(0.94 / pA).toFixed(2)));
   const oddO25 = Math.max(1.42, Math.min(2.45, +(0.94 / pO25).toFixed(2)));
   const oddGG = Math.max(1.48, Math.min(2.40, +(0.94 / pGG).toFixed(2)));
-  const oddO15 = Math.max(1.22, Math.min(1.65, +(0.94 / pO15).toFixed(2)));
-  const odd1X = Math.max(1.16, Math.min(1.95, +(0.94 / (pH + pD)).toFixed(2)));
-  const oddX2 = Math.max(1.18, Math.min(2.05, +(0.94 / (pA + pD)).toFixed(2)));
+  const oddO15 = Math.max(1.18, Math.min(1.65, +(0.94 / pO15).toFixed(2)));
+  const odd1X = Math.max(1.15, Math.min(1.85, +(0.94 / p1X).toFixed(2)));
+  const oddX2 = Math.max(1.16, Math.min(1.95, +(0.94 / pX2).toFixed(2)));
 
-  // Alegere inteligentă a pronosticului (fără 1X pe marii favoriți)
-  let pick = "", prob = 0, odd = 1.75;
-  if (pH >= 0.53) {
-    pick = `1 (${hName})`; prob = pH; odd = odd1;
-  } else if (pA >= 0.52) {
-    pick = `2 (${aName})`; prob = pA; odd = odd2;
-  } else if (pO25 >= 0.56) {
-    pick = "Peste 2.5 Goluri"; prob = pO25; odd = oddO25;
-  } else if (pGG >= 0.56 && lamH >= 1.05 && lamA >= 0.95) {
-    pick = "GG (Ambele marchează)"; prob = pGG; odd = oddGG;
-  } else if (pO15 >= 0.72) {
-    pick = "Peste 1.5 Goluri"; prob = pO15; odd = oddO15;
-  } else if (pH >= pA) {
-    pick = "Șansă Dublă 1X"; prob = pH + pD; odd = odd1X;
-  } else {
-    pick = "Șansă Dublă X2"; prob = pA + pD; odd = oddX2;
-  }
+  // Căutarea celei mai mari probabilități reale
+  const candidates = [
+    { name: `1 (${hName})`, prob: pH, odd: odd1, type: "SOLIST" },
+    { name: `2 (${aName})`, prob: pA, odd: odd2, type: "SOLIST" },
+    { name: "Peste 1.5 Goluri", prob: pO15, odd: oddO15, type: "GOLURI" },
+    { name: "Peste 2.5 Goluri", prob: pO25, odd: oddO25, type: "GOLURI" },
+    { name: "GG (Ambele marchează)", prob: pGG, odd: oddGG, type: "GOLURI" },
+    { name: "Șansă Dublă 1X", prob: p1X, odd: odd1X, type: "DUBLA" },
+    { name: "Șansă Dublă X2", prob: pX2, odd: oddX2, type: "DUBLA" }
+  ];
 
-  const expCorners = +(9.2 + (lamH + lamA - 2.3) * 0.9).toFixed(1);
-  const expCards = +(4.2 + (0.35 - Math.abs(pH - pA)) * 1.6).toFixed(1);
+  // Jack caută cota realistă (1.35 - 2.15) cu probabilitatea maximă absolută
+  let validPicks = candidates.filter(c => c.odd >= 1.30 && c.odd <= 2.20);
+  if (!validPicks.length) validPicks = candidates;
+  validPicks.sort((a, b) => b.prob - a.prob);
+
+  const bestChoice = validPicks[0];
+  const tipsterConfidence = +(bestChoice.prob * 100).toFixed(1);
 
   return {
     id: ev.id,
@@ -394,21 +401,25 @@ function analyzeMatch(ev, leagueObj) {
     home: hName,
     away: aName,
     hScore, aScore,
-    hForm, aForm, hRec, aRec,
+    hForm, aForm,
     lamH: lamH.toFixed(2),
     lamA: lamA.toFixed(2),
-    pick,
-    prob: Math.round(prob * 100),
-    odd: +odd.toFixed(2),
-    expCorners,
-    expCards,
+    pick: bestChoice.name,
+    prob: Math.round(tipsterConfidence),
+    rawProb: bestChoice.prob,
+    odd: +bestChoice.odd.toFixed(2),
+    tipsterScore: bestChoice.prob * (bestChoice.odd >= 1.40 ? 1.15 : 1.0),
+    expCorners: +(9.2 + (lamH + lamA - 2.3) * 0.9).toFixed(1),
+    expCards: +(4.2 + (0.35 - Math.abs(pH - pA)) * 1.6).toFixed(1),
     probs: {
       p1: Math.round(pH * 100),
       pX: Math.round(pD * 100),
       p2: Math.round(pA * 100),
       o25: Math.round(pO25 * 100),
       gg: Math.round(pGG * 100),
-      o15: Math.round(pO15 * 100)
+      o15: Math.round(pO15 * 100),
+      p1X: Math.round(p1X * 100),
+      pX2: Math.round(pX2 * 100)
     }
   };
 }
@@ -419,7 +430,7 @@ async function loadMatchesForDate(isoDate) {
     return;
   }
   const vp = document.getElementById("viewport");
-  vp.innerHTML = `<div class="card" style="text-align:center;padding:28px;">⏳ Se sincronizează meciurile exacte pentru <b>${isoDate}</b>...</div>`;
+  vp.innerHTML = `<div class="card" style="text-align:center;padding:28px;">⏳ Jack analizează programul pentru <b>${isoDate}</b>...</div>`;
 
   const ymd = isoDate.replace(/-/g, "");
   const natLeagues = LEAGUES.filter(l => l.cat === "nat");
@@ -451,7 +462,7 @@ async function loadEuropaMatches() {
     return;
   }
   const vp = document.getElementById("viewport");
-  vp.innerHTML = `<div class="card" style="text-align:center;padding:28px;">🏆 Se încarcă programul UEFA Champions & Europa League...</div>`;
+  vp.innerHTML = `<div class="card" style="text-align:center;padding:28px;">🏆 Jack analizează meciurile UEFA Champions & Europa League...</div>`;
 
   const now = new Date();
   const start = roDateStr(new Date(now.getTime() - 2 * 86400000)).replace(/-/g, "");
@@ -475,9 +486,9 @@ async function loadEuropaMatches() {
   renderViewport();
 }
 
-/* ================= PROIECT 500 RON LOGIC ================= */
+/* ================= JACK 500 LOGIC ================= */
 async function initProject() {
-  const localRaw = localStorage.getItem("xmts_project_500");
+  const localRaw = localStorage.getItem("xmts_jack_500");
   let localData = null;
   if (localRaw) {
     try { localData = JSON.parse(localRaw); } catch(e) {}
@@ -504,7 +515,7 @@ function recalcBankroll() {
   });
   project.bankroll = +b.toFixed(2);
   document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
-  localStorage.setItem("xmts_project_500", JSON.stringify(project));
+  localStorage.setItem("xmts_jack_500", JSON.stringify(project));
   fetch("/api/project", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -542,7 +553,7 @@ function autoSettleProjectBets(matchesList) {
   if (changed) recalcBankroll();
 }
 
-function addMatchToProject(matchId) {
+function addMatchToProject(matchId, customOdd) {
   const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
   const m = all.find(x => String(x.id) === String(matchId));
   if (!m) return;
@@ -552,8 +563,9 @@ function addMatchToProject(matchId) {
     return;
   }
 
-  // Miză inteligentă: 7% din banca activă (rotunjită la 5 RON)
   const rawStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
+  const oddToUse = customOdd ? parseFloat(customOdd) : m.odd;
+
   project.bets.unshift({
     id: Date.now(),
     matchId: m.id,
@@ -561,13 +573,40 @@ function addMatchToProject(matchId) {
     match: `${m.home} vs ${m.away}`,
     league: m.league,
     pick: m.pick,
-    odd: m.odd,
+    odd: oddToUse,
     stake: rawStake,
     status: "PENDING",
     score: ""
   });
   recalcBankroll();
   switchNav("proiect");
+}
+
+/* BUTONUL DE EDITARE COTĂ / MIZĂ (SUPERBET) */
+function editBetDetails(betId) {
+  const b = project.bets.find(x => x.id === betId);
+  if (!b) return;
+
+  const newOddStr = prompt(`Introdu cota exactă din Superbet pentru:\n${b.match} - ${b.pick}`, b.odd);
+  if (newOddStr === null) return;
+  const newOdd = parseFloat(newOddStr);
+  if (isNaN(newOdd) || newOdd <= 1.01) {
+    alert("Cotă invalidă!");
+    return;
+  }
+
+  const newStakeStr = prompt(`Introdu miza (RON) pentru acest pariu:`, b.stake);
+  if (newStakeStr === null) return;
+  const newStake = parseFloat(newStakeStr);
+  if (isNaN(newStake) || newStake <= 0) {
+    alert("Miză invalidă!");
+    return;
+  }
+
+  b.odd = +newOdd.toFixed(2);
+  b.stake = +newStake.toFixed(2);
+  recalcBankroll();
+  renderViewport();
 }
 
 function updateBetStatus(betId, newStatus) {
@@ -580,6 +619,7 @@ function updateBetStatus(betId, newStatus) {
 }
 
 function deleteBet(betId) {
+  if (!confirm("Sigur vrei să ștergi acest pariu din evidență?")) return;
   project.bets = project.bets.filter(x => x.id !== betId);
   recalcBankroll();
   renderViewport();
@@ -600,7 +640,7 @@ function renderSubBars() {
   const lBar = document.getElementById("leagueBar");
 
   if (currentNav === "europa") {
-    dBar.innerHTML = `<span style="font-size:11px;color:var(--gold);font-weight:800;">🏆 Etapa Curentă UEFA Champions, Europa & Conference League</span>`;
+    dBar.innerHTML = `<span style="font-size:11px;color:var(--gold);font-weight:800;">🏆 Programul European UEFA</span>`;
     lBar.innerHTML = "";
     return;
   }
@@ -638,13 +678,13 @@ function renderMatchCard(m) {
       <div class="pick-box">
         <div>
           <div class="pick-title">⭐ ${m.pick}</div>
-          <div class="pick-sub">Probabilitate AI: <b style="color:var(--green);">${m.prob}%</b> · xG: ${m.lamH} - ${m.lamA}</div>
+          <div class="pick-sub">Siguranță Jack: <b style="color:var(--green);">${m.prob}%</b> · xG: ${m.lamH} - ${m.lamA}</div>
         </div>
         <div class="odd-badge">@${m.odd.toFixed(2)}</div>
       </div>
       <div class="card-actions">
-        <button class="btn-sm" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză, Formă & Cartonașe</button>
-        <button class="btn-sm btn-proj" onclick="addMatchToProject('${m.id}')">➕ În Proiect</button>
+        <button class="btn-sm" onclick="toggleDrawer('dr-${m.id}')">📊 Analiza lui Jack</button>
+        <button class="btn-sm btn-proj" onclick="addMatchToProject('${m.id}')">➕ Pune la Jack</button>
       </div>
       <div class="details-drawer" id="dr-${m.id}">
         <div class="prob-grid">
@@ -677,9 +717,9 @@ function renderProjectView() {
   const winRate = settled.length ? Math.round((wins / settled.length) * 100) : 0;
   const progressPct = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
 
-  // Căutăm cel mai bun pariu al zilei (Value Bet >= 62%, cotă 1.55 - 2.15)
-  const todayMatches = (cacheByDate[selectedDate] || []).filter(m => m.status === "NS" && m.odd >= 1.50 && m.odd <= 2.25);
-  todayMatches.sort((a, b) => b.prob - a.prob);
+  // JACK'S MASTER SELECTION: Alege STRICT meciul cu cel mai mare scor de siguranță matematică
+  const todayMatches = (cacheByDate[selectedDate] || []).filter(m => m.status === "NS");
+  todayMatches.sort((a, b) => b.tipsterScore - a.tipsterScore);
   const bestOfDay = todayMatches[0];
   const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
 
@@ -687,22 +727,32 @@ function renderProjectView() {
   if (bestOfDay) {
     const potWin = +(recStake * bestOfDay.odd).toFixed(2);
     bestHtml = `
-      <div class="card" style="border-color:var(--gold);">
+      <div class="card" style="border-color:var(--gold);background:linear-gradient(145deg, #181c28, #11141d);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:11px;font-weight:800;color:var(--gold);">🔥 PARIUL OFICIAL AL ZILEI ÎN PROIECT</span>
+          <span style="font-size:11px;font-weight:800;color:var(--gold);">🔥 PARIUL ZILEI SELECTAT DE JACK (CONFIDENȚĂ MAXIMĂ)</span>
           <span style="font-size:11px;color:var(--muted);">${bestOfDay.date} · ${bestOfDay.time}</span>
         </div>
         <div style="font-size:15px;font-weight:800;margin-bottom:6px;">${bestOfDay.home} vs ${bestOfDay.away}</div>
         <div class="pick-box">
           <div>
             <div class="pick-title">👉 ${bestOfDay.pick} (@${bestOfDay.odd.toFixed(2)})</div>
-            <div class="pick-sub">Miză Kelly (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--green);">${potWin} RON</b></div>
+            <div class="pick-sub">Probabilitate: <b style="color:var(--green);">${bestOfDay.prob}%</b> · Miză Kelly (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--green);">${potWin} RON</b></div>
           </div>
-          <button class="btn-sm btn-proj" style="flex:0.45;" onclick="addMatchToProject('${bestOfDay.id}')">➕ Joacă</button>
+          <button class="btn-sm btn-proj" style="flex:0.45;" onclick="addMatchToProject('${bestOfDay.id}')">➕ Pune la Jack</button>
         </div>
       </div>
     `;
   }
+
+  const quotes = [
+    "Pariu cu picioarele pe pământ și banca protejată. Disciplina face profitul!",
+    "Nu alerga după cote uriașe, căutam matematic valoarea și consistența.",
+    "Un pas mic pe zi ne duce la țintă. Rabdarea e cel mai bun prieten la pariat.",
+    "Banca e sfântă. Mizează calculat conform strategiei mele!",
+    "Noi nu ghicim meciuri, noi analizăm probabilități. Keep cool!"
+  ];
+  const seedQ = Math.abs(Math.round(project.bankroll + project.bets.length));
+  const currentQuote = quotes[seedQ % quotes.length];
 
   const betsHtml = project.bets.map(b => {
     const pot = +(b.stake * b.odd).toFixed(2);
@@ -716,9 +766,10 @@ function renderProjectView() {
         </div>
         <div style="font-size:14px;font-weight:800;margin:4px 0;">${b.match} ${b.score ? `(${b.score})` : ''}</div>
         <div style="font-size:12px;color:var(--cyan);font-weight:700;">
-          Pronostic: <b>${b.pick}</b> &nbsp;|&nbsp; Cotă: <b style="color:var(--gold);">@${b.odd}</b> &nbsp;|&nbsp; Miză: <b>${b.stake} RON</b>
+          Pronostic: <b>${b.pick}</b> &nbsp;|&nbsp; Cotă: <b style="color:var(--gold);">@${b.odd.toFixed(2)}</b> &nbsp;|&nbsp; Miză: <b>${b.stake} RON</b>
         </div>
         <div class="bet-actions">
+          <button class="b-btn b-edit" onclick="editBetDetails(${b.id})">✏️ Editează Cotă</button>
           <button class="b-btn b-win" onclick="updateBetStatus(${b.id}, 'WIN')">✔ Câștigat</button>
           <button class="b-btn b-loss" onclick="updateBetStatus(${b.id}, 'LOSS')">✖ Pierdut</button>
           <button class="b-btn" onclick="deleteBet(${b.id})">🗑️ Șterge</button>
@@ -729,28 +780,38 @@ function renderProjectView() {
 
   return `
     <div class="hero-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="jack-profile">
+        <div class="jack-avatar">👴</div>
         <div>
-          <div style="font-size:11px;color:var(--muted);font-weight:700;">CAPITAL CURENT PROIECT</div>
+          <div style="font-size:16px;font-weight:800;color:#fff;">Nea Jack</div>
+          <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;text-transform:uppercase;">Director de Strategie AI</div>
+        </div>
+      </div>
+      <div class="jack-quote">" ${currentQuote} "</div>
+      
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;">CAPITALUL LUI JACK</div>
           <div style="font-size:26px;font-weight:800;color:#fff;margin-top:2px;">${project.bankroll.toFixed(2)} <span style="font-size:14px;color:var(--green);">RON</span></div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:11px;color:var(--muted);">Țintă Lunară</div>
+          <div style="font-size:11px;color:var(--muted);">Ținta lui Jack</div>
           <div style="font-size:15px;font-weight:800;color:var(--gold);">${project.target_bankroll} RON</div>
         </div>
       </div>
       <div class="prog-track"><div class="prog-fill" style="width:${progressPct}%;"></div></div>
+      
       <div class="kpi-grid">
         <div class="kpi-box">
-          <div class="kpi-lbl">Profit Net</div>
+          <div class="kpi-lbl">Profit Real</div>
           <div class="kpi-val" style="color:${netProfit >= 0 ? 'var(--green)' : 'var(--red)'};">${netProfit >= 0 ? '+' : ''}${netProfit} RON</div>
         </div>
         <div class="kpi-box">
-          <div class="kpi-lbl">Randament (ROI)</div>
+          <div class="kpi-lbl">ROI Proiect</div>
           <div class="kpi-val" style="color:var(--cyan);">${roiPct >= 0 ? '+' : ''}${roiPct}%</div>
         </div>
         <div class="kpi-box">
-          <div class="kpi-lbl">Win Rate (${wins}/${settled.length})</div>
+          <div class="kpi-lbl">Rată Succes (${wins}/${settled.length})</div>
           <div class="kpi-val" style="color:var(--gold);">${winRate}%</div>
         </div>
       </div>
@@ -759,10 +820,10 @@ function renderProjectView() {
     ${bestHtml}
 
     <div class="sec-head">
-      <span>📋 Jurnalul Pariurilor din Proiect (${project.bets.length})</span>
-      <span style="font-size:10px;color:var(--muted);">Salvare Automată</span>
+      <span>📋 Jurnalul de Pariuri al lui Jack (${project.bets.length})</span>
+      <span style="font-size:10px;color:var(--muted);">Auto-Calculat</span>
     </div>
-    ${betsHtml || '<div class="card" style="text-align:center;color:var(--muted);">Niciun pariu adăugat încă. Apasă pe „➕ Joacă” de mai sus sau pe „➕ În Proiect” la orice meci din listă!</div>'}
+    ${betsHtml || '<div class="card" style="text-align:center;color:var(--muted);padding:20px;">Niciun pariu adăugat. Mergi la meciuri și trimite selecții în banca lui Jack!</div>'}
   `;
 }
 
@@ -880,7 +941,7 @@ function switchNav(tab) {
 })();
 </script>
 </body>
-</html>'''
+</html>"""
 
 @app.route("/")
 def index():
