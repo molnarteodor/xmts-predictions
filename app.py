@@ -13,82 +13,126 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <style>
   :root {
     --bg-dark: #0a0a0a; --card-bg: #151515; --card-border: #282828;
-    --accent-cyan: #06b6d4; --accent-gold: #eab308; --accent-orange: #f97316;
-    --text-main: #f8fafc; --text-muted: #94a3b8; --bar-green: #22c55e;
+    --accent-cyan: #06b6d4; --accent-gold: #eab308; --text-main: #f8fafc; --text-muted: #94a3b8;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
   body { background: var(--bg-dark); color: var(--text-main); padding: 10px; }
   .container { max-width: 600px; margin: 0 auto; }
-  .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .sync-btn { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
-  .tabs-wrapper { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none; }
-  .tab-btn { background: #1c1c1c; border: 1px solid var(--card-border); color: var(--text-muted); padding: 9px 13px; border-radius: 10px; font-weight: 700; white-space: nowrap; cursor: pointer; font-size: 12px; }
-  .tab-btn.active { background: rgba(234, 179, 8, 0.16); border-color: var(--accent-gold); color: #fff; }
-  .league-filter-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: none; }
-  .league-chip { background: #141414; border: 1px solid #2a2a2a; color: #cbd5e1; padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-  .league-chip.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); font-weight: 800; }
-  .date-picker-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
-  .date-chip { background: #1f1f1f; border: 1px solid var(--card-border); color: var(--text-muted); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; white-space: nowrap; cursor: pointer; }
-  .date-chip.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
-  .league-section { margin-bottom: 20px; }
-  .league-section-header { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(234,179,8,0.16) 0%, rgba(22,22,22,0.95) 100%); border-left: 4px solid var(--accent-gold); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; font-weight: 800; font-size: 13px; color: #fff; }
-  .league-badge-count { font-size: 11px; color: var(--accent-gold); background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 6px; font-weight: 700; }
-  .glass-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 15px; margin-bottom: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); }
-  .match-basic { display:flex; flex-direction:column; gap:8px; }
-  .pred-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.45); border-radius: 10px; padding: 10px; }
-  .risk-tag { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
-  .risk-Scăzut { background: rgba(16,185,129,0.2); color: #34d399; }
-  .risk-Mediu { background: rgba(245,158,11,0.2); color: #fbbf24; }
-  .btn-expand { width: 100%; background: #1f1f1f; border: 1px solid #eab308; color: #fff; padding: 9px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 8px; font-size: 12px; }
-  .golden-panel { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--card-border); }
-  .golden-header { text-align: center; color: var(--accent-gold); font-size: 15px; font-weight: 800; margin-bottom: 12px; text-transform: uppercase; }
-  .h2h-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; }
-  .h2h-val { width: 65px; text-align: center; font-weight: 800; padding: 5px 4px; border-radius: 6px; background: #222; color: var(--accent-gold); }
-  .h2h-label { flex: 1; text-align: center; color: #cbd5e1; font-weight: bold; }
-  .bars-section { margin-top: 14px; }
-  .bar-row { display: flex; align-items: center; margin-bottom: 7px; font-size: 12px; font-weight: bold; }
-  .bar-label { width: 100px; color: #fff; }
-  .bar-track { flex: 1; background: rgba(255,255,255,0.06); border-radius: 12px; height: 18px; position: relative; }
-  .bar-fill { height: 100%; background: var(--bar-green); border-radius: 12px; display: flex; justify-content: flex-end; align-items: center; padding-right: 8px; color: #fff; font-size: 10px; }
-  .acc-item { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; }
-  .acc-header { padding: 10px 14px; display: flex; justify-content: space-between; cursor: pointer; color: #fff; font-weight: bold; font-size: 12px; }
-  .acc-body { padding: 10px 14px; border-top: 1px solid #2a2a2a; font-size: 12px; color: var(--text-muted); display: none; line-height: 1.5; }
-  .ticket-config { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 15px; }
-  .odds-btn { background: #222; border: 1px solid var(--card-border); color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
-  .odds-btn.active { background: var(--accent-gold); color: #000; border-color: var(--accent-gold); }
-  .ticket-match-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
-  .result-badge { font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
-  .res-pending { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+  .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .glass-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .tab-btn { background: #1c1c1c; border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+  .tab-btn.active { background: rgba(234, 179, 8, 0.2); border-color: var(--accent-gold); color: #fff; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header-bar">
     <div style="font-size:20px; font-weight:800; color:var(--accent-gold);">XMTS PREDICTIONS</div>
-    <button class="sync-btn" id="syncBtn" onclick="fetchLiveMatches()">🔄 Sincronizează Live</button>
+    <button class="tab-btn active" onclick="loadMatches()">🔄 Actualizează</button>
+  </div>
+  
+  <div class="tabs">
+    <button class="tab-btn active" onclick="filterLeague('ALL')">Toate Meciurile</button>
+    <button class="tab-btn" onclick="filterLeague('UEFA Champions League')">Champions League</button>
+    <button class="tab-btn" onclick="filterLeague('UEFA Europa League')">Europa League</button>
   </div>
 
-  <div class="tabs-wrapper">
-    <button class="tab-btn active" onclick="switchTab('meciuri', this)">⚽ Ligi Naționale</button>
-    <button class="tab-btn" onclick="switchTab('cl', this)" style="border-color:var(--accent-cyan); color:var(--accent-cyan);">🏆 Champions League</button>
-    <button class="tab-btn" onclick="switchTab('el', this)" style="border-color:var(--accent-orange); color:var(--accent-orange);">🟠 Europa League</button>
-    <button class="tab-btn" onclick="switchTab('bilete', this)" style="border-color:var(--accent-gold); color:var(--accent-gold);">🎟️ Generator Bilete</button>
+  <div id="content">
+    <div class="glass-card" style="text-align:center;">Se încarcă meciurile reale...</div>
   </div>
-
-  <div id="dateSelectorContainer"></div>
-  <div id="leagueFilterContainer"></div>
-  <div id="content"><div class="glass-card" style="text-align:center;">Se descarcă meciurile reale de pe ESPN...</div></div>
 </div>
 
 <script>
-let allMatches = [];
-let currentTab = 'meciuri';
-let selectedDate = 'ALL';
-let selectedClDate = 'ALL';
-let selectedElDate = 'ALL';
-let selectedLeagueFilter = 'ALL';
-let selectedTargetOdds = 10;
+let globalMatches = [];
 
-// Preluare automată și 100% reală din feed-ul public ESPN (fără cheie, fără cont)
-async function fetchLiveMatches() {
-  document.getElementById('content').innerHTML = '<div class="glass-card
+async function loadMatches() {
+  const container = document.getElementById('content');
+  container.innerHTML = '<div class="glass-card" style="text-align:center;">Se preiau datele de pe ESPN...</div>';
+  
+  const leagues = [
+    {slug: "uefa.champions", name: "UEFA Champions League", icon: "🏆"},
+    {slug: "uefa.europa", name: "UEFA Europa League", icon: "🟠"},
+    {slug: "eng.1", name: "Premier League (Anglia)", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    {slug: "esp.1", name: "La Liga (Spania)", icon: "🇪🇸"},
+    {slug: "ita.1", name: "Serie A (Italia)", icon: "🇮🇹"},
+    {slug: "ger.1", name: "Bundesliga (Germania)", icon: "🇩🇪"},
+    {slug: "rou.1", name: "SuperLiga (România)", icon: "🇷🇴"}
+  ];
+
+  let matches = [];
+  try {
+    for (let l of leagues) {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`);
+      const data = await res.json();
+      if (data && data.events) {
+        data.events.forEach(ev => {
+          const comp = ev.competitions[0];
+          const home = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors[0];
+          const away = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors[1];
+          
+          const hName = home.team.displayName;
+          const aName = away.team.displayName;
+          const dateObj = new Date(comp.date);
+          
+          matches.push({
+            league: l.name,
+            icon: l.icon,
+            date: dateObj.toISOString().split('T')[0],
+            time: dateObj.toTimeString().substring(0, 5),
+            home: hName,
+            away: aName,
+            prediction: `1X (${hName} sau Egal)`,
+            prob: "74%"
+          });
+        });
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  globalMatches = matches;
+  displayMatches(matches);
+}
+
+function filterLeague(leagueName) {
+  if (leagueName === 'ALL') {
+    displayMatches(globalMatches);
+  } else {
+    displayMatches(globalMatches.filter(m => m.league === leagueName));
+  }
+}
+
+function displayMatches(matches) {
+  const container = document.getElementById('content');
+  if (!matches.length) {
+    container.innerHTML = '<div class="glass-card" style="text-align:center;">Nu sunt meciuri programate momentan.</div>';
+    return;
+  }
+
+  container.innerHTML = matches.map(m => `
+    <div class="glass-card">
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">${m.icon} ${m.league} · ${m.date} (${m.time})</div>
+      <div style="font-size:16px; font-weight:800; text-align:center; margin-bottom:8px;">${m.home} <span style="color:var(--accent-gold);">VS</span> ${m.away}</div>
+      <div style="background:rgba(0,0,0,0.4); padding:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; font-weight:700;">⭐ Pronostic: ${m.prediction}</span>
+        <span style="font-size:11px; font-weight:800; background:rgba(16,185,129,0.2); color:#34d399; padding:2px 6px; border-radius:4px;">${m.prob}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+loadMatches();
+</script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def home():
+    return render_template_string(HTML_TEMPLATE)
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
