@@ -14,7 +14,7 @@
   /* LOGIN OVERLAY */
   .login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
   .login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
-  .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); }
+  .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
   .cyber-input { width:100%; background:rgba(2,4,8,0.85); border:1px solid var(--card-border); color:#fff; padding:12px 14px; border-radius:12px; font-size:13px; margin-bottom:12px; outline:none; }
   .cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
   .login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
@@ -22,7 +22,7 @@
   /* TOP HUD */
   .top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
   .hud-brand { display:flex; align-items:center; gap:10px; }
-  .hud-logo { width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:15px; box-shadow:0 0 15px rgba(0,243,255,0.4); }
+  .hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
   .hud-title { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1px; color:#fff; display:block; }
   .hud-status { font-size:9px; color:var(--neon-green); font-weight:700; text-transform:uppercase; }
   .hud-right { display:flex; align-items:center; gap:8px; }
@@ -63,8 +63,8 @@
   /* JOE CHARACTER STYLES */
   .vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
   .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
-  .joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); background:linear-gradient(135deg,#1e293b,#0f172a); display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
-  .joe-status-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:var(--neon-green); border:2px solid #020408; border-radius:50%; }
+  .joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
+  .joe-status-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:var(--neon-green); border:2px solid #020408; border-radius:50%; z-index:2; }
   .vault-quote { font-style:italic; font-size:11.5px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:10px 14px; border-radius:12px; border-left:3px solid var(--neon-cyan); line-height:1.4; }
   
   .vault-kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
@@ -94,7 +94,9 @@
 <!-- ECRAN DE LOGARE -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
-    <div class="login-logo">J</div>
+    <div class="login-logo">
+      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+    </div>
     <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
     <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">NEURAL BETTING HUD</div>
     <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
@@ -108,7 +110,9 @@
 <div class="app-shell">
   <div class="top-hud">
     <div class="hud-brand">
-      <div class="hud-logo">J</div>
+      <div class="hud-logo">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+      </div>
       <div>
         <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
         <span class="hud-status" id="liveClock">● Live 24/7</span>
@@ -668,7 +672,6 @@ function renderProjectView() {
   const bestOfDay = candidates[0];
   const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
 
-  // Joe's dynamic quotes based on bankroll performance
   const quotes = net >= 0 
     ? `"Suntem pe verde, șefu'! Disciplina și modelul Poisson nu dau greș când joci la sigur."`
     : `"Capul sus! O zi mai slabă face parte din joc. Recuperăm pas cu pas, fără riscuri inutile."`;
@@ -715,7 +718,10 @@ function renderProjectView() {
 
   return `<div class="vault-hero">
     <div class="vault-profile">
-      <div class="joe-avatar-box">😎<div class="joe-status-dot"></div></div>
+      <div class="joe-avatar-box">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+        <div class="joe-status-dot"></div>
+      </div>
       <div>
         <div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Joe's Safe Vault</div>
         <div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">TIPSTER ANALYTICS & BANKROLL</div>
