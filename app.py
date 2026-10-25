@@ -1,7 +1,7 @@
 import os
 import json
 import psycopg2
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
@@ -74,7 +74,7 @@ def api_project():
 
     return jsonify({"initial_bankroll": 500.0, "target_bankroll": 800.0, "bankroll": 500.0, "bets": []})
 
-HTML_PAGE = """<!DOCTYPE html>
+HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
@@ -198,6 +198,7 @@ const ELITE_TEAMS = [
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
+let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
@@ -218,6 +219,13 @@ function fallbackCopy(txt) {
   const ta = document.createElement("textarea");
   ta.value = txt; document.body.appendChild(ta); ta.select();
   document.execCommand("copy"); document.body.removeChild(ta);
+}
+
+function copyCurrentTicket() {
+  const nl = String.fromCharCode(10);
+  const header = "🎟️ BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2);
+  const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
+  copyText([header, ...lines].join(nl));
 }
 
 function getEliteBoost(name) {
@@ -306,7 +314,6 @@ function analyzeMatch(ev, lg) {
     { name: "Șansă Dublă X2", prob: pX2, odd: Math.max(1.18, Math.min(1.98, +(0.91 / pX2).toFixed(2))), w: 0.94 }
   ];
 
-  // Scor de valoare: favorizează cotele optime 1.38 - 1.95 cu probabilitate ridicată
   candidates.forEach(c => {
     const sweetSpot = (c.odd >= 1.38 && c.odd <= 1.95) ? 1.12 : ((c.odd >= 1.30 && c.odd <= 2.15) ? 1.0 : 0.75);
     c.valueScore = c.prob * c.w * sweetSpot;
@@ -318,7 +325,6 @@ function analyzeMatch(ev, lg) {
   valid.sort((a, b) => b.valueScore - a.valueScore);
   const best = valid[0];
 
-  // Calcul realist pe baza profilului ligii, intensității ofensive (lamH+lamA) și echilibrului
   const cSpread = ((seed % 29) - 14) / 10;
   const kSpread = (((seed >> 3) % 23) - 11) / 10;
   const expCorners = Math.max(6.5, Math.min(13.5, +((lg.cBase || 9.5) + (lamH + lamA - 2.45) * 1.6 + cSpread).toFixed(1)));
@@ -338,6 +344,7 @@ function analyzeMatch(ev, lg) {
 }
 
 async function loadMatchesForDate(iso) {
+  renderSubBars();
   if (cacheByDate[iso]) { renderViewport(); return; }
   document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Scanare completă (Ligi + UEFA) pentru <b>${iso}</b>...</div>`;
   const ymd = iso.replace(/-/g, "");
@@ -346,13 +353,19 @@ async function loadMatchesForDate(iso) {
       .then(r => r.json()).then(d => ({ l, evs: (d && d.events) || [] })).catch(() => ({ l, evs: [] }))
   ));
   const list = [];
-  res.forEach(r => r.evs.forEach(ev => { const m = analyzeMatch(ev, r.l); if (m.date === iso) list.push(m); }));
+  res.forEach(r => r.evs.forEach(ev => {
+    try {
+      const m = analyzeMatch(ev, r.l);
+      if (m.date === iso) list.push(m);
+    } catch (e) {}
+  }));
   cacheByDate[iso] = list;
   autoSettleProjectBets(list);
   renderViewport();
 }
 
 async function loadEuropaMatches() {
+  renderSubBars();
   if (europaMatches.length) { renderViewport(); return; }
   document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Se încarcă UEFA...</div>`;
   const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
@@ -361,7 +374,9 @@ async function loadEuropaMatches() {
       .then(r => r.json()).then(d => ({ l, evs: (d && d.events) || [] })).catch(() => ({ l, evs: [] }))
   ));
   const list = [];
-  res.forEach(r => r.evs.forEach(ev => list.push(analyzeMatch(ev, r.l))));
+  res.forEach(r => r.evs.forEach(ev => {
+    try { list.push(analyzeMatch(ev, r.l)); } catch (err) {}
+  }));
   list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   europaMatches = list;
   renderViewport();
@@ -584,7 +599,6 @@ function renderProjectView() {
   ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Joacă mâna lui Jack de mai sus!</div>'}`;
 }
 
-let lastBuiltTicketText = "";
 function renderTicketsView() {
   const dayPool = cacheByDate[selectedDate] || [];
   let pool = dayPool.filter(m => m.status === "NS");
@@ -593,15 +607,15 @@ function renderTicketsView() {
   let picks = [], tot = 1.0;
   for (let m of sorted) { if (picks.length >= 10) break; if (tot < targetTicketOdds) { picks.push(m); tot *= m.odd; } }
 
-  lastBuiltTicketText = `🎟️ BILETUL ZILEI (${selectedDate}) — Cotă Totală: @${tot.toFixed(2)}\n` +
-    picks.map((m, i) => `${i+1}. ${m.home} vs ${m.away} ➔ ${m.pick} (@${m.odd.toFixed(2)})`).join("\n");
+  currentTicketPicks = picks;
+  currentTicketTotalOdd = tot;
 
   const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="targetTicketOdds=${o};renderViewport();">Cotă ${o}</button>`).join("");
   const rows = picks.map((m, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(15,23,42,0.8);border-radius:10px;margin-bottom:6px;border:1px solid var(--card-border);"><div><div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div><div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>`).join("");
   return `<div class="cyber-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Neural Ticket (${selectedDate})</span>
-      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyText(lastBuiltTicketText)">📋 Copiază Biletul</button>
+      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază Biletul</button>
     </div>
     <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
     <div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;"><span>Țintă: ~${targetTicketOdds}</span><span style="color:var(--neon-green);">Total: @${tot.toFixed(2)}</span></div>
@@ -632,8 +646,10 @@ function switchNav(tab) {
 
 (async function startApp() {
   selectedDate = getDatesList()[1].iso;
+  renderSubBars();
+  loadMatchesForDate(selectedDate);
   await initProject();
-  await loadMatchesForDate(selectedDate);
+  if (currentNav === "proiect") renderViewport();
 })();
 </script>
 </body>
@@ -641,7 +657,7 @@ function switchNav(tab) {
 
 @app.route("/")
 def index():
-    return render_template_string(HTML_PAGE)
+    return HTML_PAGE
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
