@@ -5,7 +5,6 @@ from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-# .strip() sterge automat orice Enter sau spatiu ramas la finalul URL-ului in Render
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -18,7 +17,6 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     if not conn:
-        print("ATENTIE: DATABASE_URL nu este setat!")
         return
     try:
         cur = conn.cursor()
@@ -40,7 +38,6 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("PostgreSQL conectat si initializat cu succes!")
     except Exception as e:
         print("Eroare la init_db:", e)
 
@@ -61,7 +58,6 @@ def api_project():
                 conn.commit()
                 cur.close()
                 conn.close()
-                print(f"Salvat in DB: bankroll={body['bankroll']}, pariuri={len(body['bets'])}")
                 return jsonify(body)
 
         cur.execute("SELECT data FROM jack_project ORDER BY id DESC LIMIT 1;")
@@ -114,9 +110,9 @@ HTML_PAGE = """<!DOCTYPE html>
   .team-name { width:40%; font-size:14px; font-weight:800; line-height:1.3; }
   .team-name.away { text-align:right; }
   .score-display { background:rgba(15,23,42,0.9); border:1px solid var(--card-border); padding:6px 14px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; color:var(--neon-gold); }
-  .prediction-panel { background:rgba(2,4,8,0.8); border:1px solid var(--card-border); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; }
+  .prediction-panel { background:rgba(2,4,8,0.8); border:1px solid var(--card-border); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
   .pred-main { font-size:12px; font-weight:800; color:#fff; }
-  .pred-sub { font-size:10px; color:var(--text-muted); margin-top:3px; }
+  .pred-sub { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.4; }
   .odd-chip { background:rgba(255,183,3,0.12); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:5px 11px; border-radius:10px; font-family:'Orbitron',sans-serif; font-weight:800; font-size:12px; }
   .action-bar { display:flex; gap:8px; margin-top:10px; }
   .cyber-btn { flex:1; background:rgba(15,23,42,0.9); border:1px solid var(--card-border); color:var(--text-main); padding:9px; border-radius:12px; font-size:11px; font-weight:700; cursor:pointer; }
@@ -125,9 +121,9 @@ HTML_PAGE = """<!DOCTYPE html>
   .matrix-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
   .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
   .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
-  .vault-hero { background:linear-gradient(135deg,#091526,#020408); border:1px solid rgba(0,243,255,0.4); border-radius:22px; padding:20px; margin-bottom:16px; }
-  .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
-  .vault-avatar { width:64px; height:64px; border-radius:50%; border:2.5px solid var(--neon-cyan); background:#020408; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+  .vault-hero { background:linear-gradient(135deg,#091526,#020408); border:1px solid rgba(0,243,255,0.4); border-radius:22px; padding:20px; margin-bottom:14px; }
+  .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .vault-avatar { width:60px; height:60px; border-radius:50%; border:2.5px solid var(--neon-cyan); background:#020408; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; box-shadow:0 0 16px rgba(0,243,255,0.35); }
   .vault-quote { font-style:italic; font-size:11px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:9px 13px; border-radius:12px; border-left:2.5px solid var(--neon-cyan); }
   .vault-kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
   .vault-kpi { background:rgba(2,4,8,0.6); border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center; }
@@ -135,6 +131,7 @@ HTML_PAGE = """<!DOCTYPE html>
   .v-val { font-size:13px; font-family:'Orbitron',sans-serif; font-weight:900; margin-top:4px; }
   .cyber-progress { width:100%; height:10px; background:rgba(255,255,255,0.04); border-radius:99px; margin-top:14px; overflow:hidden; border:1px solid var(--card-border); }
   .cyber-progress-fill { height:100%; background:linear-gradient(90deg,var(--neon-green),var(--neon-cyan)); border-radius:99px; transition:0.4s; }
+  .jack-pick-card { background:linear-gradient(145deg,rgba(6,214,160,0.12),rgba(2,4,8,0.95)); border:1.5px solid var(--neon-green); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 0 25px rgba(6,214,160,0.15); }
   .bet-ticket { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:14px; margin-bottom:10px; }
   .bet-ticket-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
   .t-btn { flex:1; padding:7px; border-radius:10px; border:1px solid var(--card-border); font-size:11px; font-weight:800; cursor:pointer; background:rgba(15,23,42,0.9); color:#fff; min-width:65px; }
@@ -303,7 +300,6 @@ async function initProject() {
     }
   } catch (e) { console.error(e); }
   recalcBankroll(false);
-  renderViewport();
 }
 
 async function saveToDB() {
@@ -433,6 +429,34 @@ function renderProjectView() {
   const wins = project.bets.filter(b => b.status === "WIN").length;
   const wr = settled.length ? Math.round((wins / settled.length) * 100) : 0;
   const prog = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
+
+  const dayAll = cacheByDate[selectedDate] || [];
+  let candidates = dayAll.filter(m => m.status === "NS");
+  if (!candidates.length) candidates = [...dayAll];
+  candidates.sort((a, b) => b.tipsterScore - a.tipsterScore);
+  const bestOfDay = candidates[0];
+  const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
+
+  let jackAutoPickHtml = "";
+  if (bestOfDay) {
+    const potWin = +(recStake * bestOfDay.odd).toFixed(2);
+    const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
+    jackAutoPickHtml = `<div class="jack-pick-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">💎 PRONOSTICUL LUI NEA JACK (${bestOfDay.date})</span>
+        <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div>
+      <div class="prediction-panel">
+        <div>
+          <div class="pred-main" style="color:var(--neon-cyan);">👉 ${bestOfDay.pick} <span style="color:var(--neon-gold);">@${bestOfDay.odd.toFixed(2)}</span></div>
+          <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză calculată (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
+        </div>
+        <button class="cyber-btn accent" style="flex:0.45;padding:10px 8px;font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Joacă Mâna'}</button>
+      </div>
+    </div>`;
+  }
+
   const betsHtml = project.bets.map(b => {
     const pot = +(b.stake * b.odd).toFixed(2);
     const col = b.status === "WIN" ? "var(--neon-green)" : (b.status === "LOSS" ? "var(--neon-red)" : "var(--neon-gold)");
@@ -449,9 +473,10 @@ function renderProjectView() {
       </div>
     </div>`;
   }).join("");
+
   return `<div class="vault-hero">
     <div class="vault-profile"><div class="vault-avatar">👴</div><div><div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;">Nea Jack HUD</div><div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">POSTGRESQL VAULT</div></div></div>
-    <div class="vault-quote">" Matematica nu minte niciodată. Respectăm banca și mergem la țintă! "</div>
+    <div class="vault-quote">" Am scanat toate cotele zilei. Ai mai jos pronosticul meu numărul 1! "</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
       <div><div class="v-lbl">Capital Activ (DB)</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
       <div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div></div>
@@ -463,8 +488,9 @@ function renderProjectView() {
       <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">${wr}%</div></div>
     </div>
   </div>
+  ${jackAutoPickHtml}
   <div class="cyber-sec-head"><span>📋 PORTOFOLIU DB (${project.bets.length})</span><span>POSTGRESQL</span></div>
-  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă meciuri!</div>'}`;
+  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Joacă mâna lui Jack de mai sus!</div>'}`;
 }
 
 function renderTicketsView() {
