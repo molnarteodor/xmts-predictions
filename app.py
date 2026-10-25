@@ -32,6 +32,7 @@ def init_db():
                     "bets": []
                 }
                 cur.execute("INSERT INTO jack_project (data) VALUES (%s);", [json.dumps(default_data)])
+                print("Baza de date a fost inițializată cu datele default.")
             conn.commit()
             cur.close()
             conn.close()
@@ -43,47 +44,43 @@ try:
 except Exception as e:
     print("Nu s-a putut initializa baza de date:", e)
 
-def load_project():
+@app.route("/api/project", methods=["GET", "POST"])
+def api_project():
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT data FROM jack_project ORDER BY id DESC LIMIT 1;")
-            row = cur.fetchone()
-            cur.close()
+    if not conn:
+        return jsonify({"error": "No database connection"}), 500
+
+    try:
+        cur = conn.cursor()
+        if request.method == "POST":
+            body = request.get_json(silent=True)
+            if body and "bankroll" in body and "bets" in body:
+                cur.execute("DELETE FROM jack_project;")
+                cur.execute("INSERT INTO jack_project (data) VALUES (%s);", [json.dumps(body)])
+                conn.commit()
+                print(f"Salvat în DB cu succes! Pariuri: {len(body.get('bets', []))}")
+                cur.close()
+                conn.close()
+                return jsonify(body)
+        
+        # GET request
+        cur.execute("SELECT data FROM jack_project ORDER BY id DESC LIMIT 1;")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            return jsonify(json.loads(row[0]))
+    except Exception as e:
+        print("Eroare în rutele API:", e)
+        if conn:
             conn.close()
-            if row:
-                return json.loads(row[0])
-        except Exception as e:
-            print("Eroare la citire DB:", e)
-    return {
+
+    return jsonify({
         "initial_bankroll": 500.0,
         "target_bankroll": 800.0,
         "bankroll": 500.0,
         "bets": []
-    }
-
-def save_project(data):
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM jack_project;")
-            cur.execute("INSERT INTO jack_project (data) VALUES (%s);", [json.dumps(data)])
-            conn.commit()
-            cur.close()
-            conn.close()
-        except Exception as e:
-            print("Eroare la salvare DB:", e)
-
-@app.route("/api/project", methods=["GET", "POST"])
-def api_project():
-    if request.method == "POST":
-        body = request.get_json(silent=True)
-        if body and "bankroll" in body and "bets" in body:
-            save_project(body)
-            return jsonify(body)
-    return jsonify(load_project())
+    })
 
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="ro">
@@ -245,7 +242,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <div class="hud-logo">J</div>
       <div>
         <span class="hud-title">JACK 500 HUD</span>
-        <span class="hud-status" id="liveClock">● DB Online</span>
+        <span class="hud-status" id="liveClock">● DB Synced</span>
       </div>
     </div>
     <div class="hud-bank" onclick="switchNav('proiect')">
@@ -526,7 +523,7 @@ async function loadEuropaMatches() {
   renderViewport();
 }
 
-/* ================= PROJECT LOGIC (SYNCED WITH POSTGRESQL) ================= */
+/* ================= DIRECT API SYNC (NO LOCALSTORAGE CONFLICT) ================= */
 async function initProject() {
   try {
     const r = await fetch("/api/project");
@@ -537,7 +534,23 @@ async function initProject() {
   } catch (e) {
     console.error("Eroare preluare date din DB:", e);
   }
-  recalcBankroll();
+  renderViewport();
+}
+
+async function saveToDB() {
+  try {
+    const r = await fetch("/api/project", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(project)
+    });
+    const res = await r.json();
+    if (res && res.bankroll !== undefined) {
+      project = res;
+    }
+  } catch (e) {
+    console.error("Eroare salvare DB:", e);
+  }
 }
 
 function recalcBankroll() {
@@ -549,11 +562,7 @@ function recalcBankroll() {
   project.bankroll = +b.toFixed(2);
   document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
   
-  fetch("/api/project", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(project)
-  }).catch(() => {});
+  saveToDB();
 }
 
 function checkBetOutcome(pick, hScore, aScore, homeName, awayName) {
@@ -563,415 +572,3 @@ function checkBetOutcome(pick, hScore, aScore, homeName, awayName) {
   if (pick.includes("Peste 2.5")) return tot > 2.5;
   if (pick.includes("Peste 1.5")) return tot > 1.5;
   if (pick.includes("Sub 2.5")) return tot < 2.5;
-  if (pick.includes("GG")) return hScore > 0 && aScore > 0;
-  if (pick.includes("1X")) return hScore >= aScore;
-  if (pick.includes("X2")) return aScore >= hScore;
-  return null;
-}
-
-function autoSettleProjectBets(matchesList) {
-  let changed = false;
-  (project.bets || []).forEach(bet => {
-    if (bet.status !== "PENDING") return;
-    const found = matchesList.find(m => m.id === bet.matchId && m.status === "FT");
-    if (found && found.hScore !== null) {
-      const won = checkBetOutcome(bet.pick, found.hScore, found.aScore, found.home, found.away);
-      if (won !== null) {
-        bet.status = won ? "WIN" : "LOSS";
-        bet.score = `${found.hScore}-${found.aScore}`;
-        changed = true;
-      }
-    }
-  });
-  if (changed) recalcBankroll();
-}
-
-function addMatchToProject(matchId, customOdd) {
-  const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
-  const m = all.find(x => String(x.id) === String(matchId));
-  if (!m) return;
-
-  if (project.bets.some(b => String(b.matchId) === String(m.id))) {
-    switchNav("proiect");
-    return;
-  }
-
-  const rawStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
-  const oddToUse = customOdd ? parseFloat(customOdd) : m.odd;
-
-  project.bets.unshift({
-    id: Date.now(),
-    matchId: m.id,
-    date: m.date,
-    match: `${m.home} vs ${m.away}`,
-    league: m.league,
-    pick: m.pick,
-    odd: oddToUse,
-    stake: rawStake,
-    status: "PENDING",
-    score: ""
-  });
-  recalcBankroll();
-  switchNav("proiect");
-}
-
-function editBetDetails(betId) {
-  const b = project.bets.find(x => x.id === betId);
-  if (!b) return;
-
-  const newOddStr = prompt(`Introdu cota Superbet pentru:\n${b.match} - ${b.pick}`, b.odd);
-  if (newOddStr === null) return;
-  const newOdd = parseFloat(newOddStr);
-  if (isNaN(newOdd) || newOdd <= 1.01) { alert("Cotă invalidă!"); return; }
-
-  const newStakeStr = prompt(`Introdu miza (RON):`, b.stake);
-  if (newStakeStr === null) return;
-  const newStake = parseFloat(newStakeStr);
-  if (isNaN(newStake) || newStake <= 0) { alert("Miză invalidă!"); return; }
-
-  b.odd = +newOdd.toFixed(2);
-  b.stake = +newStake.toFixed(2);
-  recalcBankroll();
-  renderViewport();
-}
-
-function updateBetStatus(betId, newStatus) {
-  const b = project.bets.find(x => x.id === betId);
-  if (b) {
-    b.status = newStatus;
-    recalcBankroll();
-    renderViewport();
-  }
-}
-
-function deleteBet(betId) {
-  if (!confirm("Ștergi acest pariu?")) return;
-  project.bets = project.bets.filter(x => x.id !== betId);
-  recalcBankroll();
-  renderViewport();
-}
-
-/* ================= RENDERING UI ================= */
-function renderSubBars() {
-  const sb = document.getElementById("subBars");
-  if (currentNav === "proiect") {
-    sb.style.display = "none";
-    return;
-  }
-  sb.style.display = "block";
-  const dates = getDatesList();
-  if (!selectedDate) selectedDate = dates[1].iso;
-
-  const dBar = document.getElementById("dateBar");
-  const lBar = document.getElementById("leagueBar");
-
-  if (currentNav === "europa") {
-    dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
-    lBar.innerHTML = "";
-    return;
-  }
-
-  dBar.innerHTML = dates.map(d =>
-    `<button class="cyber-chip ${selectedDate === d.iso ? 'active' : ''}" onclick="selectDay('${d.iso}')">${d.label}</button>`
-  ).join("");
-
-  const dayList = cacheByDate[selectedDate] || [];
-  const leaguesPresent = [...new Set(dayList.map(m => m.league))];
-  let lHtml = `<button class="cyber-chip cyber-chip-gold ${selectedLeague === 'ALL' ? 'active' : ''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>`;
-  leaguesPresent.forEach(lg => {
-    const cnt = dayList.filter(m => m.league === lg).length;
-    lHtml += `<button class="cyber-chip cyber-chip-gold ${selectedLeague === lg ? 'active' : ''}" onclick="selectLeague('${lg}')">${lg} (${cnt})</button>`;
-  });
-  lBar.innerHTML = lHtml;
-}
-
-function renderMatchCard(m) {
-  const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
-  const stText = m.status === "FT" ? `FT (${m.hScore}-${m.aScore})` : (m.status === "LIVE" ? `LIVE ${m.hScore}-${m.aScore}` : `🕒 ${m.time}`);
-  const centerBox = (m.status === "FT" || m.status === "LIVE") ? `${m.hScore} - ${m.aScore}` : "VS";
-
-  return `
-    <div class="cyber-card">
-      <div class="card-top">
-        <span>${m.icon} ${m.league} · ${m.date}</span>
-        <span class="status-badge ${stClass}">${stText}</span>
-      </div>
-      <div class="teams-container">
-        <div class="team-name">${m.home}</div>
-        <div class="score-display">${centerBox}</div>
-        <div class="team-name away">${m.away}</div>
-      </div>
-      <div class="prediction-panel">
-        <div>
-          <div class="pred-main">⭐ ${m.pick}</div>
-          <div class="pred-sub">Siguranță HUD: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH} - ${m.lamA}</div>
-        </div>
-        <div class="odd-chip">@${m.odd.toFixed(2)}</div>
-      </div>
-      <div class="action-bar">
-        <button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Matrice Analiză</button>
-        <button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ Adaugă la Jack</button>
-      </div>
-      <div class="analytics-drawer" id="dr-${m.id}">
-        <div class="matrix-grid">
-          <div class="matrix-cell">1 (Gazde)<b>${m.probs.p1}%</b></div>
-          <div class="matrix-cell">X (Egal)<b>${m.probs.pX}%</b></div>
-          <div class="matrix-cell">2 (Oaspeți)<b>${m.probs.p2}%</b></div>
-          <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div>
-          <div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div>
-          <div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
-        </div>
-        <div style="background:rgba(2,4,8,0.7);padding:8px 10px;border-radius:10px;line-height:1.6;border:1px solid var(--card-border);">
-          <div>📈 <b>Formă:</b> ${m.home} (<b style="color:var(--neon-gold);">${m.hForm}</b>) vs ${m.away} (<b style="color:var(--neon-cyan);">${m.aForm}</b>)</div>
-          <div>🟨 <b>Cartonașe:</b> ~${m.expCards} &nbsp;|&nbsp; 🚩 <b>Cornere:</b> ~${m.expCorners}</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function toggleDrawer(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = el.style.display === "block" ? "none" : "block";
-}
-
-function renderProjectView() {
-  const netProfit = +(project.bankroll - project.initial_bankroll).toFixed(2);
-  const roiPct = +((netProfit / project.initial_bankroll) * 100).toFixed(1);
-  const settled = project.bets.filter(b => b.status === "WIN" || b.status === "LOSS");
-  const wins = project.bets.filter(b => b.status === "WIN").length;
-  const winRate = settled.length ? Math.round((wins / settled.length) * 100) : 0;
-  const progressPct = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
-
-  const todayMatches = (cacheByDate[selectedDate] || []).filter(m => m.status === "NS");
-  todayMatches.sort((a, b) => b.tipsterScore - a.tipsterScore);
-  const bestOfDay = todayMatches[0];
-  const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
-
-  let bestHtml = "";
-  if (bestOfDay) {
-    const potWin = +(recStake * bestOfDay.odd).toFixed(2);
-    bestHtml = `
-      <div class="cyber-card" style="border-color:var(--neon-cyan);background:linear-gradient(145deg, #071526, #020408);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:10px;font-weight:800;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">💎 TOP NEURAL VALUE BET</span>
-          <span style="font-size:11px;color:var(--text-muted);">${bestOfDay.date} · ${bestOfDay.time}</span>
-        </div>
-        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">${bestOfDay.home} vs ${bestOfDay.away}</div>
-        <div class="prediction-panel">
-          <div>
-            <div class="pred-main">👉 ${bestOfDay.pick} (@${bestOfDay.odd.toFixed(2)})</div>
-            <div class="pred-sub">Confidence: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · Miză: <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
-          </div>
-          <button class="cyber-btn accent" style="flex:0.45;padding:7px;" onclick="addMatchToProject('${bestOfDay.id}')">➕ Adaugă</button>
-        </div>
-      </div>
-    `;
-  }
-
-  const quotes = [
-    "Sistemul nostru scanează piața în căutarea valorii absolute. Fără riscuri inutile!",
-    "Matematica nu minte niciodată. Respectăm banca și mergem la țintă.",
-    "Un portofoliu de succes se construiește zi de zi cu disciplină robotică.",
-    "Nea Jack ține cont de fiecare cotă din Superbet. Executăm planul!"
-  ];
-  const seedQ = Math.abs(Math.round(project.bankroll + project.bets.length));
-  const currentQuote = quotes[seedQ % quotes.length];
-
-  const betsHtml = project.bets.map(b => {
-    const pot = +(b.stake * b.odd).toFixed(2);
-    const stColor = b.status === "WIN" ? "var(--neon-green)" : (b.status === "LOSS" ? "var(--neon-red)" : "var(--neon-gold)");
-    const stLabel = b.status === "WIN" ? `✔ WIN (+${(pot - b.stake).toFixed(2)})` : (b.status === "LOSS" ? `✖ LOSS (-${b.stake})` : `⏳ PENDING (${pot})`);
-    return `
-      <div class="bet-ticket">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">
-          <span>${b.date} · ${b.league}</span>
-          <span style="font-weight:800;color:${stColor};">${stLabel}</span>
-        </div>
-        <div style="font-size:14px;font-weight:800;margin:6px 0;">${b.match} ${b.score ? `(${b.score})` : ''}</div>
-        <div style="font-size:12px;color:var(--neon-cyan);font-weight:700;">
-          Pronostic: <b>${b.pick}</b> &nbsp;|&nbsp; Cotă: <b style="color:var(--neon-gold);">@${b.odd.toFixed(2)}</b> &nbsp;|&nbsp; Miză: <b>${b.stake} RON</b>
-        </div>
-        <div class="bet-ticket-actions">
-          <button class="t-btn t-edit" onclick="editBetDetails(${b.id})">✏️ Cotă</button>
-          <button class="t-btn t-win" onclick="updateBetStatus(${b.id}, 'WIN')">✔ Win</button>
-          <button class="t-btn t-loss" onclick="updateBetStatus(${b.id}, 'LOSS')">✖ Loss</button>
-          <button class="t-btn" onclick="deleteBet(${b.id})">🗑️ Șterge</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  return `
-    <div class="vault-hero">
-      <div class="vault-profile">
-        <div class="vault-avatar">👴</div>
-        <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Nea Jack HUD</div>
-          <div style="font-size:9px;color:var(--neon-cyan);font-weight:700;letter-spacing:1px;text-transform:uppercase;font-family:'Orbitron',sans-serif;">PostgreSQL Vault Controller</div>
-        </div>
-      </div>
-      <div class="vault-quote">" ${currentQuote} "</div>
-      
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;border-top:1px solid var(--card-border);padding-top:12px;">
-        <div>
-          <div class="v-lbl">Capital Activ (DB)</div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;color:#fff;margin-top:2px;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div>
-        </div>
-        <div style="text-align:right;">
-          <div class="v-lbl">Țintă Finală</div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div>
-        </div>
-      </div>
-      <div class="cyber-progress"><div class="cyber-progress-fill" style="width:${progressPct}%;"></div></div>
-      
-      <div class="vault-kpi-grid">
-        <div class="vault-kpi">
-          <div class="v-lbl">Profit Net</div>
-          <div class="v-val" style="color:${netProfit >= 0 ? 'var(--neon-green)' : 'var(--neon-red)'};">${netProfit >= 0 ? '+' : ''}${netProfit}</div>
-        </div>
-        <div class="vault-kpi">
-          <div class="v-lbl">ROI Proiect</div>
-          <div class="v-val" style="color:var(--neon-cyan);">${roiPct >= 0 ? '+' : ''}${roiPct}%</div>
-        </div>
-        <div class="vault-kpi">
-          <div class="v-lbl">Win Rate</div>
-          <div class="v-val" style="color:var(--neon-gold);">${winRate}%</div>
-        </div>
-      </div>
-    </div>
-
-    ${bestHtml}
-
-    <div class="cyber-sec-head">
-      <span>📋 PORTOFOLIU SALVAT ÎN DB (${project.bets.length})</span>
-      <span style="font-size:9px;color:var(--text-muted);">POSTGRESQL</span>
-    </div>
-    ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol în baza de date. Adaugă selecții!</div>'}
-  `;
-}
-
-function renderTicketsView() {
-  const dayMatches = (cacheByDate[selectedDate] || []).filter(m => m.status === "NS");
-  const sorted = [...dayMatches].sort((a, b) => b.prob - a.prob);
-
-  let picks = [], totalOdd = 1.0;
-  for (let m of sorted) {
-    if (picks.length >= 10) break;
-    if (totalOdd < targetTicketOdds) {
-      picks.push(m);
-      totalOdd *= m.odd;
-    }
-  }
-
-  const btns = [2, 5, 10, 20, 50].map(o =>
-    `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds === o ? 'active' : ''}" onclick="setTicketTarget(${o})">Cotă ${o}</button>`
-  ).join("");
-
-  const rows = picks.map((m, i) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(15,23,42,0.8);border-radius:10px;margin-bottom:6px;border:1px solid var(--card-border);">
-      <div>
-        <div style="font-size:13px;font-weight:800;">${i + 1}. ${m.home} vs ${m.away}</div>
-        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
-      </div>
-      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
-    </div>
-  `).join("");
-
-  return `
-    <div class="cyber-card">
-      <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:10px;">🎟️ Neural Ticket Builder (${selectedDate})</div>
-      <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
-      <div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;">
-        <span>Cotă Țintă: ~${targetTicketOdds}</span>
-        <span style="color:var(--neon-green);">Total: ${totalOdd.toFixed(2)}</span>
-      </div>
-      ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri.</div>'}
-    </div>
-  `;
-}
-
-function setTicketTarget(val) {
-  targetTicketOdds = val;
-  renderViewport();
-}
-
-function renderViewport() {
-  renderSubBars();
-  const vp = document.getElementById("viewport");
-
-  if (currentNav === "proiect") {
-    vp.innerHTML = renderProjectView();
-    return;
-  }
-  if (currentNav === "bilete") {
-    vp.innerHTML = renderTicketsView();
-    return;
-  }
-
-  const list = currentNav === "europa"
-    ? europaMatches
-    : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
-
-  if (!list.length) {
-    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci programat în această zi.</div>`;
-    return;
-  }
-
-  const groups = {};
-  list.forEach(m => {
-    if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] };
-    groups[m.league].items.push(m);
-  });
-
-  vp.innerHTML = Object.keys(groups).map(lg => `
-    <div class="cyber-sec-head">
-      <span>${groups[lg].icon} ${lg}</span>
-      <span style="color:var(--neon-cyan);">${groups[lg].items.length} meciuri</span>
-    </div>
-    ${groups[lg].items.map(renderMatchCard).join("")}
-  `).join("");
-}
-
-function selectDay(iso) {
-  selectedDate = iso;
-  selectedLeague = "ALL";
-  loadMatchesForDate(iso);
-}
-
-function selectLeague(lg) {
-  selectedLeague = lg;
-  renderViewport();
-}
-
-function switchNav(tab) {
-  currentNav = tab;
-  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
-  const activeBtn = document.getElementById("nav-" + tab);
-  if (activeBtn) activeBtn.classList.add("active");
-
-  if (tab === "europa") {
-    loadEuropaMatches();
-  } else {
-    renderViewport();
-  }
-}
-
-(async function startApp() {
-  const dates = getDatesList();
-  selectedDate = dates[1].iso;
-  await initProject();
-  await loadMatchesForDate(selectedDate);
-})();
-</script>
-</body>
-</html>
-"""
-
-@app.route("/")
-def index():
-    return render_template_string(HTML_PAGE)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
