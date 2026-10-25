@@ -59,17 +59,21 @@
   .matrix-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
   .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
   .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
-  .vault-hero { background:linear-gradient(135deg,#091526,#020408); border:1px solid rgba(0,243,255,0.4); border-radius:22px; padding:20px; margin-bottom:14px; }
-  .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
-  .vault-avatar { width:60px; height:60px; border-radius:50%; border:2.5px solid var(--neon-cyan); background:#020408; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; box-shadow:0 0 16px rgba(0,243,255,0.35); }
-  .vault-quote { font-style:italic; font-size:11px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:9px 13px; border-radius:12px; border-left:2.5px solid var(--neon-cyan); }
+  
+  /* JOE CHARACTER STYLES */
+  .vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
+  .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); background:linear-gradient(135deg,#1e293b,#0f172a); display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
+  .joe-status-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:var(--neon-green); border:2px solid #020408; border-radius:50%; }
+  .vault-quote { font-style:italic; font-size:11.5px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:10px 14px; border-radius:12px; border-left:3px solid var(--neon-cyan); line-height:1.4; }
+  
   .vault-kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
   .vault-kpi { background:rgba(2,4,8,0.6); border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center; }
   .v-lbl { font-size:9px; color:var(--text-muted); text-transform:uppercase; font-family:'Orbitron',sans-serif; }
   .v-val { font-size:13px; font-family:'Orbitron',sans-serif; font-weight:900; margin-top:4px; }
   .cyber-progress { width:100%; height:10px; background:rgba(255,255,255,0.04); border-radius:99px; margin-top:14px; overflow:hidden; border:1px solid var(--card-border); }
   .cyber-progress-fill { height:100%; background:linear-gradient(90deg,var(--neon-green),var(--neon-cyan)); border-radius:99px; transition:0.4s; }
-  .jack-pick-card { background:linear-gradient(145deg,rgba(6,214,160,0.12),rgba(2,4,8,0.95)); border:1.5px solid var(--neon-green); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 0 25px rgba(6,214,160,0.15); }
+  .joe-pick-card { background:linear-gradient(145deg,rgba(6,214,160,0.12),rgba(2,4,8,0.95)); border:1.5px solid var(--neon-green); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 0 25px rgba(6,214,160,0.15); }
   .bet-ticket { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:14px; margin-bottom:10px; }
   .bet-ticket-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
   .t-btn { flex:1; padding:7px; border-radius:10px; border:1px solid var(--card-border); font-size:11px; font-weight:800; cursor:pointer; background:rgba(15,23,42,0.9); color:#fff; min-width:65px; }
@@ -91,8 +95,8 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="login-logo">J</div>
-    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE · HUD</div>
-    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">PRIVATE ACCESS GATEWAY</div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
+    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">NEURAL BETTING HUD</div>
     <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
     <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
     <button class="login-btn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
@@ -203,7 +207,7 @@ function applyRolePermissions() {
   } else {
     joeBtn.style.display = "none";
     bankBtn.style.display = "none";
-    titleEl.innerText = "XMTS PREDICTIONS";
+    titleEl.innerText = "JOE PREZICE";
     if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
   }
 
@@ -308,7 +312,7 @@ function fallbackCopy(txt) {
 
 function copyCurrentTicket() {
   const nl = String.fromCharCode(10);
-  const header = "🎟️ BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2);
+  const header = "🎟️ JOE PREZICE - BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2);
   const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
   copyText([header, ...lines].join(nl));
 }
@@ -431,7 +435,7 @@ function analyzeMatch(ev, lg) {
 async function loadMatchesForDate(iso) {
   renderSubBars();
   if (cacheByDate[iso]) { renderViewport(); return; }
-  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Scanare completă (Ligi + UEFA) pentru <b>${iso}</b>...</div>`;
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează ligile și datele xG pentru <b>${iso}</b>...</div>`;
   const ymd = iso.replace(/-/g, "");
   const res = await Promise.all(LEAGUES.map(l =>
     fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`)
@@ -452,7 +456,7 @@ async function loadMatchesForDate(iso) {
 async function loadEuropaMatches() {
   renderSubBars();
   if (europaMatches.length) { renderViewport(); return; }
-  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Se încarcă UEFA...</div>`;
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
   const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
   const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
     fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
@@ -664,25 +668,30 @@ function renderProjectView() {
   const bestOfDay = candidates[0];
   const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
 
+  // Joe's dynamic quotes based on bankroll performance
+  const quotes = net >= 0 
+    ? `"Suntem pe verde, șefu'! Disciplina și modelul Poisson nu dau greș când joci la sigur."`
+    : `"Capul sus! O zi mai slabă face parte din joc. Recuperăm pas cu pas, fără riscuri inutile."`;
+
   let joeAutoPickHtml = "";
   if (bestOfDay) {
     const potWin = +(recStake * bestOfDay.odd).toFixed(2);
     const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
-    joeAutoPickHtml = `<div class="jack-pick-card">
+    joeAutoPickHtml = `<div class="joe-pick-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">💎 PONTUL ZILEI DE LA JOE (${bestOfDay.date})</span>
+        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">🎯 ANALIZA SPECIALĂ A LUI JOE (${bestOfDay.date})</span>
         <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span>
       </div>
       <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div>
       <div class="prediction-panel">
         <div>
           <div class="pred-main" style="color:var(--neon-cyan);">👉 ${bestOfDay.pick} <span style="color:var(--neon-gold);">@${bestOfDay.odd.toFixed(2)}</span></div>
-          <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
+          <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză recomandată (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
         </div>
       </div>
       <div class="action-bar" style="margin-top:10px;">
         <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pontul</button>
-        <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Joacă Mâna'}</button>
+        <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Adaugă la Joe Vault'}</button>
       </div>
     </div>`;
   }
@@ -705,8 +714,14 @@ function renderProjectView() {
   }).join("");
 
   return `<div class="vault-hero">
-    <div class="vault-profile"><div class="vault-avatar">😎</div><div><div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;">Joe's Safe Vault</div><div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">VIP VAULT ACCESS</div></div></div>
-    <div class="vault-quote">" Analizez meciurile la sânge. Urmărește ponturile mele și mergem direct la țintă! "</div>
+    <div class="vault-profile">
+      <div class="joe-avatar-box">😎<div class="joe-status-dot"></div></div>
+      <div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Joe's Safe Vault</div>
+        <div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">TIPSTER ANALYTICS & BANKROLL</div>
+      </div>
+    </div>
+    <div class="vault-quote">${quotes}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
       <div><div class="v-lbl">Capital Activ</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
       <div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div></div>
@@ -738,7 +753,7 @@ function renderTicketsView() {
   const rows = picks.map((m, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(15,23,42,0.8);border-radius:10px;margin-bottom:6px;border:1px solid var(--card-border);"><div><div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div><div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>`).join("");
   return `<div class="cyber-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Neural Ticket (${selectedDate})</span>
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Joe's Neural Ticket (${selectedDate})</span>
       <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază Biletul</button>
     </div>
     <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
