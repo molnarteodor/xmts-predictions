@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>XMTS · Neural HUD</title>
+<title>JOE PREZICE · Neural HUD</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg:#020408; --card-bg:rgba(10,15,28,0.82); --card-border:rgba(0,243,255,0.22); --neon-cyan:#00f3ff; --neon-gold:#ffb703; --neon-green:#06d6a0; --neon-red:#ef476f; --text-main:#f8fafc; --text-muted:#64748b; }
@@ -91,7 +91,7 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="login-logo">J</div>
-    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">XMTS · NEURAL HUD</div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE · HUD</div>
     <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">PRIVATE ACCESS GATEWAY</div>
     <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
     <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
@@ -106,7 +106,7 @@
     <div class="hud-brand">
       <div class="hud-logo">J</div>
       <div>
-        <span class="hud-title" id="hudAppTitle">XMTS HUD</span>
+        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
         <span class="hud-status" id="liveClock">● Live 24/7</span>
       </div>
     </div>
@@ -123,7 +123,7 @@
   <nav class="bottom-hud-nav">
     <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
     <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
-    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Jack Vault</span></button>
+    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
     <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
     <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
   </nav>
@@ -182,7 +182,7 @@ let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
 
-function hasJackAccess() {
+function hasJoeAccess() {
   return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
 }
 
@@ -191,17 +191,17 @@ function isAdmin() {
 }
 
 function applyRolePermissions() {
-  const jackBtn = document.getElementById("nav-proiect");
+  const joeBtn = document.getElementById("nav-proiect");
   const bankBtn = document.getElementById("topBankBtn");
   const adminBtn = document.getElementById("nav-admin");
   const titleEl = document.getElementById("hudAppTitle");
 
-  if (hasJackAccess()) {
-    jackBtn.style.display = "flex";
+  if (hasJoeAccess()) {
+    joeBtn.style.display = "flex";
     bankBtn.style.display = "block";
-    titleEl.innerText = "JACK 500 HUD";
+    titleEl.innerText = "JOE PREZICE";
   } else {
-    jackBtn.style.display = "none";
+    joeBtn.style.display = "none";
     bankBtn.style.display = "none";
     titleEl.innerText = "XMTS PREDICTIONS";
     if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
@@ -531,7 +531,7 @@ function autoSettleProjectBets(list) {
 }
 
 function addMatchToProject(matchId) {
-  if (!hasJackAccess()) return;
+  if (!hasJoeAccess()) return;
   const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
   const m = all.find(x => String(x.id) === String(matchId));
   if (!m) return;
@@ -600,7 +600,7 @@ function renderMatchCard(m) {
   const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
   const stText = m.status === "FT" ? `FT (${m.hScore}-${m.aScore})` : (m.status === "LIVE" ? `LIVE ${m.hScore}-${m.aScore}` : `🕒 ${m.time}`);
   const center = (m.status === "FT" || m.status === "LIVE") ? `${m.hScore} - ${m.aScore}` : "VS";
-  const jackBtnHtml = hasJackAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Jack</button>` : "";
+  const joeBtnHtml = hasJoeAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>` : "";
 
   return `<div class="cyber-card">
     <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}</span><span class="status-badge ${stClass}">${stText}</span></div>
@@ -609,7 +609,7 @@ function renderMatchCard(m) {
     <div class="action-bar">
       <button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză</button>
       <button class="cyber-btn copy-btn" onclick="copyMatchById('${m.id}')">📋 Copiază</button>
-      ${jackBtnHtml}
+      ${joeBtnHtml}
     </div>
     <div class="analytics-drawer" id="dr-${m.id}">
       <div class="matrix-grid">
@@ -623,7 +623,7 @@ function renderMatchCard(m) {
 
 function renderAdminView() {
   const rows = usersList.map(u => {
-    const badge = u.role === "admin" ? "👑 ADMIN" : (u.role === "vip" ? "⚡ VIP + JACK" : "👁️ DOAR PRONOSTICURI");
+    const badge = u.role === "admin" ? "👑 ADMIN" : (u.role === "vip" ? "⚡ VIP + JOE" : "👁️ DOAR PRONOSTICURI");
     const col = u.role === "admin" ? "var(--neon-gold)" : (u.role === "vip" ? "var(--neon-green)" : "var(--neon-cyan)");
     return `<div class="bet-ticket" style="display:flex;justify-content:space-between;align-items:center;">
       <div>
@@ -639,8 +639,8 @@ function renderAdminView() {
     <input type="text" id="newUsername" class="cyber-input" placeholder="Nume utilizator (ex: alex)">
     <input type="text" id="newPassword" class="cyber-input" placeholder="Parolă (ex: 1234)">
     <select id="newRole" class="cyber-input" style="background:#070d19;">
-      <option value="basic">👁️ Standard (Vede DOAR Pronosticuri - Fără Jack)</option>
-      <option value="vip">⚡ VIP (Îl vede pe Jack + Vault + Funcții Noi)</option>
+      <option value="basic">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
+      <option value="vip">⚡ VIP (Îl vede pe Joe + Vault + Funcții Noi)</option>
       <option value="admin">👑 Admin (Control Total + Creare Conturi)</option>
     </select>
     <button class="login-btn" onclick="createNewUser()">➕ SALVEAZĂ UTILIZATORUL</button>
@@ -664,13 +664,13 @@ function renderProjectView() {
   const bestOfDay = candidates[0];
   const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
 
-  let jackAutoPickHtml = "";
+  let joeAutoPickHtml = "";
   if (bestOfDay) {
     const potWin = +(recStake * bestOfDay.odd).toFixed(2);
     const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
-    jackAutoPickHtml = `<div class="jack-pick-card">
+    joeAutoPickHtml = `<div class="jack-pick-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">💎 PRONOSTICUL LUI NEA JACK (${bestOfDay.date})</span>
+        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">💎 PONTUL ZILEI DE LA JOE (${bestOfDay.date})</span>
         <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span>
       </div>
       <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div>
@@ -681,7 +681,7 @@ function renderProjectView() {
         </div>
       </div>
       <div class="action-bar" style="margin-top:10px;">
-        <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pronostic</button>
+        <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pontul</button>
         <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Joacă Mâna'}</button>
       </div>
     </div>`;
@@ -705,8 +705,8 @@ function renderProjectView() {
   }).join("");
 
   return `<div class="vault-hero">
-    <div class="vault-profile"><div class="vault-avatar">👴</div><div><div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;">Nea Jack HUD</div><div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">VIP VAULT ACCESS</div></div></div>
-    <div class="vault-quote">" Aleg doar pronosticul cu cel mai bun raport între siguranță matematică și cotă! "</div>
+    <div class="vault-profile"><div class="vault-avatar">😎</div><div><div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;">Joe's Safe Vault</div><div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">VIP VAULT ACCESS</div></div></div>
+    <div class="vault-quote">" Analizez meciurile la sânge. Urmărește ponturile mele și mergem direct la țintă! "</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
       <div><div class="v-lbl">Capital Activ</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
       <div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div></div>
@@ -718,9 +718,9 @@ function renderProjectView() {
       <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">${wr}%</div></div>
     </div>
   </div>
-  ${jackAutoPickHtml}
-  <div class="cyber-sec-head"><span>📋 PORTOFOLIU JACK (${project.bets.length})</span><span>LIVE DB</span></div>
-  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Joacă mâna lui Jack de mai sus!</div>'}`;
+  ${joeAutoPickHtml}
+  <div class="cyber-sec-head"><span>📋 PORTOFOLIU JOE (${project.bets.length})</span><span>LIVE DB</span></div>
+  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă ponturi de la Joe de mai sus!</div>'}`;
 }
 
 function renderTicketsView() {
@@ -751,7 +751,7 @@ function renderViewport() {
   renderSubBars();
   const vp = document.getElementById("viewport");
   if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
-  if (currentNav === "proiect" && hasJackAccess()) { vp.innerHTML = renderProjectView(); return; }
+  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
   if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
   const list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
   if (!list.length) { vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci programat în această zi.</div>`; return; }
@@ -763,7 +763,7 @@ function renderViewport() {
 function selectDay(iso) { selectedDate = iso; selectedLeague = "ALL"; loadMatchesForDate(iso); }
 function selectLeague(lg) { selectedLeague = lg; renderViewport(); }
 function switchNav(tab) {
-  if (tab === "proiect" && !hasJackAccess()) return;
+  if (tab === "proiect" && !hasJoeAccess()) return;
   if (tab === "admin" && !isAdmin()) return;
   currentNav = tab;
   document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
