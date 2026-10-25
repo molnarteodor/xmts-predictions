@@ -37,7 +37,10 @@
   .cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); }
   .viewport { flex:1; overflow-y:auto; padding:14px 14px 90px; -webkit-overflow-scrolling:touch; }
   .cyber-sec-head { display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg,rgba(0,243,255,0.1),rgba(10,15,28,0.6)); border-left:3px solid var(--neon-cyan); border-radius:8px; padding:9px 14px; margin:14px 0 10px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:var(--neon-cyan); }
-  .cyber-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); }
+  .cyber-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); transition:0.3s; }
+  .cyber-card.match-win { border-color:var(--neon-green); box-shadow:0 0 20px rgba(6,214,160,0.25); background:linear-gradient(145deg,rgba(6,214,160,0.08),rgba(10,15,28,0.85)); }
+  .cyber-card.match-loss { border-color:var(--neon-red); box-shadow:0 0 20px rgba(239,71,111,0.25); background:linear-gradient(145deg,rgba(239,71,111,0.08),rgba(10,15,28,0.85)); }
+
   .card-top { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
   .status-badge { padding:3px 9px; border-radius:6px; font-weight:800; font-size:9px; font-family:'Orbitron',sans-serif; }
   .st-live { background:rgba(239,71,111,0.2); color:var(--neon-red); border:1px solid var(--neon-red); }
@@ -606,11 +609,20 @@ function renderSubBars() {
 
 function renderMatchCard(m) {
   const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
+  
+  // Determinăm dacă meciul s-a terminat și dacă pronosticul a ieșit (verde) sau nu (roșu)
+  let cardStatusClass = "";
+  if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
+    const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore);
+    if (outcome === true) cardStatusClass = "match-win";
+    else if (outcome === false) cardStatusClass = "match-loss";
+  }
+
   const stText = m.status === "FT" ? `FT (${m.hScore}-${m.aScore})` : (m.status === "LIVE" ? `LIVE ${m.hScore}-${m.aScore}` : `🕒 ${m.time}`);
   const center = (m.status === "FT" || m.status === "LIVE") ? `${m.hScore} - ${m.aScore}` : "VS";
   const joeBtnHtml = hasJoeAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>` : "";
 
-  return `<div class="cyber-card">
+  return `<div class="cyber-card ${cardStatusClass}">
     <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}</span><span class="status-badge ${stClass}">${stText}</span></div>
     <div class="teams-container"><div class="team-name">${m.home}</div><div class="score-display">${center}</div><div class="team-name away">${m.away}</div></div>
     <div class="prediction-panel"><div><div class="pred-main">⭐ ${m.pick}</div><div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>
