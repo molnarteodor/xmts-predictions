@@ -297,7 +297,8 @@ function analyzeMatch(ev, lg) {
   const p1X = pH + pD, pX2 = pA + pD;
 
   const candidates = [
-    { name: `1 (${hName})`, prob: pH, odd: Math.max(1.22, Math.min(6.5, +(0.93 / pH).toFixed(2))), w: 1.08 }, { name: `2 (${aName})`, prob: pA, odd: Math.max(1.25, Math.min(7.5, +(0.93 / pA).toFixed(2))), w: 1.07 },
+    { name: `1 (${hName})`, prob: pH, odd: Math.max(1.22, Math.min(6.5, +(0.93 / pH).toFixed(2))), w: 1.08 },
+    { name: `2 (${aName})`, prob: pA, odd: Math.max(1.25, Math.min(7.5, +(0.93 / pA).toFixed(2))), w: 1.07 },
     { name: "Peste 2.5 Goluri", prob: pO25, odd: Math.max(1.40, Math.min(2.45, +(0.93 / pO25).toFixed(2))), w: 1.06 },
     { name: "GG (Ambele marchează)", prob: pGG, odd: Math.max(1.45, Math.min(2.40, +(0.93 / pGG).toFixed(2))), w: 1.05 },
     { name: "Peste 1.5 Goluri", prob: pO15, odd: Math.max(1.20, Math.min(1.75, +(0.92 / pO15).toFixed(2))), w: 0.96 },
@@ -338,4 +339,310 @@ function analyzeMatch(ev, lg) {
 
 async function loadMatchesForDate(iso) {
   if (cacheByDate[iso]) { renderViewport(); return; }
-  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:2
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Scanare completă (Ligi + UEFA) pentru <b>${iso}</b>...</div>`;
+  const ymd = iso.replace(/-/g, "");
+  const res = await Promise.all(LEAGUES.map(l =>
+    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`)
+      .then(r => r.json()).then(d => ({ l, evs: (d && d.events) || [] })).catch(() => ({ l, evs: [] }))
+  ));
+  const list = [];
+  res.forEach(r => r.evs.forEach(ev => { const m = analyzeMatch(ev, r.l); if (m.date === iso) list.push(m); }));
+  cacheByDate[iso] = list;
+  autoSettleProjectBets(list);
+  renderViewport();
+}
+
+async function loadEuropaMatches() {
+  if (europaMatches.length) { renderViewport(); return; }
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Se încarcă UEFA...</div>`;
+  const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
+  const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
+    fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
+      .then(r => r.json()).then(d => ({ l, evs: (d && d.events) || [] })).catch(() => ({ l, evs: [] }))
+  ));
+  const list = [];
+  res.forEach(r => r.evs.forEach(ev => list.push(analyzeMatch(ev, r.l))));
+  list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  europaMatches = list;
+  renderViewport();
+}
+
+async function initProject() {
+  try {
+    const r = await fetch("/api/project");
+    if (r.ok) {
+      const srv = await r.json();
+      if (srv && srv.bankroll !== undefined) project = srv;
+    }
+  } catch (e) { console.error(e); }
+  recalcBankroll(false);
+}
+
+async function saveToDB() {
+  try {
+    const r = await fetch("/api/project", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(project) });
+    document.getElementById("liveClock").innerText = r.ok ? "● DB Synced" : "● Eroare DB";
+  } catch (e) {
+    document.getElementById("liveClock").innerText = "● Eroare DB";
+  }
+}
+
+function recalcBankroll(shouldSave = true) {
+  let b = project.initial_bankroll || 500.0;
+  (project.bets || []).forEach(bet => {
+    if (bet.status === "WIN") b += bet.stake * (bet.odd - 1);
+    else if (bet.status === "LOSS") b -= bet.stake;
+  });
+  project.bankroll = +b.toFixed(2);
+  document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
+  if (shouldSave) saveToDB();
+}
+
+function checkBetOutcome(pick, h, a) {
+  const t = h + a;
+  if (pick.startsWith("1 (")) return h > a;
+  if (pick.startsWith("2 (")) return a > h;
+  if (pick.includes("Peste 2.5")) return t > 2.5;
+  if (pick.includes("Peste 1.5")) return t > 1.5;
+  if (pick.includes("GG")) return h > 0 && a > 0;
+  if (pick.includes("1X")) return h >= a;
+  if (pick.includes("X2")) return a >= h;
+  return null;
+}
+
+function autoSettleProjectBets(list) {
+  let ch = false;
+  (project.bets || []).forEach(b => {
+    if (b.status !== "PENDING") return;
+    const f = list.find(m => String(m.id) === String(b.matchId) && m.status === "FT");
+    if (f && f.hScore !== null) {
+      const w = checkBetOutcome(b.pick, f.hScore, f.aScore);
+      if (w !== null) { b.status = w ? "WIN" : "LOSS"; b.score = `${f.hScore}-${f.aScore}`; ch = true; }
+    }
+  });
+  if (ch) recalcBankroll(true);
+}
+
+function addMatchToProject(matchId) {
+  const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
+  const m = all.find(x => String(x.id) === String(matchId));
+  if (!m) return;
+  if (!project.bets.some(b => String(b.matchId) === String(m.id))) {
+    const stake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
+    project.bets.unshift({ id: Date.now(), matchId: m.id, date: m.date, match: `${m.home} vs ${m.away}`, league: m.league, pick: m.pick, odd: m.odd, stake, status: "PENDING", score: "" });
+    recalcBankroll(true);
+  }
+  switchNav("proiect");
+}
+
+function copyMatchById(matchId) {
+  const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
+  const m = all.find(x => String(x.id) === String(matchId));
+  if (!m) return;
+  copyText(`${m.home} vs ${m.away} — ${m.pick} (@${m.odd.toFixed(2)})`);
+}
+
+function editBetDetails(id) {
+  const b = project.bets.find(x => x.id === id);
+  if (!b) return;
+  const o = parseFloat(prompt(`Cotă nouă pentru ${b.match}:`, b.odd));
+  if (isNaN(o) || o <= 1.01) return;
+  const s = parseFloat(prompt("Miză nouă (RON):", b.stake));
+  if (isNaN(s) || s <= 0) return;
+  b.odd = +o.toFixed(2); b.stake = +s.toFixed(2);
+  recalcBankroll(true); renderViewport();
+}
+
+function updateBetStatus(id, st) {
+  const b = project.bets.find(x => x.id === id);
+  if (b) { b.status = st; recalcBankroll(true); renderViewport(); }
+}
+
+function deleteBet(id) {
+  if (!confirm("Ștergi acest pariu?")) return;
+  project.bets = project.bets.filter(x => x.id !== id);
+  recalcBankroll(true); renderViewport();
+}
+
+function toggleDrawer(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === "block" ? "none" : "block";
+}
+
+function renderSubBars() {
+  const sb = document.getElementById("subBars");
+  const dates = getDatesList();
+  if (!selectedDate) selectedDate = dates[1].iso;
+  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
+  if (currentNav === "europa") {
+    sb.style.display = "block";
+    dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
+    lBar.innerHTML = ""; return;
+  }
+  sb.style.display = "block";
+  dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
+  if (currentNav === "proiect" || currentNav === "bilete") { lBar.innerHTML = ""; return; }
+  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
+  lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
+    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
+}
+
+function renderMatchCard(m) {
+  const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
+  const stText = m.status === "FT" ? `FT (${m.hScore}-${m.aScore})` : (m.status === "LIVE" ? `LIVE ${m.hScore}-${m.aScore}` : `🕒 ${m.time}`);
+  const center = (m.status === "FT" || m.status === "LIVE") ? `${m.hScore} - ${m.aScore}` : "VS";
+  return `<div class="cyber-card">
+    <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}</span><span class="status-badge ${stClass}">${stText}</span></div>
+    <div class="teams-container"><div class="team-name">${m.home}</div><div class="score-display">${center}</div><div class="team-name away">${m.away}</div></div>
+    <div class="prediction-panel"><div><div class="pred-main">⭐ ${m.pick}</div><div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>
+    <div class="action-bar">
+      <button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză</button>
+      <button class="cyber-btn copy-btn" onclick="copyMatchById('${m.id}')">📋 Copiază</button>
+      <button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Jack</button>
+    </div>
+    <div class="analytics-drawer" id="dr-${m.id}">
+      <div class="matrix-grid">
+        <div class="matrix-cell">1<b>${m.probs.p1}%</b></div><div class="matrix-cell">X<b>${m.probs.pX}%</b></div><div class="matrix-cell">2<b>${m.probs.p2}%</b></div>
+        <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
+      </div>
+      <div>📈 Bilanț/Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b> | 🟨 Cartonașe: ~<b>${m.expCards}</b> | 🚩 Cornere: ~<b>${m.expCorners}</b></div>
+    </div>
+  </div>`;
+}
+
+function renderProjectView() {
+  const net = +(project.bankroll - project.initial_bankroll).toFixed(2);
+  const roi = +((net / project.initial_bankroll) * 100).toFixed(1);
+  const settled = project.bets.filter(b => b.status === "WIN" || b.status === "LOSS");
+  const wins = project.bets.filter(b => b.status === "WIN").length;
+  const wr = settled.length ? Math.round((wins / settled.length) * 100) : 0;
+  const prog = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
+
+  const dayAll = cacheByDate[selectedDate] || [];
+  let candidates = dayAll.filter(m => m.status === "NS");
+  if (!candidates.length) candidates = [...dayAll];
+  candidates.sort((a, b) => b.tipsterScore - a.tipsterScore);
+  const bestOfDay = candidates[0];
+  const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
+
+  let jackAutoPickHtml = "";
+  if (bestOfDay) {
+    const potWin = +(recStake * bestOfDay.odd).toFixed(2);
+    const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
+    jackAutoPickHtml = `<div class="jack-pick-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">💎 PRONOSTICUL LUI NEA JACK (${bestOfDay.date})</span>
+        <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div>
+      <div class="prediction-panel">
+        <div>
+          <div class="pred-main" style="color:var(--neon-cyan);">👉 ${bestOfDay.pick} <span style="color:var(--neon-gold);">@${bestOfDay.odd.toFixed(2)}</span></div>
+          <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză (7%): <b style="color:#fff;">${recStake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
+        </div>
+      </div>
+      <div class="action-bar" style="margin-top:10px;">
+        <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pronostic</button>
+        <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Joacă Mâna'}</button>
+      </div>
+    </div>`;
+  }
+
+  const betsHtml = project.bets.map(b => {
+    const pot = +(b.stake * b.odd).toFixed(2);
+    const col = b.status === "WIN" ? "var(--neon-green)" : (b.status === "LOSS" ? "var(--neon-red)" : "var(--neon-gold)");
+    const lbl = b.status === "WIN" ? `✔ WIN (+${(pot-b.stake).toFixed(2)})` : (b.status === "LOSS" ? `✖ LOSS (-${b.stake})` : `⏳ PENDING (${pot})`);
+    return `<div class="bet-ticket">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;"><span>${b.date} · ${b.league}</span><span style="font-weight:800;color:${col};">${lbl}</span></div>
+      <div style="font-size:14px;font-weight:800;margin:6px 0;">${b.match} ${b.score ? `(${b.score})` : ''}</div>
+      <div style="font-size:12px;color:var(--neon-cyan);">Pronostic: <b>${b.pick}</b> | Cotă: <b style="color:var(--neon-gold);">@${b.odd.toFixed(2)}</b> | Miză: <b>${b.stake} RON</b></div>
+      <div class="bet-ticket-actions">
+        <button class="t-btn t-edit" onclick="editBetDetails(${b.id})">✏️ Cotă</button>
+        <button class="t-btn t-win" onclick="updateBetStatus(${b.id},'WIN')">✔ Win</button>
+        <button class="t-btn t-loss" onclick="updateBetStatus(${b.id},'LOSS')">✖ Loss</button>
+        <button class="t-btn" onclick="deleteBet(${b.id})">🗑️ Șterge</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="vault-hero">
+    <div class="vault-profile"><div class="vault-avatar">👴</div><div><div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;">Nea Jack HUD</div><div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">POSTGRESQL VAULT</div></div></div>
+    <div class="vault-quote">" Aleg doar pronosticul cu cel mai bun raport între siguranță matematică și cotă! "</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
+      <div><div class="v-lbl">Capital Activ (DB)</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
+      <div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div></div>
+    </div>
+    <div class="cyber-progress"><div class="cyber-progress-fill" style="width:${prog}%;"></div></div>
+    <div class="vault-kpi-grid">
+      <div class="vault-kpi"><div class="v-lbl">Profit Net</div><div class="v-val" style="color:${net>=0?'var(--neon-green)':'var(--neon-red)'};">${net>=0?'+':''}${net}</div></div>
+      <div class="vault-kpi"><div class="v-lbl">ROI</div><div class="v-val" style="color:var(--neon-cyan);">${roi>=0?'+':''}${roi}%</div></div>
+      <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">${wr}%</div></div>
+    </div>
+  </div>
+  ${jackAutoPickHtml}
+  <div class="cyber-sec-head"><span>📋 PORTOFOLIU DB (${project.bets.length})</span><span>POSTGRESQL</span></div>
+  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Joacă mâna lui Jack de mai sus!</div>'}`;
+}
+
+let lastBuiltTicketText = "";
+function renderTicketsView() {
+  const dayPool = cacheByDate[selectedDate] || [];
+  let pool = dayPool.filter(m => m.status === "NS");
+  if (!pool.length) pool = [...dayPool];
+  const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
+  let picks = [], tot = 1.0;
+  for (let m of sorted) { if (picks.length >= 10) break; if (tot < targetTicketOdds) { picks.push(m); tot *= m.odd; } }
+
+  lastBuiltTicketText = `🎟️ BILETUL ZILEI (${selectedDate}) — Cotă Totală: @${tot.toFixed(2)}\n` +
+    picks.map((m, i) => `${i+1}. ${m.home} vs ${m.away} ➔ ${m.pick} (@${m.odd.toFixed(2)})`).join("\n");
+
+  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="targetTicketOdds=${o};renderViewport();">Cotă ${o}</button>`).join("");
+  const rows = picks.map((m, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(15,23,42,0.8);border-radius:10px;margin-bottom:6px;border:1px solid var(--card-border);"><div><div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div><div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>`).join("");
+  return `<div class="cyber-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Neural Ticket (${selectedDate})</span>
+      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyText(lastBuiltTicketText)">📋 Copiază Biletul</button>
+    </div>
+    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
+    <div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;"><span>Țintă: ~${targetTicketOdds}</span><span style="color:var(--neon-green);">Total: @${tot.toFixed(2)}</span></div>
+    ${rows || 'Nu sunt suficiente meciuri în această zi.'}
+  </div>`;
+}
+
+function renderViewport() {
+  renderSubBars();
+  const vp = document.getElementById("viewport");
+  if (currentNav === "proiect") { vp.innerHTML = renderProjectView(); return; }
+  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
+  const list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
+  if (!list.length) { vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci programat în această zi.</div>`; return; }
+  const groups = {};
+  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
+  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
+}
+
+function selectDay(iso) { selectedDate = iso; selectedLeague = "ALL"; loadMatchesForDate(iso); }
+function selectLeague(lg) { selectedLeague = lg; renderViewport(); }
+function switchNav(tab) {
+  currentNav = tab;
+  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
+  document.getElementById("nav-" + tab).classList.add("active");
+  if (tab === "europa") loadEuropaMatches(); else renderViewport();
+}
+
+(async function startApp() {
+  selectedDate = getDatesList()[1].iso;
+  await initProject();
+  await loadMatchesForDate(selectedDate);
+})();
+</script>
+</body>
+</html>"""
+
+@app.route("/")
+def index():
+    return render_template_string(HTML_PAGE)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
