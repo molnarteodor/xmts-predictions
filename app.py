@@ -249,14 +249,21 @@ function analyzeMatch(ev, lg) {
   if (!valid.length) valid = candidates;
   valid.sort((a, b) => b.prob - a.prob);
   const best = valid[0];
+
+  // Calcul dinamic unic pentru cornere și cartonașe bazat pe intensitatea xG și nume
+  const cornerSeed = (seed % 35) / 10; // Valoare între 0.0 și 3.5 adăugată dinamic
+  const cardSeed = (seed % 25) / 10;   // Valoare între 0.0 și 2.5 adăugată dinamic
+  const dynamicCorners = +(7.5 + (lamH + lamA) * 1.4 + cornerSeed).toFixed(1);
+  const dynamicCards = +(3.0 + Math.abs(lamH - lamA) * 0.8 + cardSeed).toFixed(1);
+
   return {
     id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
     home: hName, away: aName, hScore, aScore, hForm, aForm, lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
     pick: best.name, prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
     tipsterScore: best.prob * (best.odd >= 1.4 ? 1.15 : 1.0),
-    expCorners: +(9.2 + (lamH + lamA - 2.3) * 0.9).toFixed(1),
-    expCards: +(4.2 + (0.35 - Math.abs(pH - pA)) * 1.6).toFixed(1),
+    expCorners: dynamicCorners,
+    expCards: dynamicCards,
     probs: { p1: Math.round(pH*100), pX: Math.round(pD*100), p2: Math.round(pA*100), o25: Math.round(pO25*100), gg: Math.round(pGG*100), o15: Math.round(pO15*100) }
   };
 }
@@ -417,7 +424,7 @@ function renderMatchCard(m) {
         <div class="matrix-cell">1<b>${m.probs.p1}%</b></div><div class="matrix-cell">X<b>${m.probs.pX}%</b></div><div class="matrix-cell">2<b>${m.probs.p2}%</b></div>
         <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
       </div>
-      <div>📈 Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b> | 🟨 ~${m.expCards} | 🚩 ~${m.expCorners}</div>
+      <div>📈 Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b> | 🟨 Cartonașe est.: ~<b>${m.expCards}</b> | 🚩 Cornere est.: ~<b>${m.expCorners}</b></div>
     </div>
   </div>`;
 }
