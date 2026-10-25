@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>JOE PREZICE · Neural HUD</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Iconiță personalizată cu Joe pentru ecranul telefonului și browser -->
+<link rel="apple-touch-icon" href="favicon.jpg">
+<link rel="icon" type="image/jpeg" href="favicon.jpg">
+
 <style>
   :root { --bg:#020408; --card-bg:rgba(10,15,28,0.82); --card-border:rgba(0,243,255,0.22); --neon-cyan:#00f3ff; --neon-gold:#ffb703; --neon-green:#06d6a0; --neon-red:#ef476f; --text-main:#f8fafc; --text-muted:#64748b; }
   * { box-sizing:border-box; margin:0; padding:0; font-family:'Plus Jakarta Sans',sans-serif; -webkit-tap-highlight-color:transparent; }
@@ -610,7 +615,6 @@ function renderSubBars() {
 function renderMatchCard(m) {
   const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
   
-  // Determinăm dacă meciul s-a terminat și dacă pronosticul a ieșit (verde) sau nu (roșu)
   let cardStatusClass = "";
   if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
     const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore);
