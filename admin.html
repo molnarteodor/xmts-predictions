@@ -2,14 +2,15 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Statistica Joe</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; padding: 40px; }
+        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; padding: 20px; }
         .card { max-width: 400px; margin: auto; background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d; }
-        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 5px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 5px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #238636; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         button:hover { background: #2ea043; }
-        #result { margin-top: 15px; font-weight: bold; text-align: center; }
+        #result { margin-top: 15px; font-weight: bold; text-align: center; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -22,9 +23,6 @@
 
         <label>Email Client:</label>
         <input type="email" id="email" required placeholder="client@gmail.com">
-
-        <label>Parolă Temporară Client:</label>
-        <input type="text" id="password" required placeholder="Parola pentru client">
 
         <label>Tip Pachet:</label>
         <select id="tier">
@@ -47,18 +45,17 @@
 </div>
 
 <script>
-    const SUPABASE_FUNCTION_URL = "AICI_PUUI_URL-UL_DIRECT_AL_EDGE_FUNCTION-ULUI"; // Îl iei din panoul Supabase -> Edge Functions
+    const SUPABASE_FUNCTION_URL = "URL-UL_TAU_DE_LA_EDGE_FUNCTION"; // Pune URL-ul tău aici
 
     document.getElementById('adminForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const resultDiv = document.getElementById('result');
         resultDiv.style.color = "#fff";
-        resultDiv.innerText = "Se procesează...";
+        resultDiv.innerText = "Se creează contul...";
 
         const dataToSend = {
             adminSecret: document.getElementById('adminSecret').value,
             email: document.getElementById('email').value,
-            password: document.getElementById('password').value,
             tier: document.getElementById('tier').value,
             duration: document.getElementById('duration').value
         };
@@ -77,8 +74,7 @@
             }
 
             resultDiv.style.color = "#3fb950";
-            resultDiv.innerText = result.message;
-            document.getElementById('adminForm').reset();
+            resultDiv.innerText = result.message; // Aici va apărea mesajul cu parola generată automat!
         } catch (err) {
             resultDiv.style.color = "#f85149";
             resultDiv.innerText = "Eroare: " + err.message;
