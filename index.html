@@ -77,12 +77,12 @@
   /* CHAT VIP CU JOE STYLES */
   .joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
   .chat-messages { height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
-  .chat-msg { max-width:85%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.4; }
+  .chat-msg { max-width:85%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.4; word-break:break-word; }
   .chat-msg.joe { background:rgba(0,243,255,0.1); border:1px solid rgba(0,243,255,0.3); color:#fff; align-self:flex-start; border-top-left-radius:3px; }
   .chat-msg.user { background:rgba(6,214,160,0.15); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); align-self:flex-end; border-top-right-radius:3px; }
-  .chat-input-area { display:flex; gap:6px; align-items:center; }
-  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; }
-  .preview-thumb { width:100%; max-height:100px; object-fit:cover; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); }
+  .chat-form { display:flex; gap:6px; align-items:center; }
+  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .preview-thumb { width:100%; max-height:120px; object-fit:cover; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); }
 
   /* TICKET GENERATION ANIMATIONS */
   @keyframes pulseGlow {
@@ -475,7 +475,6 @@ function analyzeMatch(ev, lg) {
   const tot = pH + pD + pA; pH /= tot; pD /= tot; pA /= tot;
   const p1X = pH + pD, pX2 = pA + pD;
 
-  // Candidați diversificați: favorizăm golurile și șansele duble dacă probabilitatea lor este mare
   const candidates = [
     { name: "Peste 1.5 Goluri", prob: pO15, odd: Math.max(1.20, Math.min(1.75, +(0.92 / pO15).toFixed(2))), w: 1.15 },
     { name: "Peste 2.5 Goluri", prob: pO25, odd: Math.max(1.40, Math.min(2.45, +(0.93 / pO25).toFixed(2))), w: 1.10 },
@@ -491,8 +490,7 @@ function analyzeMatch(ev, lg) {
     c.valueScore = c.prob * c.w * sweetSpot;
   });
 
-  let valid = candidates.filter(c => c.odd >= 1.25 && c.odd <= 2.20 && c.prob >= 0.55);
-  if (!valid.length) valid = candidates.filter(c => c.odd >= 1.20 && c.odd <= 2.50);
+  let valid = candidates.filter(c => c.odd >= 1.20 && c.odd <= 2.50 && c.prob >= 0.50);
   if (!valid.length) valid = candidates;
   valid.sort((a, b) => b.valueScore - a.valueScore);
   const best = valid[0];
@@ -664,8 +662,9 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
-// Funcții pentru Chat-ul VIP cu Joe
-function sendVipMessage() {
+// Funcții pentru Chat-ul VIP cu Joe (Complet Interactiv cu Formular)
+function handleVipChatSubmit(event) {
+  event.preventDefault();
   const input = document.getElementById("vipChatInput");
   const txt = (input?.value || "").trim();
   if(!txt) return;
@@ -915,20 +914,20 @@ function renderProjectView() {
     </div>
   </div>
 
-  <!-- CHAT TACTIC VIP CU JOE & ÎNCĂRCARE POZE -->
+  <!-- CHAT TACTIC VIP CU JOE & ÎNCĂRCARE POZE (Formular Corectat) -->
   <div class="joe-chat-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE</span>
       <span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
     </div>
     <div class="chat-messages" id="chatMessagesBox"></div>
-    <div class="chat-input-area">
+    <form class="chat-form" onsubmit="handleVipChatSubmit(event)">
       <label class="chat-file-btn" title="Încarcă poză cu biletul">
         📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
       </label>
-      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre un meci..." onkeydown="if(event.key==='Enter')sendVipMessage()">
-      <button class="cyber-btn accent" style="flex:0;padding:10px 14px;" onclick="sendVipMessage()">Trimite</button>
-    </div>
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre un meci...">
+      <button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
+    </form>
   </div>
 
   ${joeAutoPickHtml}
