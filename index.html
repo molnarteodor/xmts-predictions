@@ -212,6 +212,7 @@
 // ================= CONFIGURARE SUPABASE LIVE 24/7 =================
 const SUPABASE_URL = "https://edlfqiruegrmxcuubmil.supabase.co";
 const SUPABASE_KEY = "sb_publishable_b8npaox4JSEHkQzGC-SAjg_UHm_bOBE";
+const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1/create-user-admin";
 
 const isSupabaseConfigured = () => SUPABASE_URL.startsWith("https://") && SUPABASE_KEY.length > 20;
 
@@ -337,26 +338,71 @@ function logoutUser() {
 }
 
 async function createNewUser() {
-  const u = document.getElementById("newUsername").value.trim().toLowerCase();
-  const p = document.getElementById("newPassword").value.trim();
-  const r = document.getElementById("newRole").value;
-  if (!u || !p) { alert("Completează utilizatorul și parola!"); return; }
+  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
+  const password = document.getElementById("newPassword").value.trim();
+  const tier = document.getElementById("newRole").value;
+  const duration = document.getElementById("newDuration").value;
+  const adminSecret = document.getElementById("adminSecretInput").value.trim();
+  const resultMsg = document.getElementById("formResultMsg");
 
-  const newUserObj = { username: u, password: p, role: r };
-  usersList = usersList.filter(x => x.username.toLowerCase() !== u);
-  usersList.push(newUserObj);
+  if (!rawUsername || !password || !adminSecret) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
+    } else {
+      alert("Completează toate câmpurile obligatorii și parola secretă de admin!");
+    }
+    return;
+  }
 
-  if (isSupabaseConfigured()) {
-    try {
+  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
+  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+
+  if(resultMsg) {
+    resultMsg.style.color = "var(--neon-gold)";
+    resultMsg.innerText = "Se creează contul și se setează abonamentul...";
+  }
+
+  try {
+    const response = await fetch(SUPABASE_EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, tier, duration, adminSecret })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Eroare necunoscută");
+    }
+
+    const newUserObj = { username: rawUsername, password: password, role: mappedRole };
+    usersList = usersList.filter(x => x.username.toLowerCase() !== rawUsername);
+    usersList.push(newUserObj);
+
+    if (isSupabaseConfigured()) {
       await fetch(`${SUPABASE_URL}/rest/v1/jack_users`, {
         method: "POST",
         headers: { ...sbHeaders(), "Prefer": "resolution=merge-duplicates" },
         body: JSON.stringify(newUserObj)
-      });
-    } catch (e) { console.error(e); }
+      }).catch(err => console.error(err));
+    }
+
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-green)";
+      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
+    }
+    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
+    setTimeout(() => { renderViewport(); }, 1200);
+
+  } catch (err) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Eroare: " + err.message;
+    } else {
+      alert("Eroare: " + err.message);
+    }
   }
-  copyText(`Cont creat!\nUtilizator: ${u}\nParolă: ${p}`);
-  renderViewport();
 }
 
 async function removeUser(uname) {
@@ -834,14 +880,33 @@ function renderAdminView() {
 
   return `<div class="cyber-card" style="border-color:var(--neon-gold);">
     <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:12px;">👑 CREARE CONT UTILIZATOR</div>
-    <input type="text" id="newUsername" class="cyber-input" placeholder="Nume utilizator (ex: alex)">
-    <input type="text" id="newPassword" class="cyber-input" placeholder="Parolă (ex: 1234)">
+    
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Nume utilizator (ex: alex)</label>
+    <input type="text" id="newUsername" class="cyber-input" placeholder="ex: alex">
+
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă temporară</label>
+    <input type="text" id="newPassword" class="cyber-input" placeholder="ex: parola123">
+
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Tip Pachet</label>
     <select id="newRole" class="cyber-input" style="background:#070d19;">
-      <option value="basic">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
-      <option value="vip">⚡ VIP (Îl vede pe Joe + Vault + Funcții Noi)</option>
-      <option value="admin">👑 Admin (Control Total + Creare Conturi)</option>
+      <option value="standard">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
+      <option value="vip" selected>⚡ VIP + JOE (Acces Total)</option>
     </select>
-    <button class="login-btn" onclick="createNewUser()">➕ SALVEAZĂ UTILIZATORUL</button>
+
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Durată / Valabilitate</label>
+    <select id="newDuration" class="cyber-input" style="background:#070d19;">
+      <option value="trial">Test 2 Zile</option>
+      <option value="1_month" selected>1 Lună</option>
+      <option value="3_months">3 Luni</option>
+      <option value="6_months">6 Luni</option>
+      <option value="1_year">1 An</option>
+    </select>
+
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă Master Admin</label>
+    <input type="password" id="adminSecretInput" class="cyber-input" placeholder="Parola ta secretă de admin">
+
+    <button class="login-btn" onclick="createNewUser()">+ SALVEAZĂ UTILIZATORUL</button>
+    <div id="formResultMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: bold; word-break: break-all;"></div>
   </div>
   <div class="cyber-sec-head"><span>👥 UTILIZATORI ACTIVI (${usersList.length})</span><span>LIVE ACCESS</span></div>
   ${rows}`;
@@ -1035,7 +1100,7 @@ function renderViewport() {
   }
 
   if (!list.length) { 
-    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);$.Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
     return; 
   }
 
