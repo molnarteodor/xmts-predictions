@@ -37,9 +37,9 @@
   .sub-bars { background:rgba(5,9,18,0.6); border-bottom:1px solid var(--card-border); padding:10px 14px 8px; }
   .h-scroll { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
   .h-scroll::-webkit-scrollbar { display:none; }
-  .cyber-chip { background:rgba(15,23,42,0.8); border:1px solid var(--card-border); color:var(--text-muted); padding:7px 14px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; }
+  .cyber-chip { background:rgba(15,23,42,0.8); border:1px solid var(--card-border); color:var(--text-muted); padding:7px 14px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; transition:0.2s; }
   .cyber-chip.active { background:var(--neon-cyan); color:#020408; border-color:var(--neon-cyan); font-weight:800; }
-  .cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); }
+  .cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); box-shadow:0 0 12px rgba(255,183,3,0.4); }
   
   /* SEARCH BAR STYLES */
   .search-container { padding:8px 14px 2px; background:rgba(5,9,18,0.6); }
@@ -74,6 +74,45 @@
   .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
   .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
   
+  /* TICKET GENERATION ANIMATIONS */
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; text-shadow: 0 0 14px var(--neon-cyan); }
+    50% { opacity: 0.45; text-shadow: none; }
+  }
+  @keyframes scanBarProgress {
+    0% { width: 5%; }
+    45% { width: 65%; }
+    100% { width: 100%; }
+  }
+  @keyframes ticketRowSlide {
+    0% { opacity: 0; transform: translateY(12px) scale(0.97); border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+    100% { opacity: 1; transform: translateY(0) scale(1); border-color: var(--card-border); box-shadow: none; }
+  }
+  .ticket-row-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px; background: rgba(15,23,42,0.8); border-radius: 10px;
+    margin-bottom: 6px; border: 1px solid var(--card-border);
+    opacity: 0;
+    animation: ticketRowSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .neural-loader-box {
+    padding: 30px 16px; text-align: center;
+    background: radial-gradient(circle at 50% 50%, rgba(0,243,255,0.08), rgba(2,4,8,0.9));
+    border: 1px dashed var(--neon-cyan); border-radius: 14px; margin: 8px 0;
+  }
+  .neural-loader-title {
+    font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900;
+    color: var(--neon-cyan); animation: pulseGlow 0.7s infinite; margin-bottom: 12px;
+  }
+  .neural-scan-bar {
+    width: 100%; max-width: 240px; height: 7px; background: rgba(255,255,255,0.06);
+    border-radius: 99px; overflow: hidden; margin: 0 auto 10px; border: 1px solid var(--card-border);
+  }
+  .neural-scan-fill {
+    height: 100%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green), var(--neon-gold));
+    border-radius: 99px; animation: scanBarProgress 1.1s ease-out forwards;
+  }
+
   /* JOE CHARACTER STYLES */
   .vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
   .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
@@ -206,7 +245,8 @@ const ELITE_TEAMS = [
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
-let customBudget = 100; // Pentru biletul automatizat în funcție de buget
+let customBudget = 100;
+let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
@@ -608,6 +648,28 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
+function selectTicketOdd(odd) {
+  if (isGeneratingTicket) return;
+  targetTicketOdds = odd;
+  isGeneratingTicket = true;
+  renderViewport();
+
+  setTimeout(() => {
+    const stEl = document.getElementById("neuralStepText");
+    if (stEl) stEl.innerText = "🧠 Rulare model Poisson & filtre...";
+  }, 360);
+
+  setTimeout(() => {
+    const stEl = document.getElementById("neuralStepText");
+    if (stEl) stEl.innerText = "🎯 Asamblare cotă optimă ~" + odd + "...";
+  }, 720);
+
+  setTimeout(() => {
+    isGeneratingTicket = false;
+    renderViewport();
+  }, 1100);
+}
+
 function renderSubBars() {
   const sb = document.getElementById("subBars");
   const searchBox = document.getElementById("searchContainer");
@@ -618,7 +680,6 @@ function renderSubBars() {
     return; 
   }
   
-  // Afișăm bara de căutare doar la Meciuri și Europa
   if (currentNav === "meciuri" || currentNav === "europa") {
     searchBox.style.display = "block";
   } else {
@@ -804,9 +865,31 @@ function renderTicketsView() {
 
   const potentialWin = +(customBudget * tot).toFixed(2);
 
-  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="targetTicketOdds=${o};renderViewport();">Cotă ${o}</button>`).join("");
-  const rows = picks.map((m, i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(15,23,42,0.8);border-radius:10px;margin-bottom:6px;border:1px solid var(--card-border);"><div><div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div><div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>`).join("");
+  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
   
+  let contentBody = "";
+  if (isGeneratingTicket) {
+    contentBody = `<div class="neural-loader-box">
+      <div class="neural-loader-title" id="neuralStepText">⚡ Extragere date xG & cote...</div>
+      <div class="neural-scan-bar"><div class="neural-scan-fill"></div></div>
+      <div style="font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">NEURAL ENGINE · COTA ȚINTĂ ~${targetTicketOdds}</div>
+    </div>`;
+  } else {
+    const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
+      <div>
+        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
+        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
+      </div>
+      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
+    </div>`).join("");
+
+    contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
+      <span>Cotă Totală: <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
+    </div>
+    ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
+  }
+
   return `<div class="cyber-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Automat (${selectedDate})</span>
@@ -815,17 +898,12 @@ function renderTicketsView() {
     
     <!-- Widget Buget personalizat -->
     <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGET TĂU (RON):</span>
-      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;document.getElementById('potWinLabel').innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
+      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
     </div>
 
     <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
-    
-    <div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-      <span>Cotă Totală: <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
-      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
-    </div>
-    ${rows || 'Nu sunt suficiente meciuri în această zi.'}
+    ${contentBody}
   </div>
 
   <!-- Arhivă Transparentă / Istoric Randament pentru toată lumea -->
@@ -847,12 +925,10 @@ function renderViewport() {
   if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
   if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
   
-  // Preluăm termenul din căsuța de căutare
   const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
 
   let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
   
-  // Filtrăm după textul introdus în căutare (după numele echipelor)
   if (searchTerm) {
     list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
   }
@@ -871,7 +947,7 @@ function selectDay(iso) {
   selectedDate = iso; 
   selectedLeague = "ALL"; 
   const searchInput = document.getElementById("matchSearchInput");
-  if(searchInput) searchInput.value = ""; // Resetăm căutarea la schimbarea zilei
+  if(searchInput) searchInput.value = "";
   loadMatchesForDate(iso); 
 }
 
