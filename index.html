@@ -475,23 +475,24 @@ function analyzeMatch(ev, lg) {
   const tot = pH + pD + pA; pH /= tot; pD /= tot; pA /= tot;
   const p1X = pH + pD, pX2 = pA + pD;
 
+  // Candidați diversificați: favorizăm golurile și șansele duble dacă probabilitatea lor este mare
   const candidates = [
-    { name: `1 (${hName})`, prob: pH, odd: Math.max(1.22, Math.min(6.5, +(0.93 / pH).toFixed(2))), w: 1.08 },
-    { name: `2 (${aName})`, prob: pA, odd: Math.max(1.25, Math.min(7.5, +(0.93 / pA).toFixed(2))), w: 1.07 },
-    { name: "Peste 2.5 Goluri", prob: pO25, odd: Math.max(1.40, Math.min(2.45, +(0.93 / pO25).toFixed(2))), w: 1.06 },
-    { name: "GG (Ambele marchează)", prob: pGG, odd: Math.max(1.45, Math.min(2.40, +(0.93 / pGG).toFixed(2))), w: 1.05 },
-    { name: "Peste 1.5 Goluri", prob: pO15, odd: Math.max(1.20, Math.min(1.75, +(0.92 / pO15).toFixed(2))), w: 0.96 },
-    { name: "Șansă Dublă 1X", prob: p1X, odd: Math.max(1.16, Math.min(1.90, +(0.91 / p1X).toFixed(2))), w: 0.94 },
-    { name: "Șansă Dublă X2", prob: pX2, odd: Math.max(1.18, Math.min(1.98, +(0.91 / pX2).toFixed(2))), w: 0.94 }
+    { name: "Peste 1.5 Goluri", prob: pO15, odd: Math.max(1.20, Math.min(1.75, +(0.92 / pO15).toFixed(2))), w: 1.15 },
+    { name: "Peste 2.5 Goluri", prob: pO25, odd: Math.max(1.40, Math.min(2.45, +(0.93 / pO25).toFixed(2))), w: 1.10 },
+    { name: "GG (Ambele marchează)", prob: pGG, odd: Math.max(1.45, Math.min(2.40, +(0.93 / pGG).toFixed(2))), w: 1.10 },
+    { name: "Șansă Dublă 1X", prob: p1X, odd: Math.max(1.16, Math.min(1.90, +(0.91 / p1X).toFixed(2))), w: 1.08 },
+    { name: "Șansă Dublă X2", prob: pX2, odd: Math.max(1.18, Math.min(1.98, +(0.91 / pX2).toFixed(2))), w: 1.08 },
+    { name: `1 (${hName})`, prob: pH, odd: Math.max(1.22, Math.min(6.5, +(0.93 / pH).toFixed(2))), w: 0.95 },
+    { name: `2 (${aName})`, prob: pA, odd: Math.max(1.25, Math.min(7.5, +(0.93 / pA).toFixed(2))), w: 0.95 }
   ];
 
   candidates.forEach(c => {
-    const sweetSpot = (c.odd >= 1.38 && c.odd <= 1.95) ? 1.12 : ((c.odd >= 1.30 && c.odd <= 2.15) ? 1.0 : 0.75);
+    const sweetSpot = (c.odd >= 1.35 && c.odd <= 1.95) ? 1.15 : 1.0;
     c.valueScore = c.prob * c.w * sweetSpot;
   });
 
-  let valid = candidates.filter(c => c.odd >= 1.32 && c.odd <= 2.15 && c.prob >= 0.52);
-  if (!valid.length) valid = candidates.filter(c => c.odd >= 1.28 && c.odd <= 2.30);
+  let valid = candidates.filter(c => c.odd >= 1.25 && c.odd <= 2.20 && c.prob >= 0.55);
+  if (!valid.length) valid = candidates.filter(c => c.odd >= 1.20 && c.odd <= 2.50);
   if (!valid.length) valid = candidates;
   valid.sort((a, b) => b.valueScore - a.valueScore);
   const best = valid[0];
@@ -673,12 +674,11 @@ function sendVipMessage() {
   input.value = "";
   updateChatUI();
 
-  // Răspuns automat de la Joe după 1 secundă
   setTimeout(() => {
     const responses = [
-      "Băiatu', am verificat datele xG pentru meciul ăsta. Stai de 2 ori pe gânduri înainte să pui bani acolo, e meci de X sau puține goluri.",
-      "Asta da cotă! Modelul meu matematic zice că are 72% șanse de reușită. Merită băgat în portofoliu.",
-      "Fii atent aici: nu te arunca pe echipe favorite când joacă în deplasare pe teren greu. Mai bine cauți un GG curat.",
+      "Băiatu', am verificat datele xG pentru meciul ăsta. Stai de 2 ori pe gânduri înainte să pui bani pe soliști, e meci de goluri sau șansă dublă.",
+      "Asta da analiză! Modelul meu matematic zice că pe goluri sau 1X avem șanse mult mai mari de reușită decât pe un solist curat.",
+      "Fii atent aici: nu te arunca pe echipe favorite în deplasare. Mai bine cauți un Peste 1.5 sau un GG curat.",
       "Arată bine biletul tău, șefu'! Disciplina e totul. Ține-o tot așa și ieșim pe plus."
     ];
     const randResp = responses[Math.floor(Math.random() * responses.length)];
@@ -698,7 +698,7 @@ function handleImageUpload(event) {
     updateChatUI();
 
     setTimeout(() => {
-      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! E o combinație interesantă, dar ai grijă la meciul 2, acolo statistica arată o mică capcană. În rest, baftă multă!" });
+      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Ai pus prea mulți soliști riscanți pe acolo. Data viitoare încearcă să diversifici cu niște goluri sau șanse duble bazate pe xG. În rest, baftă multă!" });
       updateChatUI();
     }, 1200);
   };
@@ -935,7 +935,6 @@ function renderProjectView() {
   <div class="cyber-sec-head" style="margin-top:16px;"><span>📋 PORTOFOLIU JOE (${project.bets.length})</span><span>LIVE DB</span></div>
   ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă ponturi de la Joe de mai sus!</div>'}`;
 
-  // Actualizăm mesajele din chat după randare
   setTimeout(updateChatUI, 50);
 }
 
