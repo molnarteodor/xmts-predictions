@@ -262,7 +262,7 @@ let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0
 
 // Istoric Chat VIP cu Joe
 let vipChatMessages = [
-  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Întreabă-mă orice despre meciurile de azi sau urcă o poză cu biletul tău să vedem ce șanse are!' }
+  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Întreabă-mă despre orice echipă sau meci de azi și îți dau pontul direct din modelul Poisson!' }
 ];
 
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
@@ -662,7 +662,7 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
-// Funcții pentru Chat-ul VIP cu Joe (Complet Interactiv cu Formular)
+// Chat Inteligent și Contextual cu Joe (Caută prin meciurile încărcate)
 function handleVipChatSubmit(event) {
   event.preventDefault();
   const input = document.getElementById("vipChatInput");
@@ -674,14 +674,34 @@ function handleVipChatSubmit(event) {
   updateChatUI();
 
   setTimeout(() => {
-    const responses = [
-      "Băiatu', am verificat datele xG pentru meciul ăsta. Stai de 2 ori pe gânduri înainte să pui bani pe soliști, e meci de goluri sau șansă dublă.",
-      "Asta da analiză! Modelul meu matematic zice că pe goluri sau 1X avem șanse mult mai mari de reușită decât pe un solist curat.",
-      "Fii atent aici: nu te arunca pe echipe favorite în deplasare. Mai bine cauți un Peste 1.5 sau un GG curat.",
-      "Arată bine biletul tău, șefu'! Disciplina e totul. Ține-o tot așa și ieșim pe plus."
-    ];
-    const randResp = responses[Math.floor(Math.random() * responses.length)];
-    vipChatMessages.push({ sender: 'joe', text: randResp });
+    let reply = "";
+    const lowerTxt = txt.toLowerCase();
+    
+    // Căutăm dacă userul a întrebat de o echipă din meciurile încărcate
+    const allMatches = [...(cacheByDate[selectedDate] || []), ...europaMatches];
+    const foundMatch = allMatches.find(m => 
+      m.home.toLowerCase().includes(lowerTxt) || 
+      m.away.toLowerCase().includes(lowerTxt) || 
+      lowerTxt.includes(m.home.toLowerCase()) || 
+      lowerTxt.includes(m.away.toLowerCase())
+    );
+
+    if (foundMatch) {
+      reply = `Băiatu', am verificat ${foundMatch.home} vs ${foundMatch.away} (${foundMatch.league}). Modelul xG arată ${foundMatch.lamH}-${foundMatch.lamA}. Recomandarea mea de expert e: ${foundMatch.pick} la cota de @${foundMatch.odd.toFixed(2)} (${foundMatch.prob}% siguranță)!`;
+    } else if (lowerTxt.includes("bilet") || lowerTxt.includes("cotă")) {
+      reply = "Pentru un bilet de succes, șefu', nu sări pe 10 meciuri. Ia 2-3 ponturi curate cu xG mare, leagă o cotă de 2-3 și mergi la sigur!";
+    } else if (lowerTxt.includes("salut") || lowerTxt.includes("ce faci") || lowerTxt.includes("ceau") || lowerTxt.includes("ce zici")) {
+      reply = "Salutare, șefu'! Sunt pe fază, analizez datele și cotele pentru azi. Despre ce meci vrei să discutăm?";
+    } else {
+      const generalResp = [
+        `Băiatu', la ce date am în sistem azi, cel mai bine jucăm pe goluri sau șanse duble, nu pe soliști riscanți.`,
+        `Sunt pe fază! Modelul Poisson zice să păstrăm banca intactă și să jucăm doar ce e calculat matematic.`,
+        `Întreabă-mă specific despre un meci sau o echipă din listă și îți dau verdictul instant!`
+      ];
+      reply = generalResp[Math.floor(Math.random() * generalResp.length)];
+    }
+
+    vipChatMessages.push({ sender: 'joe', text: reply });
     updateChatUI();
   }, 1000);
 }
@@ -697,7 +717,7 @@ function handleImageUpload(event) {
     updateChatUI();
 
     setTimeout(() => {
-      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Ai pus prea mulți soliști riscanți pe acolo. Data viitoare încearcă să diversifici cu niște goluri sau șanse duble bazate pe xG. În rest, baftă multă!" });
+      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Analiza arată bine, dar ai grijă la meciurile cu echipe de pe locurile 1-2 unde surprizele apar des. Fii disciplinat și mergem pe verde!" });
       updateChatUI();
     }, 1200);
   };
@@ -914,7 +934,7 @@ function renderProjectView() {
     </div>
   </div>
 
-  <!-- CHAT TACTIC VIP CU JOE & ÎNCĂRCARE POZE (Formular Corectat) -->
+  <!-- CHAT TACTIC VIP CU JOE (Inteligent & Contextual) -->
   <div class="joe-chat-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE</span>
@@ -925,7 +945,7 @@ function renderProjectView() {
       <label class="chat-file-btn" title="Încarcă poză cu biletul">
         📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
       </label>
-      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre un meci...">
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre o echipă (ex: PSG)...">
       <button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
     </form>
   </div>
@@ -1056,8 +1076,9 @@ function switchNav(tab) {
   await fetchUsersFromDB();
   const savedUser = localStorage.getItem("xmts_logged_user");
   if (savedUser) {
+    let parsed;
     try {
-      const parsed = JSON.parse(savedUser);
+      parsed = JSON.parse(savedUser);
       const stillValid = usersList.find(x => x.username === parsed.username && x.password === parsed.password);
       if (stillValid) {
         currentUser = stillValid;
