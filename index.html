@@ -226,7 +226,7 @@ function sbHeaders() {
 }
 
 let usersList = [
-  { username: "teodor", password: "xmts2026", role: "admin" }
+  { username: "teodor", password: "xmts2026", role: "admin", expires_at: null }
 ];
 let currentUser = null;
 
@@ -261,7 +261,6 @@ let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
-// Istoric Chat VIP cu Joe (Sigur prin Supabase Edge Function)
 let vipChatMessages = [
   { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Canalul neural prin Supabase este securizat. Întreabă-mă orice despre meciuri sau urcă o poză cu biletul tău!' }
 ];
@@ -337,6 +336,23 @@ function logoutUser() {
   document.getElementById("loginScreen").style.display = "flex";
 }
 
+function calculateExpiresAt(duration) {
+  const now = new Date();
+  if (duration === 'trial') now.setDate(now.getDate() + 2);
+  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
+  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
+  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
+  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
+}
+
+function formatExpiryDate(isoStr) {
+  if (!isoStr) return "Permanent / Nelimitat";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 async function createNewUser() {
   const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
   const password = document.getElementById("newPassword").value.trim();
@@ -357,6 +373,7 @@ async function createNewUser() {
 
   const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
   let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+  const expiresAt = calculateExpiresAt(duration);
 
   if(resultMsg) {
     resultMsg.style.color = "var(--neon-gold)";
@@ -376,7 +393,7 @@ async function createNewUser() {
       throw new Error(data.error || "Eroare necunoscută");
     }
 
-    const newUserObj = { username: rawUsername, password: password, role: mappedRole };
+    const newUserObj = { username: rawUsername, password: password, role: mappedRole, expires_at: expiresAt };
     usersList = usersList.filter(x => x.username.toLowerCase() !== rawUsername);
     usersList.push(newUserObj);
 
@@ -708,7 +725,6 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
-// 🤖 Apel sigur prin Supabase Edge Function (Fără chei expuse în frontend)
 async function handleVipChatSubmit(event) {
   event.preventDefault();
   const input = document.getElementById("vipChatInput");
@@ -869,10 +885,13 @@ function renderAdminView() {
   const rows = usersList.map(u => {
     const badge = u.role === "admin" ? "👑 ADMIN" : (u.role === "vip" ? "⚡ VIP + JOE" : "👁️ DOAR PRONOSTICURI");
     const col = u.role === "admin" ? "var(--neon-gold)" : (u.role === "vip" ? "var(--neon-green)" : "var(--neon-cyan)");
+    const expiryText = u.username === 'teodor' ? 'Acces Permanent (Admin)' : (u.expires_at ? `Valabil până la: ${formatExpiryDate(u.expires_at)}` : 'Fără termen setat');
+    
     return `<div class="bet-ticket" style="display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-size:14px;font-weight:800;color:#fff;">👤 ${u.username} <span style="font-size:11px;color:var(--text-muted);">(parolă: ${u.password})</span></div>
         <div style="font-size:10px;font-family:'Orbitron',sans-serif;color:${col};margin-top:4px;font-weight:800;">${badge}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">⏳ ${expiryText}</div>
       </div>
       ${u.username !== 'teodor' ? `<button class="t-btn t-loss" style="flex:0;padding:8px 12px;" onclick="removeUser('${u.username}')">🗑️</button>` : ''}
     </div>`;
@@ -995,7 +1014,6 @@ function renderProjectView() {
     </div>
   </div>
 
-  <!-- CHAT TACTIC VIP CU JOE (Supabase Edge Function Secure) -->
   <div class="joe-chat-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (SECURE AI)</span>
@@ -1030,7 +1048,6 @@ function renderTicketsView() {
   currentTicketTotalOdd = tot;
 
   const potentialWin = +(customBudget * tot).toFixed(2);
-
   const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
   
   let contentBody = "";
@@ -1062,7 +1079,6 @@ function renderTicketsView() {
       <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
     </div>
     
-    <!-- Widget Buget personalizat -->
     <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
       <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
@@ -1072,7 +1088,6 @@ function renderTicketsView() {
     ${contentBody}
   </div>
 
-  <!-- Arhivă Transparentă / Istoric Randament pentru toată lumea -->
   <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
     <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 ARHIVĂ & PERFORMANȚĂ MODEL xG</div>
     <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Modelul matematic Poisson rulează 24/7 analizând ratele de conversie și xG-ul istoric al echipelor.</div>
