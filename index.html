@@ -260,9 +260,9 @@ let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
-// Istoric Chat VIP cu Joe
+// Istoric Chat VIP cu Joe (Sigur prin Supabase Edge Function)
 let vipChatMessages = [
-  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Întreabă-mă despre orice echipă sau meci de azi și îți dau pontul direct din modelul Poisson!' }
+  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Canalul neural prin Supabase este securizat. Întreabă-mă orice despre meciuri sau urcă o poză cu biletul tău!' }
 ];
 
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
@@ -662,8 +662,8 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
-// Chat Inteligent și Contextual cu Joe (Caută prin meciurile încărcate)
-function handleVipChatSubmit(event) {
+// 🤖 Apel sigur prin Supabase Edge Function (Fără chei expuse în frontend)
+async function handleVipChatSubmit(event) {
   event.preventDefault();
   const input = document.getElementById("vipChatInput");
   const txt = (input?.value || "").trim();
@@ -673,37 +673,33 @@ function handleVipChatSubmit(event) {
   input.value = "";
   updateChatUI();
 
-  setTimeout(() => {
-    let reply = "";
-    const lowerTxt = txt.toLowerCase();
-    
-    // Căutăm dacă userul a întrebat de o echipă din meciurile încărcate
-    const allMatches = [...(cacheByDate[selectedDate] || []), ...europaMatches];
-    const foundMatch = allMatches.find(m => 
-      m.home.toLowerCase().includes(lowerTxt) || 
-      m.away.toLowerCase().includes(lowerTxt) || 
-      lowerTxt.includes(m.home.toLowerCase()) || 
-      lowerTxt.includes(m.away.toLowerCase())
-    );
+  const loadingId = Date.now();
+  vipChatMessages.push({ sender: 'joe', text: "⚡ Joe interoghează serverul neural Supabase...", id: loadingId });
+  updateChatUI();
 
-    if (foundMatch) {
-      reply = `Băiatu', am verificat ${foundMatch.home} vs ${foundMatch.away} (${foundMatch.league}). Modelul xG arată ${foundMatch.lamH}-${foundMatch.lamA}. Recomandarea mea de expert e: ${foundMatch.pick} la cota de @${foundMatch.odd.toFixed(2)} (${foundMatch.prob}% siguranță)!`;
-    } else if (lowerTxt.includes("bilet") || lowerTxt.includes("cotă")) {
-      reply = "Pentru un bilet de succes, șefu', nu sări pe 10 meciuri. Ia 2-3 ponturi curate cu xG mare, leagă o cotă de 2-3 și mergi la sigur!";
-    } else if (lowerTxt.includes("salut") || lowerTxt.includes("ce faci") || lowerTxt.includes("ceau") || lowerTxt.includes("ce zici")) {
-      reply = "Salutare, șefu'! Sunt pe fază, analizez datele și cotele pentru azi. Despre ce meci vrei să discutăm?";
-    } else {
-      const generalResp = [
-        `Băiatu', la ce date am în sistem azi, cel mai bine jucăm pe goluri sau șanse duble, nu pe soliști riscanți.`,
-        `Sunt pe fază! Modelul Poisson zice să păstrăm banca intactă și să jucăm doar ce e calculat matematic.`,
-        `Întreabă-mă specific despre un meci sau o echipă din listă și îți dau verdictul instant!`
-      ];
-      reply = generalResp[Math.floor(Math.random() * generalResp.length)];
-    }
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/joe-chat`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ prompt: txt })
+    });
 
-    vipChatMessages.push({ sender: 'joe', text: reply });
-    updateChatUI();
-  }, 1000);
+    const data = await response.json();
+    const aiReply = data.reply || "Băiatu', serverul neural n-a returnat niciun răspuns. Mai încearcă o dată!";
+
+    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
+    vipChatMessages.push({ sender: 'joe', text: aiReply });
+
+  } catch (err) {
+    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
+    vipChatMessages.push({ sender: 'joe', text: "Eroare de conexiune cu Supabase, șefu'!" });
+  }
+
+  updateChatUI();
 }
 
 function handleImageUpload(event) {
@@ -717,7 +713,7 @@ function handleImageUpload(event) {
     updateChatUI();
 
     setTimeout(() => {
-      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Analiza arată bine, dar ai grijă la meciurile cu echipe de pe locurile 1-2 unde surprizele apar des. Fii disciplinat și mergem pe verde!" });
+      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Analiza arată bine, dar ai grijă la meciurile cu echipe de pe primele locuri unde surprizele apar des. Fii disciplinat și mergem pe verde!" });
       updateChatUI();
     }, 1200);
   };
@@ -934,10 +930,10 @@ function renderProjectView() {
     </div>
   </div>
 
-  <!-- CHAT TACTIC VIP CU JOE (Inteligent & Contextual) -->
+  <!-- CHAT TACTIC VIP CU JOE (Supabase Edge Function Secure) -->
   <div class="joe-chat-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE</span>
+      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (SECURE AI)</span>
       <span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
     </div>
     <div class="chat-messages" id="chatMessagesBox"></div>
@@ -945,7 +941,7 @@ function renderProjectView() {
       <label class="chat-file-btn" title="Încarcă poză cu biletul">
         📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
       </label>
-      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre o echipă (ex: PSG)...">
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe orice...">
       <button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
     </form>
   </div>
@@ -1039,7 +1035,7 @@ function renderViewport() {
   }
 
   if (!list.length) { 
-    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);$.Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
     return; 
   }
 
