@@ -74,6 +74,16 @@
   .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
   .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
   
+  /* CHAT VIP CU JOE STYLES */
+  .joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
+  .chat-messages { height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
+  .chat-msg { max-width:85%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.4; }
+  .chat-msg.joe { background:rgba(0,243,255,0.1); border:1px solid rgba(0,243,255,0.3); color:#fff; align-self:flex-start; border-top-left-radius:3px; }
+  .chat-msg.user { background:rgba(6,214,160,0.15); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); align-self:flex-end; border-top-right-radius:3px; }
+  .chat-input-area { display:flex; gap:6px; align-items:center; }
+  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; }
+  .preview-thumb { width:100%; max-height:100px; object-fit:cover; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); }
+
   /* TICKET GENERATION ANIMATIONS */
   @keyframes pulseGlow {
     0%, 100% { opacity: 1; text-shadow: 0 0 14px var(--neon-cyan); }
@@ -249,6 +259,11 @@ let customBudget = 100;
 let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
+
+// Istoric Chat VIP cu Joe
+let vipChatMessages = [
+  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Întreabă-mă orice despre meciurile de azi sau urcă o poză cu biletul tău să vedem ce șanse are!' }
+];
 
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
@@ -648,6 +663,58 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
+// Funcții pentru Chat-ul VIP cu Joe
+function sendVipMessage() {
+  const input = document.getElementById("vipChatInput");
+  const txt = (input?.value || "").trim();
+  if(!txt) return;
+
+  vipChatMessages.push({ sender: 'user', text: txt });
+  input.value = "";
+  updateChatUI();
+
+  // Răspuns automat de la Joe după 1 secundă
+  setTimeout(() => {
+    const responses = [
+      "Băiatu', am verificat datele xG pentru meciul ăsta. Stai de 2 ori pe gânduri înainte să pui bani acolo, e meci de X sau puține goluri.",
+      "Asta da cotă! Modelul meu matematic zice că are 72% șanse de reușită. Merită băgat în portofoliu.",
+      "Fii atent aici: nu te arunca pe echipe favorite când joacă în deplasare pe teren greu. Mai bine cauți un GG curat.",
+      "Arată bine biletul tău, șefu'! Disciplina e totul. Ține-o tot așa și ieșim pe plus."
+    ];
+    const randResp = responses[Math.floor(Math.random() * responses.length)];
+    vipChatMessages.push({ sender: 'joe', text: randResp });
+    updateChatUI();
+  }, 1000);
+}
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const imgSrc = e.target.result;
+    vipChatMessages.push({ sender: 'user', text: '📷 [A încărcat o poză cu biletul]', img: imgSrc });
+    updateChatUI();
+
+    setTimeout(() => {
+      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! E o combinație interesantă, dar ai grijă la meciul 2, acolo statistica arată o mică capcană. În rest, baftă multă!" });
+      updateChatUI();
+    }, 1200);
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateChatUI() {
+  const box = document.getElementById("chatMessagesBox");
+  if(!box) return;
+  box.innerHTML = vipChatMessages.map(m => {
+    let imgHtml = m.img ? `<br><img src="${m.img}" class="preview-thumb">` : '';
+    return `<div class="chat-msg ${m.sender}">${m.sender === 'joe' ? '🤖 <b>Joe:</b> ' : '👤 <b>Tu:</b> '}${m.text}${imgHtml}</div>`;
+  }).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
 function selectTicketOdd(odd) {
   if (isGeneratingTicket) return;
   targetTicketOdds = odd;
@@ -847,9 +914,29 @@ function renderProjectView() {
       <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">${wr}%</div></div>
     </div>
   </div>
+
+  <!-- CHAT TACTIC VIP CU JOE & ÎNCĂRCARE POZE -->
+  <div class="joe-chat-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE</span>
+      <span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
+    </div>
+    <div class="chat-messages" id="chatMessagesBox"></div>
+    <div class="chat-input-area">
+      <label class="chat-file-btn" title="Încarcă poză cu biletul">
+        📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+      </label>
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe despre un meci..." onkeydown="if(event.key==='Enter')sendVipMessage()">
+      <button class="cyber-btn accent" style="flex:0;padding:10px 14px;" onclick="sendVipMessage()">Trimite</button>
+    </div>
+  </div>
+
   ${joeAutoPickHtml}
-  <div class="cyber-sec-head"><span>📋 PORTOFOLIU JOE (${project.bets.length})</span><span>LIVE DB</span></div>
+  <div class="cyber-sec-head" style="margin-top:16px;"><span>📋 PORTOFOLIU JOE (${project.bets.length})</span><span>LIVE DB</span></div>
   ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă ponturi de la Joe de mai sus!</div>'}`;
+
+  // Actualizăm mesajele din chat după randare
+  setTimeout(updateChatUI, 50);
 }
 
 function renderTicketsView() {
