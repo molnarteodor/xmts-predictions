@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Statistica Joe</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; padding: 40px; }
+        .card { max-width: 400px; margin: auto; background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 5px; }
+        button { width: 100%; padding: 12px; background: #238636; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #2ea043; }
+        #result { margin-top: 15px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Creare Cont & Abonament</h2>
+    <form id="adminForm">
+        <label>Parolă Master Admin:</label>
+        <input type="password" id="adminSecret" required placeholder="Parola ta secretă">
+
+        <label>Email Client:</label>
+        <input type="email" id="email" required placeholder="client@gmail.com">
+
+        <label>Parolă Temporară Client:</label>
+        <input type="text" id="password" required placeholder="Parola pentru client">
+
+        <label>Tip Pachet:</label>
+        <select id="tier">
+            <option value="standard">Standard (25 RON)</option>
+            <option value="vip" selected>VIP (50 RON)</option>
+        </select>
+
+        <label>Durată:</label>
+        <select id="duration">
+            <option value="trial">Test 2 Zile (Gratuit)</option>
+            <option value="1_month" selected>1 Lună</option>
+            <option value="3_months">3 Luni</option>
+            <option value="6_months">6 Luni</option>
+            <option value="1_year">1 An</option>
+        </select>
+
+        <button type="submit">Creează Contul Acum</button>
+    </form>
+    <div id="result"></div>
+</div>
+
+<script>
+    const SUPABASE_FUNCTION_URL = "AICI_PUUI_URL-UL_DIRECT_AL_EDGE_FUNCTION-ULUI"; // Îl iei din panoul Supabase -> Edge Functions
+
+    document.getElementById('adminForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.color = "#fff";
+        resultDiv.innerText = "Se procesează...";
+
+        const dataToSend = {
+            adminSecret: document.getElementById('adminSecret').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            tier: document.getElementById('tier').value,
+            duration: document.getElementById('duration').value
+        };
+
+        try {
+            const response = await fetch(SUPABASE_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataToSend)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Eroare necunoscută");
+            }
+
+            resultDiv.style.color = "#3fb950";
+            resultDiv.innerText = result.message;
+            document.getElementById('adminForm').reset();
+        } catch (err) {
+            resultDiv.style.color = "#f85149";
+            resultDiv.innerText = "Eroare: " + err.message;
+        }
+    });
+</script>
+
+</body>
+</html>
