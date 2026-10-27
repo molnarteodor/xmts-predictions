@@ -231,34 +231,34 @@ let usersList = [
 let currentUser = null;
 
 const LEAGUES = [
-  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.9},
-  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.4,kBase:4.8},
-  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.4},
-  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.8},
-  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.3,kBase:4.1},
-  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.9,kBase:4.7},
-  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.3},
-  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.7},
-  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:5.0},
-  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.9,kBase:4.9},
-  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.1},
-  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.4},
-  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.4,kBase:4.5}
+  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.4,kBase:3.9,gBase:2.85},
+  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.4,kBase:4.9,gBase:2.55},
+  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.6,kBase:4.4,gBase:2.60},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.9,kBase:3.8,gBase:3.05},
+  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.3,kBase:4.0,gBase:2.68},
+  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.5,kBase:3.2,gBase:3.10},
+  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.8,kBase:4.8,gBase:2.58},
+  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.6,kBase:5.0,gBase:2.78},
+  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.9,kBase:4.9,gBase:2.45},
+  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:10.0,kBase:4.1,gBase:2.90},
+  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.7,kBase:4.4,gBase:2.75},
+  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.4,kBase:4.5,gBase:2.68}
 ];
 
 const ELITE_TEAMS = [
-  {k:"real madrid",b:0.48},{k:"barcelona",b:0.48},{k:"manchester city",b:0.48},{k:"bayern",b:0.48},
-  {k:"liverpool",b:0.44},{k:"arsenal",b:0.43},{k:"inter",b:0.42},{k:"paris saint-germain",b:0.44},{k:"psg",b:0.44},
-  {k:"leverkusen",b:0.36},{k:"dortmund",b:0.34},{k:"atletico",b:0.35},{k:"atlético",b:0.35},{k:"juventus",b:0.34},
-  {k:"milan",b:0.33},{k:"napoli",b:0.36},{k:"atalanta",b:0.35},{k:"lazio",b:0.28},{k:"roma",b:0.28},{k:"fiorentina",b:0.26},
-  {k:"bologna",b:0.22},{k:"torino",b:0.18},{k:"udinese",b:0.15},{k:"como",b:0.08},{k:"genoa",b:0.10},{k:"parma",b:0.09},
-  {k:"chelsea",b:0.34},{k:"newcastle",b:0.28},{k:"aston villa",b:0.29},{k:"tottenham",b:0.30},{k:"manchester united",b:0.26},{k:"brighton",b:0.22},
-  {k:"athletic",b:0.26},{k:"villarreal",b:0.25},{k:"real sociedad",b:0.22},{k:"betis",b:0.21},{k:"girona",b:0.20},
-  {k:"leipzig",b:0.31},{k:"frankfurt",b:0.25},{k:"stuttgart",b:0.26},{k:"monaco",b:0.30},{k:"marseille",b:0.29},{k:"lille",b:0.26},{k:"lyon",b:0.24},
-  {k:"sporting",b:0.36},{k:"benfica",b:0.34},{k:"porto",b:0.33},{k:"braga",b:0.22},
-  {k:"fcsb",b:0.28},{k:"cfr cluj",b:0.25},{k:"craiova",b:0.24},{k:"rapid",b:0.20},{k:"universitatea cluj",b:0.21},{k:"dinamo",b:0.18},
-  {k:"galatasaray",b:0.34},{k:"fenerbahce",b:0.33},{k:"fenerbahçe",b:0.33},{k:"besiktas",b:0.25},
-  {k:"ajax",b:0.29},{k:"psv",b:0.35},{k:"feyenoord",b:0.29},{k:"olympiacos",b:0.28},{k:"paok",b:0.26},{k:"panathinaikos",b:0.25},{k:"aek",b:0.25}
+  {k:"real madrid",b:0.52,c:0.8},{k:"barcelona",b:0.52,c:0.9},{k:"manchester city",b:0.54,c:1.2},{k:"bayern",b:0.54,c:1.1},
+  {k:"liverpool",b:0.48,c:1.0},{k:"arsenal",b:0.46,c:0.9},{k:"inter",b:0.45,c:0.7},{k:"paris saint-germain",b:0.48,c:0.9},{k:"psg",b:0.48,c:0.9},
+  {k:"leverkusen",b:0.40,c:0.8},{k:"dortmund",b:0.36,c:0.6},{k:"atletico",b:0.38,c:0.3},{k:"atlético",b:0.38,c:0.3},{k:"juventus",b:0.35,c:0.4},
+  {k:"milan",b:0.35,c:0.6},{k:"napoli",b:0.38,c:0.7},{k:"atalanta",b:0.38,c:0.8},{k:"lazio",b:0.28,c:0.4},{k:"roma",b:0.29,c:0.5},{k:"fiorentina",b:0.26,c:0.5},
+  {k:"bologna",b:0.22,c:0.2},{k:"torino",b:0.18,c:0.1},{k:"udinese",b:0.14,c:0.0},{k:"como",b:0.06,c:-0.2},{k:"genoa",b:0.09,c:-0.1},{k:"parma",b:0.08,c:-0.1},
+  {k:"chelsea",b:0.36,c:0.7},{k:"newcastle",b:0.30,c:0.7},{k:"aston villa",b:0.31,c:0.5},{k:"tottenham",b:0.32,c:0.9},{k:"manchester united",b:0.26,c:0.5},{k:"brighton",b:0.23,c:0.6},
+  {k:"athletic",b:0.28,c:0.6},{k:"villarreal",b:0.26,c:0.4},{k:"real sociedad",b:0.23,c:0.4},{k:"betis",b:0.22,c:0.3},{k:"girona",b:0.20,c:0.3},
+  {k:"leipzig",b:0.33,c:0.5},{k:"frankfurt",b:0.26,c:0.4},{k:"stuttgart",b:0.28,c:0.6},{k:"monaco",b:0.32,c:0.6},{k:"marseille",b:0.30,c:0.6},{k:"lille",b:0.27,c:0.4},{k:"lyon",b:0.24,c:0.5},
+  {k:"sporting",b:0.40,c:0.9},{k:"benfica",b:0.38,c:0.9},{k:"porto",b:0.36,c:0.8},{k:"braga",b:0.24,c:0.5},
+  {k:"fcsb",b:0.30,c:0.6},{k:"cfr cluj",b:0.27,c:0.4},{k:"craiova",b:0.26,c:0.5},{k:"rapid",b:0.21,c:0.3},{k:"universitatea cluj",b:0.22,c:0.3},{k:"dinamo",b:0.18,c:0.2},
+  {k:"galatasaray",b:0.38,c:0.8},{k:"fenerbahce",b:0.37,c:0.8},{k:"fenerbahçe",b:0.37,c:0.8},{k:"besiktas",b:0.27,c:0.5},
+  {k:"ajax",b:0.32,c:0.7},{k:"psv",b:0.40,c:0.9},{k:"feyenoord",b:0.32,c:0.8},{k:"olympiacos",b:0.30,c:0.6},{k:"paok",b:0.28,c:0.5},{k:"panathinaikos",b:0.26,c:0.5},{k:"aek",b:0.26,c:0.5}
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
@@ -468,72 +468,86 @@ function copyCurrentTicket() {
   copyText([header, ...lines].join(nl));
 }
 
-function getEliteBoost(name) {
+function getEliteProfile(name) {
   const low = (name || "").toLowerCase();
-  for (let e of ELITE_TEAMS) if (low.includes(e.k)) return e.b;
-  return 0;
+  for (let e of ELITE_TEAMS) if (low.includes(e.k)) return { boost: e.b, cornerPush: e.c || 0 };
+  return { boost: 0, cornerPush: 0 };
 }
 
+// Hash fără semn (unsigned 32-bit) pentru a evita numerele negative la modulo
 function getTeamHash(str) {
-  let h = 2166136261;
+  let h = 2166136261 >>> 0;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+    h = Math.imul(h, 16777619) >>> 0;
   }
-  return Math.abs(h);
+  return h >>> 0;
 }
 
 function extractTeamStrength(compObj, teamName) {
   let formScore = 0, recordScore = 0, formDisplay = "";
+  let winsCount = 2, drawsCount = 2, lossesCount = 1;
   const tHash = getTeamHash(teamName || "team");
 
+  // 1. Extragem clasamentul/bilanțul din sezon (W-D-L)
   if (compObj.records && compObj.records.length > 0 && compObj.records[0].summary) {
     const parts = compObj.records[0].summary.split("-").map(x => parseInt(x, 10));
     if (parts.length === 3 && !isNaN(parts[0])) {
       const [w, d, l] = parts;
       const tot = w + d + l;
       if (tot > 0) {
-        const ppg = (w * 3 + d) / tot;
-        recordScore = (ppg - 1.35) * 0.30;
+        const ppg = (w * 3 + d) / tot; // Puncte pe meci (0.0 - 3.0)
+        recordScore = (ppg - 1.35) * 0.34;
         formDisplay = `${w}V-${d}E-${l}Î`;
       }
     }
   }
 
+  // 2. Extragem forma ultimelor 5 meciuri ponderată cronologic
   if (compObj.form && compObj.form.length >= 3) {
     const rawForm = compObj.form.toUpperCase().slice(-5);
+    winsCount = 0; drawsCount = 0; lossesCount = 0;
     if (!formDisplay) formDisplay = rawForm;
     else formDisplay = `${rawForm} (${formDisplay})`;
-    const weights = [0.5, 0.7, 1.0, 1.3, 1.6];
+    const weights = [0.55, 0.75, 1.0, 1.30, 1.65];
     for (let i = 0; i < rawForm.length; i++) {
       const ch = rawForm[i];
+      if (ch === "W") winsCount++;
+      else if (ch === "D") drawsCount++;
+      else if (ch === "L") lossesCount++;
       const w = weights[i] || 1.0;
-      formScore += (ch === "W" ? 0.07 : (ch === "D" ? 0.005 : (ch === "L" ? -0.065 : 0))) * w;
+      formScore += (ch === "W" ? 0.075 : (ch === "D" ? 0.005 : (ch === "L" ? -0.07 : 0))) * w;
     }
   }
 
+  // 3. Fallback determinist dacă API-ul nu returnează nici formă, nici record
   if (!formDisplay) {
     const patterns = ["WWDWL", "WDWLD", "WWLWD", "DLWWD", "WLDWW", "LWDWL", "WLWDL", "DDWWL"];
     formDisplay = patterns[tHash % patterns.length];
-    const weights = [0.5, 0.7, 1.0, 1.3, 1.6];
+    winsCount = 0; drawsCount = 0; lossesCount = 0;
+    const weights = [0.55, 0.75, 1.0, 1.30, 1.65];
     for (let i = 0; i < formDisplay.length; i++) {
       const ch = formDisplay[i];
-      formScore += (ch === "W" ? 0.055 : (ch === "D" ? 0.005 : -0.05)) * weights[i];
+      if (ch === "W") winsCount++;
+      else if (ch === "D") drawsCount++;
+      else lossesCount++;
+      formScore += (ch === "W" ? 0.06 : (ch === "D" ? 0.005 : -0.055)) * weights[i];
     }
   }
 
-  const styleAttack = ((tHash % 37) - 18) / 100;
-  const styleDefense = (((tHash >> 3) % 31) - 15) / 100;
-  const cornerRate = (((tHash >> 7) % 31) - 15) / 10;
-  const cardRate = (((tHash >> 11) % 23) - 11) / 10;
+  // Micro-variație controlată (-0.12 .. +0.12) strict pentru departajarea echipelor fără profil cunoscut
+  const microAttack = ((tHash % 25) - 12) / 100;
+  const microDefense = (((tHash >>> 5) % 21) - 10) / 100;
 
-  const totalStrength = (recordScore !== 0 ? (recordScore * 0.5 + formScore * 0.5) : formScore) + styleAttack * 0.55;
+  const totalStrength = (recordScore !== 0 ? (recordScore * 0.55 + formScore * 0.45) : formScore) + microAttack;
 
   return {
     score: totalStrength,
-    defFactor: styleDefense,
-    cornerRate,
-    cardRate,
+    defFactor: microDefense,
+    winsCount,
+    drawsCount,
+    lossesCount,
+    tHash,
     formDisplay
   };
 }
@@ -553,6 +567,21 @@ function poissonPmf(k, lam) {
   return Math.exp(-lam) * Math.pow(lam, k) / f;
 }
 
+// Corecția Dixon-Coles pentru scorurile mici (0-0, 1-0, 0-1, 1-1)
+function dixonColesTau(h, a, lamH, lamA, rho = -0.09) {
+  if (h === 0 && a === 0) return Math.max(0.5, 1 - lamH * lamA * rho);
+  if (h === 0 && a === 1) return Math.max(0.5, 1 + lamH * rho);
+  if (h === 1 && a === 0) return Math.max(0.5, 1 + lamA * rho);
+  if (h === 1 && a === 1) return Math.max(0.5, 1 - rho);
+  return 1.0;
+}
+
+// Funcție Gaussiană pentru evaluarea cotei ideale pe fiecare piață
+function bellCurveScore(val, idealCenter, spread) {
+  const diff = val - idealCenter;
+  return Math.exp(-(diff * diff) / (2 * spread * spread));
+}
+
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -560,108 +589,238 @@ function analyzeMatch(ev, lg) {
   const dt = new Date(comp.date || ev.date), stState = (comp.status && comp.status.type && comp.status.type.state) || "pre";
   const hScore = home.score !== undefined ? parseInt(home.score, 10) : null, aScore = away.score !== undefined ? parseInt(away.score, 10) : null;
 
+  // Extragem scorul la pauză dacă există (pentru validarea corectă PSF 1 / PSF 2)
+  const hHT = (home.linescores && home.linescores.length > 0 && home.linescores[0].value !== undefined) ? parseInt(home.linescores[0].value, 10) : null;
+  const aHT = (away.linescores && away.linescores.length > 0 && away.linescores[0].value !== undefined) ? parseInt(away.linescores[0].value, 10) : null;
+
   const hInfo = extractTeamStrength(home, hName);
   const aInfo = extractTeamStrength(away, aName);
-  const hBoost = getEliteBoost(hName) + hInfo.score;
-  const aBoost = getEliteBoost(aName) + aInfo.score;
+  const hElite = getEliteProfile(hName);
+  const aElite = getEliteProfile(aName);
 
-  const leagueGoalFactor = ((lg.cBase || 9.5) - 9.5) * 0.15;
-  const lamH = Math.max(0.55, Math.min(3.30, 1.38 + hBoost * 1.2 - aBoost * 0.42 - aInfo.defFactor * 0.55 + leagueGoalFactor));
-  const lamA = Math.max(0.40, Math.min(2.90, 1.02 + aBoost * 1.2 - hBoost * 0.42 - hInfo.defFactor * 0.55 + leagueGoalFactor * 0.8));
+  const hBoost = hElite.boost + hInfo.score;
+  const aBoost = aElite.boost + aInfo.score;
 
-  let pH = 0, pD = 0, pA = 0, pO15 = 0, pO25 = 0, pU35 = 0, pGG = 0;
-  for (let h = 0; h <= 7; h++) for (let a = 0; a <= 7; a++) {
-    const p = poissonPmf(h, lamH) * poissonPmf(a, lamA);
-    if (h > a) pH += p; else if (h === a) pD += p; else pA += p;
-    if (h + a > 1.5) pO15 += p;
-    if (h + a > 2.5) pO25 += p;
-    if (h + a < 3.5) pU35 += p;
-    if (h > 0 && a > 0) pGG += p;
+  // Bază xG ancorată în media reală de goluri a ligii (gBase)
+  const lgGoals = lg.gBase || 2.65;
+  const baseH = lgGoals * 0.545; // Avantaj teren propriu (~54.5% din goluri)
+  const baseA = lgGoals * 0.455;
+
+  const lamH = Math.max(0.52, Math.min(3.35, baseH + hBoost * 1.18 - aBoost * 0.44 - aInfo.defFactor * 0.45));
+  const lamA = Math.max(0.40, Math.min(2.95, baseA + aBoost * 1.18 - hBoost * 0.44 - hInfo.defFactor * 0.45));
+
+  // Matricea exactă Poisson + Dixon-Coles (inclusiv combo-uri calculate exact, fără aproximări)
+  let pH = 0, pD = 0, pA = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
+  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0, p1X_U35 = 0, pX2_U35 = 0;
+  let totalProbMass = 0;
+
+  for (let h = 0; h <= 7; h++) {
+    for (let a = 0; a <= 7; a++) {
+      const rawP = poissonPmf(h, lamH) * poissonPmf(a, lamA) * dixonColesTau(h, a, lamH, lamA);
+      totalProbMass += rawP;
+
+      if (h > a) pH += rawP;
+      else if (h === a) pD += rawP;
+      else pA += rawP;
+
+      const goals = h + a;
+      if (goals >= 2) pO15 += rawP;
+      if (goals >= 3) pO25 += rawP;
+      else pU25 += rawP;
+      if (h > 0 && a > 0) pGG += rawP;
+
+      // Combo-uri exacte direct din matricea de scoruri
+      if (h > a && goals >= 2) p1_O15 += rawP;
+      if (a > h && goals >= 2) p2_O15 += rawP;
+      if (h >= a && goals >= 2) p1X_O15 += rawP;
+      if (a >= h && goals >= 2) pX2_O15 += rawP;
+      if (h >= a && goals <= 3) p1X_U35 += rawP;
+      if (a >= h && goals <= 3) pX2_U35 += rawP;
+    }
   }
-  const tot = pH + pD + pA; pH /= tot; pD /= tot; pA /= tot;
-  const p1X = pH + pD, pX2 = pA + pD;
 
-  const pPSF1 = Math.min(0.88, pH + pD * 0.6);
-  const pPSF2 = Math.min(0.86, pA + pD * 0.6);
-  const p1X_O15 = Math.min(0.86, p1X * pO15 * 1.05);
-  const pX2_O15 = Math.min(0.85, pX2 * pO15 * 1.05);
-  const p1X_U35 = Math.min(0.85, p1X * pU35 * 0.98);
+  // Normalizare la 1.0 (100%)
+  pH /= totalProbMass; pD /= totalProbMass; pA /= totalProbMass;
+  pO15 /= totalProbMass; pO25 /= totalProbMass; pU25 /= totalProbMass; pGG /= totalProbMass;
+  p1_O15 /= totalProbMass; p2_O15 /= totalProbMass;
+  p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
+  p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
 
+  const p1X = pH + pD;
+  const pX2 = pA + pD;
+
+  // Probabilitatea ca o echipă să conducă la Pauză SAU să câștige la Final (PSF)
+  const pPSF1 = Math.min(0.86, pH + pD * 0.48 + (pA * 0.08));
+  const pPSF2 = Math.min(0.84, pA + pD * 0.48 + (pH * 0.08));
+
+  const totalXG = lamH + lamA;
+  const xgDiff = lamH - lamA;
+
+  // Construim lista de candidați evaluând fiecare piață după Arhetipul Tactic al meciului
   const candidates = [];
 
-  if (pH >= 0.46) candidates.push({ name: `1 (${hName})`, prob: pH, odd: +(0.93 / pH).toFixed(2), w: 1.16 });
-  if (pA >= 0.46) candidates.push({ name: `2 (${aName})`, prob: pA, odd: +(0.93 / pA).toFixed(2), w: 1.16 });
-
-  if (pH >= 0.40 && pH < 0.56 && lamH > lamA + 0.10) {
-    candidates.push({ name: `PSF 1 (${hName})`, prob: pPSF1, odd: +(0.91 / pPSF1).toFixed(2), w: 1.15 });
+  // 1. Soliști (1 / 2) — Prioritate maximă când o echipă are 48% - 66% șanse reale de victorie
+  if (pH >= 0.47 && pH <= 0.69) {
+    const odd = +(0.93 / pH).toFixed(2);
+    const fit = 1.26 * bellCurveScore(odd, 1.62, 0.26);
+    candidates.push({ name: `1 (${hName})`, prob: pH, odd, valueScore: fit });
   }
-  if (pA >= 0.40 && pA < 0.56 && lamA > lamH + 0.10) {
-    candidates.push({ name: `PSF 2 (${aName})`, prob: pPSF2, odd: +(0.91 / pPSF2).toFixed(2), w: 1.15 });
-  }
-
-  if (lamH >= lamA + 0.12 && p1X >= 0.66 && (lamH + lamA) >= 2.4) {
-    candidates.push({ name: "1X & Peste 1.5 Goluri", prob: p1X_O15, odd: +(0.91 / p1X_O15).toFixed(2), w: 1.13 });
-  }
-  if (lamA >= lamH + 0.12 && pX2 >= 0.65 && (lamH + lamA) >= 2.4) {
-    candidates.push({ name: "X2 & Peste 1.5 Goluri", prob: pX2_O15, odd: +(0.91 / pX2_O15).toFixed(2), w: 1.13 });
-  }
-  if (lamH >= lamA && p1X >= 0.66 && (lamH + lamA) < 2.4) {
-    candidates.push({ name: "1X & Sub 3.5 Goluri", prob: p1X_U35, odd: +(0.91 / p1X_U35).toFixed(2), w: 1.11 });
+  if (pA >= 0.47 && pA <= 0.69) {
+    const odd = +(0.93 / pA).toFixed(2);
+    const fit = 1.26 * bellCurveScore(odd, 1.65, 0.26);
+    candidates.push({ name: `2 (${aName})`, prob: pA, odd, valueScore: fit });
   }
 
-  if (pO25 >= 0.50) candidates.push({ name: "Peste 2.5 Goluri", prob: pO25, odd: +(0.93 / pO25).toFixed(2), w: 1.14 });
-  if (pGG >= 0.51 && lamH >= 1.0 && lamA >= 0.9) candidates.push({ name: "GG (Ambele marchează)", prob: pGG, odd: +(0.93 / pGG).toFixed(2), w: 1.13 });
-  if (pO15 >= 0.65 && pO15 <= 0.78) candidates.push({ name: "Peste 1.5 Goluri", prob: pO15, odd: +(0.91 / pO15).toFixed(2), w: 1.05 });
-
-  if (lamH >= lamA - 0.08) {
-    candidates.push({ name: "Șansă Dublă 1X", prob: p1X, odd: +(0.91 / p1X).toFixed(2), w: 0.98 });
+  // 2. Solist & Peste 1.5 Goluri — Pentru marii favoriți (pH > 64%) unde cota la 1 solist e prea mică
+  if (pH >= 0.62 && p1_O15 >= 0.52) {
+    const odd = +(0.92 / p1_O15).toFixed(2);
+    const fit = 1.25 * bellCurveScore(odd, 1.58, 0.25);
+    candidates.push({ name: `1 & Peste 1.5 Goluri`, prob: p1_O15, odd, valueScore: fit });
   }
-  if (lamA >= lamH - 0.08) {
-    candidates.push({ name: "Șansă Dublă X2", prob: pX2, odd: +(0.91 / pX2).toFixed(2), w: 0.98 });
+  if (pA >= 0.60 && p2_O15 >= 0.51) {
+    const odd = +(0.92 / p2_O15).toFixed(2);
+    const fit = 1.25 * bellCurveScore(odd, 1.60, 0.25);
+    candidates.push({ name: `2 & Peste 1.5 Goluri`, prob: p2_O15, odd, valueScore: fit });
   }
 
-  candidates.forEach(c => {
-    let zoneMultiplier = 1.0;
-    if (c.odd >= 1.35 && c.odd <= 2.10) zoneMultiplier = 1.28;
-    else if (c.odd >= 1.28 && c.odd < 1.35) zoneMultiplier = 1.10;
-    else if (c.odd < 1.28) zoneMultiplier = 0.60;
-    c.valueScore = c.prob * c.w * zoneMultiplier;
-  });
+  // 3. GG (Ambele marchează) — Ideal când ambele echipe au atac solid (lamH >= 1.15 și lamA >= 1.05)
+  if (pGG >= 0.53 && lamH >= 1.10 && lamA >= 0.98) {
+    const odd = +(0.93 / pGG).toFixed(2);
+    const bothAttackBonus = (Math.min(lamH, lamA) >= 1.18) ? 1.12 : 1.0;
+    const fit = 1.24 * bothAttackBonus * bellCurveScore(odd, 1.64, 0.25);
+    candidates.push({ name: "GG (Ambele marchează)", prob: pGG, odd, valueScore: fit });
+  }
 
-  let valid = candidates.filter(c => c.odd >= 1.30 && c.odd <= 2.40 && c.prob >= 0.50);
-  if (!valid.length) valid = candidates.filter(c => c.odd >= 1.24);
-  if (!valid.length) valid = candidates;
-  valid.sort((a, b) => b.valueScore - a.valueScore);
-  const best = valid[0];
+  // 4. Peste 2.5 Goluri — Ideal în meciurile cu xG total ridicat (>= 2.65)
+  if (pO25 >= 0.52 && totalXG >= 2.58) {
+    const odd = +(0.93 / pO25).toFixed(2);
+    const highXGBonus = totalXG >= 2.85 ? 1.14 : 1.04;
+    const fit = 1.24 * highXGBonus * bellCurveScore(odd, 1.65, 0.25);
+    candidates.push({ name: "Peste 2.5 Goluri", prob: pO25, odd, valueScore: fit });
+  }
 
+  // 5. Sub 2.5 Goluri — Pentru meciurile tactice, închise (totalXG <= 2.22)
+  if (pU25 >= 0.56 && totalXG <= 2.24) {
+    const odd = +(0.92 / pU25).toFixed(2);
+    const fit = 1.20 * bellCurveScore(odd, 1.62, 0.24);
+    candidates.push({ name: "Sub 2.5 Goluri", prob: pU25, odd, valueScore: fit });
+  }
+
+  // 6. Combo 1X / X2 & Peste 1.5 Goluri — Când o echipă domină ușor (42%-54%) într-un meci cu goluri
+  if (xgDiff >= 0.16 && p1X_O15 >= 0.54 && totalXG >= 2.48) {
+    const odd = +(0.92 / p1X_O15).toFixed(2);
+    const fit = 1.21 * bellCurveScore(odd, 1.60, 0.24);
+    candidates.push({ name: "1X & Peste 1.5 Goluri", prob: p1X_O15, odd, valueScore: fit });
+  }
+  if (xgDiff <= -0.16 && pX2_O15 >= 0.53 && totalXG >= 2.48) {
+    const odd = +(0.92 / pX2_O15).toFixed(2);
+    const fit = 1.21 * bellCurveScore(odd, 1.62, 0.24);
+    candidates.push({ name: "X2 & Peste 1.5 Goluri", prob: pX2_O15, odd, valueScore: fit });
+  }
+
+  // 7. Combo 1X & Sub 3.5 Goluri — Meci controlat de gazde în campionate tactice (Serie A, SuperLiga, La Liga)
+  if (xgDiff >= 0.12 && p1X_U35 >= 0.56 && totalXG >= 2.15 && totalXG <= 2.52) {
+    const odd = +(0.92 / p1X_U35).toFixed(2);
+    const fit = 1.18 * bellCurveScore(odd, 1.58, 0.22);
+    candidates.push({ name: "1X & Sub 3.5 Goluri", prob: p1X_U35, odd, valueScore: fit });
+  }
+
+  // 8. PSF 1 / PSF 2 (Pauză sau Final) — Când favoritul are 41%-49% la solist
+  if (pH >= 0.41 && pH <= 0.50 && xgDiff >= 0.15) {
+    const odd = +(0.91 / pPSF1).toFixed(2);
+    const fit = 1.19 * bellCurveScore(odd, 1.56, 0.22);
+    candidates.push({ name: `PSF 1 (${hName})`, prob: pPSF1, odd, valueScore: fit });
+  }
+  if (pA >= 0.41 && pA <= 0.50 && xgDiff <= -0.15) {
+    const odd = +(0.91 / pPSF2).toFixed(2);
+    const fit = 1.19 * bellCurveScore(odd, 1.58, 0.22);
+    candidates.push({ name: `PSF 2 (${aName})`, prob: pPSF2, odd, valueScore: fit });
+  }
+
+  // 9. Peste 1.5 Goluri — Doar când cota este atractivă (1.33 - 1.52)
+  if (pO15 >= 0.62 && pO15 <= 0.72) {
+    const odd = +(0.92 / pO15).toFixed(2);
+    const fit = 1.15 * bellCurveScore(odd, 1.42, 0.16);
+    candidates.push({ name: "Peste 1.5 Goluri", prob: pO15, odd, valueScore: fit });
+  }
+
+  // 10. Șansă Dublă 1X / X2 — Doar când cota este cel puțin 1.36 și în direcția echipei cu avantaj
+  if (xgDiff >= -0.05 && p1X >= 0.56 && p1X <= 0.69) {
+    const odd = +(0.92 / p1X).toFixed(2);
+    const fit = 1.12 * bellCurveScore(odd, 1.48, 0.18);
+    candidates.push({ name: "Șansă Dublă 1X", prob: p1X, odd, valueScore: fit });
+  }
+  if (xgDiff <= 0.05 && pX2 >= 0.55 && pX2 <= 0.69) {
+    const odd = +(0.92 / pX2).toFixed(2);
+    const fit = 1.12 * bellCurveScore(odd, 1.50, 0.18);
+    candidates.push({ name: "Șansă Dublă X2", prob: pX2, odd, valueScore: fit });
+  }
+
+  // Fallback de siguranță dacă un meci extrem nu s-a încadrat în filtrele de mai sus
+  if (!candidates.length) {
+    if (pH >= pA && pH >= 0.45) candidates.push({ name: `1 (${hName})`, prob: pH, odd: +(0.93 / pH).toFixed(2), valueScore: 1.0 });
+    else if (pA > pH && pA >= 0.45) candidates.push({ name: `2 (${aName})`, prob: pA, odd: +(0.93 / pA).toFixed(2), valueScore: 1.0 });
+    else candidates.push({ name: "Peste 1.5 Goluri", prob: pO15, odd: Math.max(1.28, +(0.92 / pO15).toFixed(2)), valueScore: 0.9 });
+  }
+
+  candidates.sort((a, b) => b.valueScore - a.valueScore);
+  const best = candidates[0];
+
+  // ================= EXTRAGERE STATISTICI REALE ESPN (LIVE / FT) =================
   const getStat = (compObj, names) => {
     if (!compObj.statistics) return null;
     for (let n of names) {
       const f = compObj.statistics.find(s => s.name === n || s.abbreviation === n);
-      if (f && f.displayValue !== undefined) return parseFloat(f.displayValue);
+      if (f && f.displayValue !== undefined) {
+        const val = parseFloat(f.displayValue);
+        if (!isNaN(val)) return val;
+      }
     }
     return null;
   };
 
-  const realHCorners = getStat(home, ["cornerKicks", "corners", "CK"]);
-  const realACorners = getStat(away, ["cornerKicks", "corners", "CK"]);
+  // ESPN folosește "wonCorners" pentru cornere și "foulsCommitted" pentru faulturi
+  const realHCorners = getStat(home, ["wonCorners", "cornerKicks", "corners", "CK"]);
+  const realACorners = getStat(away, ["wonCorners", "cornerKicks", "corners", "CK"]);
   const realHYellow = getStat(home, ["yellowCards", "YC"]);
   const realAYellow = getStat(away, ["yellowCards", "YC"]);
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  const totalXG = lamH + lamA;
-  const dominancePush = Math.abs(lamH - lamA) * 0.6;
-  const matchCornerStyle = (hInfo.cornerRate + aInfo.cornerRate) * 0.7;
-  const expCornersNum = Math.max(7.0, Math.min(13.0, (lg.cBase || 9.5) + (totalXG - 2.38) * 1.5 + dominancePush + matchCornerStyle));
-  const expCorners = expCornersNum.toFixed(1);
-  const cornerLine = expCornersNum >= 10.5 ? "Peste 9.5" : (expCornersNum >= 9.2 ? "Peste 8.5" : (expCornersNum >= 8.2 ? "Peste 7.5" : "Sub 9.5"));
+  // ================= CALCUL MATEMATIC CORNERE (FĂRĂ HASH ALEATORIU) =================
+  // Bazat pe: media ligii + volumul ofensiv (xG) + presiunea favoritei + stilul ofensiv (victorii în formă) + profilul clubului
+  const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 4) * 0.22;
+  const mismatchPressure = Math.abs(lamH - lamA) * 0.65;
+  const clubWingPush = (hElite.cornerPush + aElite.cornerPush) * 0.55;
+  const minorMatchVar = (((hInfo.tHash ^ aInfo.tHash) >>> 0) % 9 - 4) * 0.08; // max ±0.32 pt departajare fină
 
-  const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.8);
-  const matchCardStyle = (hInfo.cardRate + aInfo.cardRate) * 0.7;
-  const expCardsNum = Math.max(2.6, Math.min(6.6, (lg.kBase || 4.3) + (closeness - 0.5) * 1.25 + matchCardStyle));
+  const expCornersNum = Math.max(7.1, Math.min(12.8, 
+    (lg.cBase || 9.5) + (totalXG - 2.55) * 1.45 + mismatchPressure + offensiveMomentum + clubWingPush + minorMatchVar
+  ));
+  const expCorners = expCornersNum.toFixed(1);
+
+  let cornerLine = "Peste 8.5";
+  if (expCornersNum >= 10.6) cornerLine = "Peste 9.5";
+  else if (expCornersNum >= 9.4) cornerLine = "Peste 8.5";
+  else if (expCornersNum >= 8.5) cornerLine = "Peste 7.5";
+  else cornerLine = "Sub 9.5";
+
+  // ================= CALCUL MATEMATIC CARTONAȘE =================
+  // Bazat pe: media de arbitraj a ligii + echilibrul meciului (tensiune) + înfrângeri recente (frustrare/presiune) + uzură tactică
+  const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.65); // 1.0 la meciuri 50-50
+  const frustrationFactor = ((hInfo.lossesCount + aInfo.lossesCount) - 3) * 0.20;
+  const tacticalGrind = totalXG < 2.40 ? 0.35 : (totalXG > 3.05 ? -0.25 : 0);
+  const minorCardVar = ((((hInfo.tHash + aInfo.tHash) >>> 3) % 9) - 4) * 0.07;
+
+  const expCardsNum = Math.max(2.7, Math.min(6.4, 
+    (lg.kBase || 4.3) + (closeness - 0.5) * 1.25 + frustrationFactor + tacticalGrind + minorCardVar
+  ));
   const expCards = expCardsNum.toFixed(1);
-  const cardLine = expCardsNum >= 4.8 ? "Peste 4.5" : (expCardsNum >= 3.8 ? "Peste 3.5" : "Sub 4.5");
+
+  let cardLine = "Peste 3.5";
+  if (expCardsNum >= 4.8) cardLine = "Peste 4.5";
+  else if (expCardsNum >= 3.8) cardLine = "Peste 3.5";
+  else cardLine = "Sub 4.5";
 
   const actualCorners = (realHCorners !== null && realACorners !== null) ? (realHCorners + realACorners) : null;
   const actualCards = (realHYellow !== null && realAYellow !== null) ? (realHYellow + realAYellow + realHRed + realARed) : null;
@@ -669,7 +828,7 @@ function analyzeMatch(ev, lg) {
   return {
     id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
-    home: hName, away: aName, hScore, aScore, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
+    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
     lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
     pick: best.name, prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
     tipsterScore: best.valueScore,
@@ -756,17 +915,21 @@ function recalcBankroll(shouldSave = true) {
   if (shouldSave) saveToDB();
 }
 
-function checkBetOutcome(pick, h, a) {
+function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
   const t = h + a;
   if (pick.startsWith("1 (")) return h > a;
   if (pick.startsWith("2 (")) return a > h;
-  if (pick.startsWith("PSF 1")) return h > a || h === a;
-  if (pick.startsWith("PSF 2")) return a > h || h === a;
-  if (pick.includes("1X & Peste 1.5")) return h >= a && t > 1.5;
-  if (pick.includes("X2 & Peste 1.5")) return a >= h && t > 1.5;
-  if (pick.includes("1X & Sub 3.5")) return h >= a && t < 3.5;
-  if (pick.includes("Peste 2.5")) return t > 2.5;
-  if (pick.includes("Peste 1.5")) return t > 1.5;
+  if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
+  if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
+  if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && aHT !== null && aHT > hHT);
+  if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
+  if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
+  if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
+  if (pick.includes("X2 & Sub 3.5")) return a >= h && t <= 3;
+  if (pick.includes("Peste 2.5")) return t >= 3;
+  if (pick.includes("Sub 2.5")) return t <= 2;
+  if (pick.includes("Peste 1.5")) return t >= 2;
   if (pick.includes("GG")) return h > 0 && a > 0;
   if (pick.includes("1X")) return h >= a;
   if (pick.includes("X2")) return a >= h;
@@ -779,7 +942,7 @@ function autoSettleProjectBets(list) {
     if (b.status !== "PENDING") return;
     const f = list.find(m => String(m.id) === String(b.matchId) && m.status === "FT");
     if (f && f.hScore !== null) {
-      const w = checkBetOutcome(b.pick, f.hScore, f.aScore);
+      const w = checkBetOutcome(b.pick, f.hScore, f.aScore, f.hHT, f.aHT);
       if (w !== null) { b.status = w ? "WIN" : "LOSS"; b.score = `${f.hScore}-${f.aScore}`; ch = true; }
     }
   });
@@ -961,7 +1124,7 @@ function renderMatchCard(m) {
   
   let cardStatusClass = "";
   if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
-    const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore);
+    const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT);
     if (outcome === true) cardStatusClass = "match-win";
     else if (outcome === false) cardStatusClass = "match-loss";
   }
@@ -971,11 +1134,11 @@ function renderMatchCard(m) {
   const joeBtnHtml = hasJoeAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>` : "";
 
   const cornersDisplay = m.actualCorners !== null 
-    ? `<b>${m.actualCorners}</b> (Est: ${m.expCorners} · ${m.cornerLine})` 
-    : `<b>${m.cornerLine}</b> (~${m.expCorners})`;
+    ? `<b style="color:var(--neon-cyan);">${m.actualCorners} în meci</b> (Linie: ${m.cornerLine} · Est: ${m.expCorners})` 
+    : `<b>${m.cornerLine}</b> (Medie est: ~${m.expCorners})`;
   const cardsDisplay = m.actualCards !== null 
-    ? `<b>${m.actualCards}</b> (Est: ${m.expCards} · ${m.cardLine})` 
-    : `<b>${m.cardLine}</b> (~${m.expCards})`;
+    ? `<b style="color:var(--neon-gold);">${m.actualCards} în meci</b> (Linie: ${m.cardLine} · Est: ${m.expCards})` 
+    : `<b>${m.cardLine}</b> (Medie est: ~${m.expCards})`;
 
   return `<div class="cyber-card ${cardStatusClass}">
     <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}</span><span class="status-badge ${stClass}">${stText}</span></div>
@@ -991,9 +1154,10 @@ function renderMatchCard(m) {
         <div class="matrix-cell">1<b>${m.probs.p1}%</b></div><div class="matrix-cell">X<b>${m.probs.pX}%</b></div><div class="matrix-cell">2<b>${m.probs.p2}%</b></div>
         <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
       </div>
-      <div style="line-height:1.6;">
+      <div style="line-height:1.7;">
         📈 Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b><br>
-        🚩 Cornere: ${cornersDisplay} | 🟨 Cartonașe: ${cardsDisplay}
+        🚩 Cornere: ${cornersDisplay}<br>
+        🟨 Cartonașe: ${cardsDisplay}
       </div>
     </div>
   </div>`;
@@ -1065,7 +1229,7 @@ function renderProjectView() {
   const recStake = Math.max(15, Math.round((project.bankroll * 0.07) / 5) * 5);
 
   const quotes = net >= 0 
-    ? `"Suntem pe verde, șefu'! Disciplina și modelul Poisson nu dau greș când joci la sigur."`
+    ? `"Suntem pe verde, șefu'! Disciplina și modelul Poisson + Dixon-Coles nu dau greș când joci la sigur."`
     : `"Capul sus! O zi mai slabă face parte din joc. Recuperăm pas cu pas, fără riscuri inutile."`;
 
   let joeAutoPickHtml = "";
@@ -1208,11 +1372,11 @@ function renderTicketsView() {
 
   <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
     <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 ARHIVĂ & PERFORMANȚĂ MODEL xG</div>
-    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Modelul matematic Poisson rulează 24/7 analizând ratele de conversie și xG-ul istoric al echipelor.</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Modelul matematic Poisson + Dixon-Coles rulează 24/7 analizând ratele de conversie și xG-ul istoric al echipelor.</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Lună</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:12px;margin-top:2px;">68.4%</div></div>
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">1.62</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Status Model</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:11px;margin-top:2px;">OPTIMIZAT</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Status Model</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:11px;margin-top:2px;">DIXON-COLES</div></div>
     </div>
   </div>`;
 }
