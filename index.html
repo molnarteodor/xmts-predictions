@@ -76,13 +76,14 @@
   
   /* CHAT VIP CU JOE STYLES */
   .joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
-  .chat-messages { height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
-  .chat-msg { max-width:85%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.4; word-break:break-word; }
+  .chat-messages { height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
+  .chat-msg { max-width:86%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.45; word-break:break-word; }
   .chat-msg.joe { background:rgba(0,243,255,0.1); border:1px solid rgba(0,243,255,0.3); color:#fff; align-self:flex-start; border-top-left-radius:3px; }
   .chat-msg.user { background:rgba(6,214,160,0.15); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); align-self:flex-end; border-top-right-radius:3px; }
   .chat-form { display:flex; gap:6px; align-items:center; }
-  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
-  .preview-thumb { width:100%; max-height:120px; object-fit:cover; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); }
+  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .chat-file-btn.has-img { background:rgba(6,214,160,0.22); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 10px rgba(6,214,160,0.35); }
+  .preview-thumb { width:100%; max-height:140px; object-fit:contain; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); background:#020408; }
 
   /* TICKET GENERATION ANIMATIONS */
   @keyframes pulseGlow {
@@ -230,7 +231,6 @@ let usersList = [
 ];
 let currentUser = null;
 
-// Fiecare ligă are acum și parametrul rho (corelația Dixon-Coles specifică stilului tactic al ligii)
 const LEAGUES = [
   {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.4,kBase:3.9,gBase:2.85,rho:-0.07},
   {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.4,kBase:4.9,gBase:2.55,rho:-0.11},
@@ -268,9 +268,11 @@ let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
+// Istoric Chat VIP + Memoria ultimei imagini urcate pentru Gemini Vision
 let vipChatMessages = [
-  { sender: 'joe', text: 'Salut, șefu! Sunt Joe. Canalul neural prin Supabase este securizat. Întreabă-mă orice despre meciuri sau urcă o poză cu biletul tău!' }
+  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
 ];
+let lastUploadedImage = null; // { base64: "...", mimeType: "image/jpeg" }
 
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
@@ -484,7 +486,6 @@ function getTeamHash(str) {
   return h >>> 0;
 }
 
-// UPGRADE 1: Extragerea cotelor reale din piață oferite de ESPN (Moneyline & Over/Under)
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
   const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
@@ -514,7 +515,6 @@ function extractMarketOdds(comp) {
   return { mktPH, mktPD, mktPA, ouLine };
 }
 
-// UPGRADE 2: Separarea formei Acasă (Home) vs Deplasare (Road) din API-ul ESPN
 function extractTeamStrength(compObj, teamName, isHome) {
   let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
   let winsCount = 2, drawsCount = 2, lossesCount = 1;
@@ -625,7 +625,6 @@ function bellCurveScore(val, idealCenter, spread) {
   return Math.exp(-(diff * diff) / (2 * spread * spread));
 }
 
-// UPGRADE 4: Criteriul Kelly Fracționat pentru calculul mizei optime în Joe Vault (3% - 10% din bancă)
 function calculateKellyStake(bankroll, probPct, odd) {
   const p = (probPct || 58) / 100;
   const b = Math.max(0.2, (odd || 1.55) - 1);
@@ -657,7 +656,6 @@ function analyzeMatch(ev, lg) {
   const hBoost = hElite.boost + hInfo.score;
   const aBoost = aElite.boost + aInfo.score;
 
-  // UPGRADE 3: Detecția automată a Derby-urilor / Meciurilor cu miză mare
   const isDerby = (hElite.boost >= 0.24 && aElite.boost >= 0.24) || (hBoost >= 0.22 && aBoost >= 0.22 && Math.abs(hBoost - aBoost) <= 0.16);
 
   const lgGoals = lg.gBase || 2.65;
@@ -667,7 +665,6 @@ function analyzeMatch(ev, lg) {
   let lamH = Math.max(0.52, Math.min(3.35, baseH + hBoost * 1.18 - aBoost * 0.44 - aInfo.defFactor * 0.45));
   let lamA = Math.max(0.40, Math.min(2.95, baseA + aBoost * 1.18 - hBoost * 0.44 - hInfo.defFactor * 0.45));
 
-  // Integrare linie Over/Under din piață dacă este disponibilă în ESPN
   const mkt = extractMarketOdds(comp);
   if (mkt && mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
     const modelTotal = lamH + lamA;
@@ -677,7 +674,6 @@ function analyzeMatch(ev, lg) {
     lamA = Math.max(0.40, Math.min(2.95, lamA * ratio));
   }
 
-  // Coeficientul Dixon-Coles specific ligii (mai puternic în derby-uri)
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
 
   let pH = 0, pD = 0, pA = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
@@ -714,7 +710,6 @@ function analyzeMatch(ev, lg) {
   p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
   p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
 
-  // Fuziune Bayesiană cu cotele 1X2 din piața ESPN (72% Model + 28% Piață)
   if (mkt && mkt.mktPH && mkt.mktPD && mkt.mktPA) {
     pH = pH * 0.72 + mkt.mktPH * 0.28;
     pD = pD * 0.72 + mkt.mktPD * 0.28;
@@ -848,7 +843,6 @@ function analyzeMatch(ev, lg) {
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  // Calcul Cornere cu bonus de Derby și presiune pe benzi
   const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 4) * 0.22;
   const mismatchPressure = Math.abs(lamH - lamA) * 0.65;
   const clubWingPush = (hElite.cornerPush + aElite.cornerPush) * 0.55;
@@ -866,7 +860,6 @@ function analyzeMatch(ev, lg) {
   else if (expCornersNum >= 8.5) cornerLine = "Peste 7.5";
   else cornerLine = "Sub 9.5";
 
-  // Calcul Cartonașe cu detecție Derby și tensiune competitivă
   const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.65);
   const frustrationFactor = ((hInfo.lossesCount + aInfo.lossesCount) - 3) * 0.20;
   const tacticalGrind = totalXG < 2.40 ? 0.35 : (totalXG > 3.05 ? -0.25 : 0);
@@ -900,7 +893,6 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// UPGRADE 5: Optimizator Combinatorial pentru Generatorul de Bilete (diversitate piețe + precizie pe cota țintă)
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
@@ -1100,21 +1092,66 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
-async function handleVipChatSubmit(event) {
-  event.preventDefault();
-  const input = document.getElementById("vipChatInput");
-  const txt = (input?.value || "").trim();
-  if(!txt) return;
+// ================= CHAT VIP CU JOE + GEMINI VISION (IMAGINI + CONTEXT MECIURI) =================
 
-  vipChatMessages.push({ sender: 'user', text: txt });
-  input.value = "";
-  updateChatUI();
+// Construiește rezumatul meciurilor zilei pentru ca Joe să știe cotele și xG-ul din aplicație
+function getMatchesContextString() {
+  const dayList = cacheByDate[selectedDate] || [];
+  if (!dayList.length) return "";
+  return dayList.slice(0, 18).map(m => 
+    `${m.home} vs ${m.away} (${m.league}): Pont=${m.pick} @${m.odd} (${m.prob}%), xG=${m.lamH}-${m.lamA}, Cornere=${m.cornerLine} (~${m.expCorners}), Cartonase=${m.cardLine} (~${m.expCards})`
+  ).join("\n");
+}
 
-  const loadingId = Date.now();
-  vipChatMessages.push({ sender: 'joe', text: "⚡ Joe interoghează serverul neural Supabase...", id: loadingId });
+// Comprimă automat imaginea (max 1100px) ca să se trimită instant la Supabase fără erori de mărime
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1100;
+        let w = img.width, h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) { h = Math.round(h * (MAX_DIM / w)); w = MAX_DIM; }
+          else { w = Math.round(w * (MAX_DIM / h)); h = MAX_DIM; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        resolve({ base64: dataUrl, mimeType: "image/jpeg" });
+      };
+      img.onerror = () => resolve({ base64: e.target.result, mimeType: file.type || "image/jpeg" });
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Funcție centralizată care trimite atât textul, cât și imaginea (dacă există) către Supabase
+async function sendToJoeBackend(promptText, imageObj = null) {
+  const loadingId = Date.now() + Math.random();
+  vipChatMessages.push({ 
+    sender: 'joe', 
+    text: imageObj ? "🔎 Joe scanează imaginea..." : "⚡ Joe analizează...", 
+    id: loadingId 
+  });
   updateChatUI();
 
   try {
+    const payload = {
+      prompt: promptText,
+      matchesContext: getMatchesContextString()
+    };
+
+    if (imageObj && imageObj.base64) {
+      payload.imageBase64 = imageObj.base64;
+      payload.mimeType = imageObj.mimeType || "image/jpeg";
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/joe-chat`, {
       method: "POST",
       headers: {
@@ -1122,7 +1159,7 @@ async function handleVipChatSubmit(event) {
         "Authorization": "Bearer " + SUPABASE_KEY,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ prompt: txt })
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
@@ -1130,7 +1167,6 @@ async function handleVipChatSubmit(event) {
 
     vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
     vipChatMessages.push({ sender: 'joe', text: aiReply });
-
   } catch (err) {
     vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
     vipChatMessages.push({ sender: 'joe', text: "Eroare de conexiune cu Supabase, șefu'!" });
@@ -1139,22 +1175,52 @@ async function handleVipChatSubmit(event) {
   updateChatUI();
 }
 
-function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if(!file) return;
+async function handleVipChatSubmit(event) {
+  event.preventDefault();
+  const input = document.getElementById("vipChatInput");
+  const txt = (input?.value || "").trim();
+  if (!txt) return;
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const imgSrc = e.target.result;
-    vipChatMessages.push({ sender: 'user', text: '📷 [A încărcat o poză cu biletul]', img: imgSrc });
+  vipChatMessages.push({ sender: 'user', text: txt });
+  input.value = "";
+  updateChatUI();
+
+  // Dacă utilizatorul a încărcat o imagine anterior în această sesiune, o trimitem ca context vizual!
+  await sendToJoeBackend(txt, lastUploadedImage);
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const input = document.getElementById("vipChatInput");
+  const customQuestion = (input?.value || "").trim();
+  if (input) input.value = "";
+
+  try {
+    const compressed = await compressImageFile(file);
+    lastUploadedImage = compressed;
+
+    const camBtn = document.getElementById("chatCamBtn");
+    if (camBtn) camBtn.classList.add("has-img");
+
+    vipChatMessages.push({ 
+      sender: 'user', 
+      text: customQuestion || '📷 Analizează această imagine scurt și la obiect:', 
+      img: compressed.base64 
+    });
     updateChatUI();
 
-    setTimeout(() => {
-      vipChatMessages.push({ sender: 'joe', text: "Am scanat biletul tău, șefu'! Analiza arată bine, dar ai grijă la meciurile cu echipe de pe primele locuri unde surprizele apar des. Fii disciplinat și mergem pe verde!" });
-      updateChatUI();
-    }, 1200);
-  };
-  reader.readAsDataURL(file);
+    await sendToJoeBackend(
+      customQuestion || "Analizează această imagine (bilet sau statistici) scurt și la obiect și dă-mi verdictul tău!",
+      compressed
+    );
+  } catch (e) {
+    vipChatMessages.push({ sender: 'joe', text: "Nu am putut citi fișierul imagine, șefu'. Încearcă altă captură!" });
+    updateChatUI();
+  } finally {
+    event.target.value = "";
+  }
 }
 
 function updateChatUI() {
@@ -1405,15 +1471,15 @@ function renderProjectView() {
 
   <div class="joe-chat-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (SECURE AI)</span>
+      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (VISION AI)</span>
       <span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
     </div>
     <div class="chat-messages" id="chatMessagesBox"></div>
     <form class="chat-form" onsubmit="handleVipChatSubmit(event)">
-      <label class="chat-file-btn" title="Încarcă poză cu biletul">
+      <label class="chat-file-btn ${lastUploadedImage ? 'has-img' : ''}" id="chatCamBtn" title="Încarcă poză cu biletul sau statisticile">
         📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
       </label>
-      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe orice...">
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe sau încarcă pe 📷...">
       <button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
     </form>
   </div>
