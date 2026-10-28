@@ -246,32 +246,28 @@ const LEAGUES = [
 ];
 
 // Matrice solidă de putere cluburi (Power Rating pe loturi) corectată pentru a elimina anomaliile de tip Monza vs Napoli
-const CLUB_POWER_CALIBRATED = [
-  // Elite & Forțe Europene
-  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
-  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
-  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
-  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
-  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
-  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
-  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
-  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
-  // Echipe Bune / Sub-Top
-  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
-  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
-  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
-  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
-  // SuperLiga României
-  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
-  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
-  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
-  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
-  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
-  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
-  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
-  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
-  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
-  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
+const CLUB_POWER = [
+  {k:"manchester city",p:0.65},{k:"real madrid",p:0.65},{k:"bayern",p:0.62},{k:"barcelona",p:0.60},
+  {k:"liverpool",p:0.58},{k:"inter",p:0.55},{k:"arsenal",p:0.55},{k:"paris saint-germain",p:0.55},{k:"psg",p:0.55},
+  {k:"leverkusen",p:0.48},{k:"napoli",p:0.52},{k:"atletico",p:0.45},{k:"atlético",p:0.45},{k:"dortmund",p:0.44},
+  {k:"juventus",p:0.44},{k:"milan",p:0.42},{k:"atalanta",p:0.45},{k:"chelsea",p:0.42},{k:"tottenham",p:0.38},
+  {k:"aston villa",p:0.36},{k:"newcastle",p:0.35},{k:"manchester united",p:0.30},{k:"leipzig",p:0.40},
+  {k:"sporting",p:0.50},{k:"benfica",p:0.48},{k:"porto",p:0.45},{k:"psv",p:0.50},{k:"feyenoord",p:0.38},{k:"ajax",p:0.36},
+  {k:"galatasaray",p:0.48},{k:"fenerbahce",p:0.45},{k:"fenerbahçe",p:0.45},{k:"besiktas",p:0.32},
+  {k:"olympiacos",p:0.38},{k:"paok",p:0.35},{k:"panathinaikos",p:0.32},{k:"aek",p:0.32},
+  {k:"lazio",p:0.35},{k:"roma",p:0.34},{k:"fiorentina",p:0.32},{k:"bologna",p:0.24},{k:"torino",p:0.15},
+  {k:"athletic",p:0.32},{k:"villarreal",p:0.30},{k:"real sociedad",p:0.28},{k:"betis",p:0.25},{k:"girona",p:0.22},
+  {k:"frankfurt",p:0.32},{k:"stuttgart",p:0.32},{k:"monaco",p:0.38},{k:"marseille",p:0.36},{k:"lille",p:0.32},{k:"lyon",p:0.28},
+  {k:"brighton",p:0.26},{k:"fulham",p:0.18},{k:"bournemouth",p:0.16},{k:"west ham",p:0.16},{k:"braga",p:0.30},
+  {k:"fcsb",p:0.35},{k:"cfr cluj",p:0.30},{k:"universitatea craiova",p:0.28},{k:"craiova",p:0.28},
+  {k:"universitatea cluj",p:0.22},{k:"u cluj",p:0.22},{k:"rapid",p:0.22},{k:"dinamo",p:0.15},{k:"sepsi",p:0.10},{k:"farul",p:0.10},
+  {k:"slobozia",p:-0.35},{k:"botoșani",p:-0.30},{k:"botosani",p:-0.30},{k:"buzău",p:-0.35},{k:"buzau",p:-0.35},{k:"poli iași",p:-0.28},{k:"ermannstadt",p:-0.15},
+  {k:"monza",p:-0.40},{k:"lecce",p:-0.38},{k:"venezia",p:-0.42},{k:"empoli",p:-0.30},{k:"cagliari",p:-0.30},
+  {k:"verona",p:-0.32},{k:"parma",p:-0.25},{k:"como",p:-0.22},{k:"genoa",p:-0.25},{k:"udinese",p:-0.10},{k:"sassuolo",p:-0.18},
+  {k:"valladolid",p:-0.40},{k:"las palmas",p:-0.35},{k:"leganes",p:-0.32},{k:"espanyol",p:-0.32},{k:"getafe",p:-0.20},{k:"alaves",p:-0.25},
+  {k:"southampton",p:-0.42},{k:"ipswich",p:-0.40},{k:"leicester",p:-0.35},{k:"wolves",p:-0.25},{k:"everton",p:-0.20},{k:"crystal palace",p:-0.12},
+  {k:"kiel",p:-0.40},{k:"bochum",p:-0.40},{k:"st. pauli",p:-0.35},{k:"heidenheim",p:-0.30},{k:"augsburg",p:-0.20},
+  {k:"le havre",p:-0.38},{k:"angers",p:-0.38},{k:"montpellier",p:-0.35},{k:"saint-etienne",p:-0.32},{k:"nantes",p:-0.25},{k:"auxerre",p:-0.22}
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
@@ -527,6 +523,38 @@ function copyCurrentTicket() {
   copyText([header, ...lines].join(nl));
 }
 
+// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC COREQTAT =================
+
+// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC CALIBRAT =================
+
+const CLUB_POWER_CALIBRATED = [
+  // Elite & Forțe Europene
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
+  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
+  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
+  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
+  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  // Echipe Bune / Sub-Top
+  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
+  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  // SuperLiga României
+  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
+  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
+  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
+  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
+  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
+  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
+  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
+];
+
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
   const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
@@ -563,17 +591,107 @@ function getClubBasePower(name) {
   return 0;
 }
 
+// Combină Clasamentul Real + Forma ultimelor 5 meciuri + Valoarea Lotului
 function extractTeamStrength(compObj, isHome, teamName) {
+  let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
+  let winsRate5 = 2.0, drawsRate5 = 1.4, lossesRate5 = 1.6, drawRatio = 0.26;
+  let hasRealRecord = false, hasRealForm = false;
+
   const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
+
+  if (compObj.records && Array.isArray(compObj.records)) {
+    const parseRec = (rec) => {
+      if (!rec || !rec.summary) return null;
+      const parts = rec.summary.split("-").map(x => parseInt(x, 10));
+      if (parts.length === 3 && !isNaN(parts[0])) {
+        const [w, d, l] = parts;
+        const tot = w + d + l;
+        if (tot > 0) return { w, d, l, tot, ppg: (w * 3 + d) / tot };
+      }
+      return null;
+    };
+
+    const totalRec = parseRec(compObj.records.find(r => r.type === "total") || compObj.records[0]);
+    const venueRec = parseRec(compObj.records.find(r =>
+      r.type === (isHome ? "home" : "road") ||
+      (r.name && r.name.toLowerCase() === (isHome ? "home" : "away"))
+    ));
+
+    if (totalRec) {
+      hasRealRecord = true;
+      const reliability = Math.min(1.0, totalRec.tot / (totalRec.tot + 4));
+      overallScore = (totalRec.ppg - 1.35) * 0.45 * reliability;
+      formDisplay = `${totalRec.w}V-${totalRec.d}E-${totalRec.l}Î`;
+      winsRate5 = (totalRec.w / totalRec.tot) * 5;
+      drawsRate5 = (totalRec.d / totalRec.tot) * 5;
+      lossesRate5 = (totalRec.l / totalRec.tot) * 5;
+      drawRatio = totalRec.d / totalRec.tot;
+    }
+
+    if (venueRec && venueRec.tot >= 2) {
+      const venueRel = Math.min(1.0, venueRec.tot / (venueRec.tot + 3));
+      const expectedVenuePpg = isHome ? 1.50 : 1.20;
+      venueScore = (venueRec.ppg - expectedVenuePpg) * 0.40 * venueRel;
+    }
+  }
+
+  if (compObj.form && typeof compObj.form === "string") {
+    const rawForm = compObj.form.toUpperCase().replace(/[^WDL]/g, "").slice(-5);
+    if (rawForm.length >= 3) {
+      hasRealForm = true;
+      let fW = 0, fD = 0, fL = 0;
+      formDisplay = formDisplay ? `${rawForm} (${formDisplay})` : rawForm;
+      const weights = [0.65, 0.80, 1.0, 1.20, 1.35];
+      for (let i = 0; i < rawForm.length; i++) {
+        const ch = rawForm[i];
+        if (ch === "W") fW++;
+        else if (ch === "D") fD++;
+        else if (ch === "L") fL++;
+        const w = weights[i + (5 - rawForm.length)] || 1.0;
+        formScore += (ch === "W" ? 0.065 : (ch === "D" ? 0.0 : -0.065)) * w;
+      }
+      const scale5 = 5 / rawForm.length;
+      if (hasRealRecord) {
+        winsRate5 = winsRate5 * 0.50 + (fW * scale5) * 0.50;
+        drawsRate5 = drawsRate5 * 0.50 + (fD * scale5) * 0.50;
+        lossesRate5 = lossesRate5 * 0.50 + (fL * scale5) * 0.50;
+      } else {
+        winsRate5 = fW * scale5;
+        drawsRate5 = fD * scale5;
+        lossesRate5 = fL * scale5;
+        drawRatio = fD / rawForm.length;
+      }
+    }
+  }
+
+  if (!hasRealRecord && !hasRealForm && clubPower !== 0) {
+    winsRate5 = Math.max(0.8, Math.min(4.2, 2.2 + clubPower * 3.0));
+    lossesRate5 = Math.max(0.5, Math.min(4.0, 1.6 - clubPower * 2.5));
+    drawRatio = Math.max(0.16, Math.min(0.34, 0.26 - Math.abs(clubPower) * 0.12));
+  }
+
+  const hasData = hasRealRecord || hasRealForm || clubPower !== 0;
+  if (!formDisplay) formDisplay = clubPower !== 0 ? "Rating Lot Activ" : "Echilibrat";
+
+  let tablePerf = venueScore !== 0 ? (overallScore * 0.65 + venueScore * 0.35) : overallScore;
+  let seasonStrength = hasRealRecord ? (hasRealForm ? tablePerf * 0.65 + formScore * 0.35 : tablePerf) : formScore;
+
+  let finalScore = seasonStrength;
+  if (clubPower !== 0 && (hasRealRecord || hasRealForm)) {
+    finalScore = seasonStrength * 0.50 + clubPower * 0.50;
+  } else if (clubPower !== 0) {
+    finalScore = clubPower * 0.85;
+  }
+
   return {
-    score: clubPower,
+    score: finalScore,
     clubPower,
-    hasData: true,
-    winsCount: 2.5,
-    drawsCount: 1.2,
-    lossesCount: 1.3,
-    drawRatio: 0.25,
-    formDisplay: clubPower !== 0 ? "Power Matrix Activ" : "Standard"
+    winsCount: +winsRate5.toFixed(2),
+    drawsCount: +drawsRate5.toFixed(2),
+    lossesCount: +lossesRate5.toFixed(2),
+    drawRatio,
+    hasData,
+    formDisplay
   };
 }
 
@@ -599,24 +717,27 @@ function poissonOverProb(line, lam) {
   return Math.max(0.05, Math.min(0.95, 1 - cdf));
 }
 
+// Alege pragul optim de cornere/cartonașe (sweet-spot în jur de 64%-68% siguranță, variind dinamic pe fiecare meci)
 function selectOptimalStatLine(expVal, overLines, underLines) {
   const options = [];
   for (let l of overLines) {
     const p = poissonOverProb(l, expVal);
-    if (p >= 0.55 && p <= 0.80) {
-      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p });
+    if (p >= 0.55 && p <= 0.78) {
+      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
+      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus });
     }
   }
   for (let l of underLines) {
     const p = 1 - poissonOverProb(l, expVal);
-    if (p >= 0.57 && p <= 0.80) {
-      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * 0.98 });
+    if (p >= 0.57 && p <= 0.78) {
+      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
+      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus * 0.98 });
     }
   }
   if (!options.length) {
     const midLine = overLines[1] || overLines[0];
     const p = poissonOverProb(midLine, expVal);
-    return p >= 0.50 
+    return p >= 0.50
       ? { label: `Peste ${midLine}`, prob: Math.round(p * 100) }
       : { label: `Sub ${midLine + 1}`, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
   }
@@ -645,6 +766,7 @@ function calculateSmartStake(bankroll, m) {
     else if (m.prob >= 55) pct = 0.05;
     else pct = 0.04;
   }
+  if (m.lowData) pct = Math.min(pct, 0.03);
   const rawStake = bankroll * pct;
   return {
     stake: Math.max(10, Math.round(rawStake / 5) * 5),
@@ -652,7 +774,6 @@ function calculateSmartStake(bankroll, m) {
   };
 }
 
-// ================= ANALIZĂ MECI CU SIGURANȚĂ MAXIMĂ =================
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -665,16 +786,25 @@ function analyzeMatch(ev, lg) {
 
   const hInfo = extractTeamStrength(home, true, hName);
   const aInfo = extractTeamStrength(away, false, aName);
+  const lowData = !hInfo.hasData && !aInfo.hasData;
 
   const hPower = hInfo.score;
   const aPower = aInfo.score;
   const strengthDiff = hPower - aPower;
 
-  const isDerby = Math.abs(strengthDiff) <= 0.12 && hPower >= 0.35;
+  const isDerby = hPower >= 0.22 && aPower >= 0.22 && Math.abs(strengthDiff) <= 0.16;
 
+  // Avantajul terenului propriu: 55% pentru gazde în meciurile normale, redus doar când oaspeții sunt net superiori
   const lgGoals = lg.gBase || 2.62;
-  let lamH = Math.max(0.40, Math.min(3.40, (lgGoals * 0.52) + strengthDiff * 1.35));
-  let lamA = Math.max(0.40, Math.min(3.40, (lgGoals * 0.48) - strengthDiff * 1.35));
+  const homeAdvShare = strengthDiff < -0.35 ? 0.485 : (strengthDiff < -0.18 ? 0.515 : (strengthDiff > 0.25 ? 0.565 : 0.550));
+  const avgDrawRatio = (hInfo.drawRatio + aInfo.drawRatio) / 2;
+
+  // Modificator dinamic de ritm ca totalXG să difere realist de la un meci la altul
+  const paceMod = (0.26 - avgDrawRatio) * 0.55 + (hPower + aPower) * 0.20 + Math.abs(strengthDiff) * 0.25;
+  const expectedMatchGoals = Math.max(2.05, Math.min(3.45, lgGoals + paceMod));
+
+  let lamH = Math.max(0.42, Math.min(3.30, expectedMatchGoals * homeAdvShare + strengthDiff * 0.92));
+  let lamA = Math.max(0.38, Math.min(3.10, expectedMatchGoals * (1 - homeAdvShare) - strengthDiff * 0.88));
 
   const mkt = extractMarketOdds(comp);
   if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
@@ -682,11 +812,11 @@ function analyzeMatch(ev, lg) {
     if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
       targetTotal = targetTotal * 0.55 + mkt.ouLine * 0.45;
     }
-    const mktShareH = Math.max(0.12, Math.min(0.88, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
+    const mktShareH = Math.max(0.14, Math.min(0.86, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
     const modShareH = lamH / (lamH + lamA);
-    const finalShareH = modShareH * 0.35 + mktShareH * 0.65;
-    lamH = Math.max(0.35, Math.min(3.40, targetTotal * finalShareH));
-    lamA = Math.max(0.35, Math.min(3.40, targetTotal * (1 - finalShareH)));
+    const finalShareH = modShareH * 0.45 + mktShareH * 0.55;
+    lamH = Math.max(0.38, Math.min(3.35, targetTotal * finalShareH));
+    lamA = Math.max(0.35, Math.min(3.25, targetTotal * (1 - finalShareH)));
   }
 
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
@@ -714,6 +844,7 @@ function analyzeMatch(ev, lg) {
       if (h > a && goals >= 2) p1_O15 += rawP;
       if (a > h && goals >= 2) p2_O15 += rawP;
       if (h >= a && goals >= 2) p1X_O15 += rawP;
+      if (a >= a && goals >= 2) {} // păstrăm simetria mai jos
       if (a >= h && goals >= 2) pX2_O15 += rawP;
       if (h >= a && goals <= 3) p1X_U35 += rawP;
       if (a >= h && goals <= 3) pX2_U35 += rawP;
@@ -728,42 +859,59 @@ function analyzeMatch(ev, lg) {
 
   const p1X = pH + pD;
   const pX2 = pA + pD;
+  const nonZeroDraw = Math.max(0, pD - p00);
+  const pPSF1 = Math.min(0.85, pH + nonZeroDraw * 0.34 + pA * 0.06);
+  const pPSF2 = Math.min(0.83, pA + nonZeroDraw * 0.34 + pH * 0.06);
+
   const totalXG = lamH + lamA;
   const xgDiff = lamH - lamA;
-  const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
 
   const candidates = [];
+  const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
 
   const addCandidate = (name, mktType, prob, realOdd, safetyBonus = 1.0) => {
     const fairOdd = 1 / Math.max(0.15, prob);
     const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.95 * fairOdd).toFixed(2);
+    // Păstrăm doar pronosticurile cu cotă jucabilă (>= 1.25) și șanse reale ridicate (>= 55%)
     if (displayOdd < 1.25 || displayOdd > 2.25 || prob < 0.55) return;
 
     const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
+    // Ordonăm direct după probabilitatea cea mai mare de reușită!
     const valueScore = prob * safetyBonus;
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
-  // Prioritate maximă pe siguranță (probabilitatea cea mai mare)
-  if (pO15 >= 0.62 && pO15 <= 0.85) {
+  // 1. Peste 1.5 Goluri (Dacă ambele echipe au xG >= 1.00, primește prioritate maximă contra surprizelor!)
+  if (pO15 >= 0.62 && pO15 <= 0.79) {
     addCandidate("Peste 1.5 Goluri", "O15", pO15, null, bothTeamsDangerous ? 1.05 : 1.01);
   }
+
+  // 2. Șansă Dublă 1X / X2 (Doar când adversarul nu are xG mare sau diferența de valoare e clară)
   if (xgDiff >= 0.08 && p1X >= 0.62 && p1X <= 0.78) {
     addCandidate("Șansă Dublă 1X", "DC", p1X, null, bothTeamsDangerous ? 0.95 : 1.00);
   }
   if (xgDiff <= -0.08 && pX2 >= 0.62 && pX2 <= 0.78) {
     addCandidate("Șansă Dublă X2", "DC", pX2, null, bothTeamsDangerous ? 0.95 : 1.00);
   }
+
+  // 3. Combo-uri de siguranță (Intrate în joc când 1X/X2 simplu sare de 78% și are cotă prea mică)
   if (xgDiff >= 0.15 && p1X_U35 >= 0.62 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.00);
   if (xgDiff <= -0.15 && pX2_U35 >= 0.62 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.00);
   if (xgDiff >= 0.25 && p1X_O15 >= 0.63 && lamA < 1.02) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.00);
   if (xgDiff <= -0.25 && pX2_O15 >= 0.63 && lamH < 1.02) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.00);
+
+  // 4. Piețe principale de Goluri (Sub 2.5, Peste 2.5, GG)
   if (pU25 >= 0.60 && totalXG <= 2.25) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.01);
   if (pO25 >= 0.58 && totalXG >= 2.65) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.01);
   if (pGG >= 0.58 && bothTeamsDangerous) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.01);
+
+  // 5. Soliști & Combo Favorită Puternică (Când o echipă domină categoric meciul)
   if (pH >= 0.56 && pH <= 0.76) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.01);
   if (pA >= 0.56 && pA <= 0.76) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.01);
+  if (pH >= 0.65 && p1_O15 >= 0.60) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.00);
+  if (pA >= 0.65 && p2_O15 >= 0.60) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.00);
 
+  // Fallback: alegem matematic varianta cu cea mai mare probabilitate dintre Peste 1.5, 1X și X2
   if (!candidates.length) {
     const basicOpts = [
       { name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15 },
@@ -783,6 +931,7 @@ function analyzeMatch(ev, lg) {
 
   candidates.sort((a, b) => b.valueScore - a.valueScore);
   const best = candidates[0];
+;
 
   const getStat = (compObj, names) => {
     if (!compObj.statistics) return null;
@@ -803,12 +952,28 @@ function analyzeMatch(ev, lg) {
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  const expCornersNum = Math.max(7.2, Math.min(12.6, (lg.cBase || 9.5) + (totalXG - 2.6) * 1.3));
+  // Cornere dinamice: depind de ritmul meciului, presiunea favoritei, stilul ofensiv și derby
+  const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 3.8) * 0.30;
+  const openPlayFactor = (0.26 - avgDrawRatio) * 2.5;
+  const mismatchPressure = Math.abs(lamH - lamA) * 0.75;
+  const derbyCornerPush = isDerby ? 0.55 : 0;
+
+  const expCornersNum = Math.max(7.2, Math.min(12.6,
+    (lg.cBase || 9.5) + (totalXG - (lg.gBase || 2.62)) * 1.45 + mismatchPressure + offensiveMomentum + openPlayFactor + derbyCornerPush
+  ));
   const expCorners = expCornersNum.toFixed(1);
   const bestCornerOpt = selectOptimalStatLine(expCornersNum, [7.5, 8.5, 9.5], [9.5, 10.5]);
   const cornerLine = `${bestCornerOpt.label} (${bestCornerOpt.prob}%)`;
 
-  const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
+  // Cartonașe dinamice: depind de echilibrul meciului, rata de egaluri/înfrângeri și tensiunea de derby
+  const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.75);
+  const frustrationFactor = ((hInfo.lossesCount + aInfo.lossesCount) - 2.8) * 0.25;
+  const drawFriction = (avgDrawRatio - 0.25) * 1.8;
+  const derbyCardPush = isDerby ? 0.70 : 0;
+
+  const expCardsNum = Math.max(2.6, Math.min(6.4,
+    (lg.kBase || 4.3) + (closeness - 0.50) * 1.25 + frustrationFactor + drawFriction + derbyCardPush
+  ));
   const expCards = expCardsNum.toFixed(1);
   const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
   const cardLine = `${bestCardOpt.label} (${bestCardOpt.prob}%)`;
@@ -819,44 +984,59 @@ function analyzeMatch(ev, lg) {
   return {
     id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
-    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: "Power Matrix", aForm: "Power Matrix",
+    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
     lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
-    isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
+    isDerby, lowData, hasMktOdds: !!(mkt && (mkt.mktPH || mkt.ouLine)),
     edgePct: best.edgePct || 0,
     pick: best.name, mktType: best.mktType || "OTHER", prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
-    tipsterScore: best.valueScore,
+    tipsterScore: best.valueScore * (lowData ? 0.82 : 1.0),
     expCorners, cornerLine, actualCorners,
     expCards, cardLine, actualCards,
     probs: { p1: Math.round(pH*100), pX: Math.round(pD*100), p2: Math.round(pA*100), o25: Math.round(pO25*100), gg: Math.round(pGG*100), o15: Math.round(pO15*100) }
   };
 }
 
-// ================= GENERATOR BILETE (MAXIM 10 MECIURI) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
   const picks = [];
   const usedIds = new Set();
+  const marketCounts = {};
   let tot = 1.0;
 
-  // Limită strictă la maxim 10 meciuri pe bilet
-  while (picks.length < 10 && tot < targetOdd * 0.94 && sorted.length > picks.length) {
+  while (picks.length < 11 && tot < targetOdd * 0.94) {
+    const remainingNeeded = targetOdd / tot;
     let bestCandidate = null;
     let bestScore = -999;
+
     for (let m of sorted) {
       if (usedIds.has(m.id)) continue;
-      if (m.tipsterScore > bestScore) {
-        bestScore = m.tipsterScore;
+      const mCount = marketCounts[m.mktType] || 0;
+      const diversityPenalty = mCount >= 2 ? 0.78 : (mCount === 1 ? 0.92 : 1.05);
+
+      let targetFit = 1.0;
+      if (remainingNeeded <= 2.25) {
+        const dist = Math.abs(m.odd - remainingNeeded);
+        targetFit = Math.max(0.5, 1.35 - dist * 0.65);
+      }
+
+      const candidateScore = m.tipsterScore * diversityPenalty * targetFit;
+      if (candidateScore > bestScore) {
+        bestScore = candidateScore;
         bestCandidate = m;
       }
     }
+
     if (!bestCandidate) break;
     picks.push(bestCandidate);
     usedIds.add(bestCandidate.id);
+    marketCounts[bestCandidate.mktType] = (marketCounts[bestCandidate.mktType] || 0) + 1;
     tot *= bestCandidate.odd;
   }
+
   return { picks, totalOdd: tot };
 }
+
 
 async function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -874,8 +1054,7 @@ async function fetchWithTimeout(url, timeoutMs = 8000) {
 async function loadMatchesForDate(iso) {
   renderSubBars();
   if (cacheByDate[iso]) { renderViewport(); return; }
-  const viewport = document.getElementById("viewport");
-  if(viewport) viewport.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează cotele și valoarea loturilor pentru <b>${iso}</b>...</div>`;
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează cotele și valoarea loturilor pentru <b>${iso}</b>...</div>`;
   const ymd = iso.replace(/-/g, "");
   const res = await Promise.all(LEAGUES.map(l =>
     fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`)
@@ -908,8 +1087,7 @@ async function loadMatchesForDate(iso) {
 async function loadEuropaMatches() {
   renderSubBars();
   if (europaMatches.length) { renderViewport(); return; }
-  const viewport = document.getElementById("viewport");
-  if(viewport) viewport.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
+  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
   const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
   const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
     fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
@@ -946,11 +1124,9 @@ async function saveToDB() {
       headers: sbHeaders(),
       body: JSON.stringify({ data: project })
     });
-    const liveClock = document.getElementById("liveClock");
-    if(liveClock) liveClock.innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
+    document.getElementById("liveClock").innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
   } catch (e) {
-    const liveClock = document.getElementById("liveClock");
-    if(liveClock) liveClock.innerText = "● Sync Error";
+    document.getElementById("liveClock").innerText = "● Sync Error";
   }
 }
 
@@ -961,8 +1137,7 @@ function recalcBankroll(shouldSave = true) {
     else if (bet.status === "LOSS") b -= bet.stake;
   });
   project.bankroll = +b.toFixed(2);
-  const topBankroll = document.getElementById("topBankroll");
-  if(topBankroll) topBankroll.innerText = project.bankroll.toFixed(2);
+  document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
   if (shouldSave) saveToDB();
 }
 
@@ -973,7 +1148,7 @@ function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
   if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
   if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
   if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && aHT !== null && aHT > hHT);
   if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
   if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
   if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
@@ -1047,8 +1222,200 @@ function toggleDrawer(id) {
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
+function getMatchesContextString() {
+  const dayList = cacheByDate[selectedDate] || [];
+  if (!dayList.length) return "";
+  return dayList.slice(0, 18).map(m => 
+    `${m.home} vs ${m.away} (${m.league}): Pont=${m.pick} @${m.odd} (${m.prob}%), xG=${m.lamH}-${m.lamA}, Cornere=${m.cornerLine} (~${m.expCorners}), Cartonase=${m.cardLine} (~${m.expCards})`
+  ).join("\n");
+}
+
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1100;
+        let w = img.width, h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) { h = Math.round(h * (MAX_DIM / w)); w = MAX_DIM; }
+          else { w = Math.round(w * (MAX_DIM / h)); h = MAX_DIM; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        resolve({ base64: dataUrl, mimeType: "image/jpeg" });
+      };
+      img.onerror = () => resolve({ base64: e.target.result, mimeType: file.type || "image/jpeg" });
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendToJoeBackend(promptText, imageObj = null) {
+  const loadingId = Date.now() + Math.random();
+  vipChatMessages.push({ 
+    sender: 'joe', 
+    text: imageObj ? "🔎 Joe scanează imaginea..." : "⚡ Joe analizează...", 
+    id: loadingId 
+  });
+  updateChatUI();
+
+  try {
+    const payload = {
+      prompt: promptText,
+      matchesContext: getMatchesContextString()
+    };
+
+    if (imageObj && imageObj.base64) {
+      payload.imageBase64 = imageObj.base64;
+      payload.mimeType = imageObj.mimeType || "image/jpeg";
+    }
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/joe-chat`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    const aiReply = data.reply || "Băiatu', serverul neural n-a returnat niciun răspuns. Mai încearcă o dată!";
+
+    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
+    vipChatMessages.push({ sender: 'joe', text: aiReply });
+  } catch (err) {
+    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
+    vipChatMessages.push({ sender: 'joe', text: "Eroare de conexiune cu Supabase, șefu'!" });
+  }
+
+  updateChatUI();
+}
+
+async function handleVipChatSubmit(event) {
+  event.preventDefault();
+  const input = document.getElementById("vipChatInput");
+  const txt = (input?.value || "").trim();
+  if (!txt) return;
+
+  vipChatMessages.push({ sender: 'user', text: txt });
+  input.value = "";
+  updateChatUI();
+
+  await sendToJoeBackend(txt, lastUploadedImage);
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const input = document.getElementById("vipChatInput");
+  const customQuestion = (input?.value || "").trim();
+  if (input) input.value = "";
+
+  try {
+    const compressed = await compressImageFile(file);
+    lastUploadedImage = compressed;
+
+    const camBtn = document.getElementById("chatCamBtn");
+    if (camBtn) camBtn.classList.add("has-img");
+
+    vipChatMessages.push({ 
+      sender: 'user', 
+      text: customQuestion || '📷 Analizează această imagine scurt și la obiect:', 
+      img: compressed.base64 
+    });
+    updateChatUI();
+
+    await sendToJoeBackend(
+      customQuestion || "Analizează această imagine (bilet sau statistici) scurt și la obiect și dă-mi verdictul tău!",
+      compressed
+    );
+  } catch (e) {
+    vipChatMessages.push({ sender: 'joe', text: "Nu am putut citi fișierul imagine, șefu'. Încearcă altă captură!" });
+    updateChatUI();
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function updateChatUI() {
+  const box = document.getElementById("chatMessagesBox");
+  if(!box) return;
+  box.innerHTML = vipChatMessages.map(m => {
+    let imgHtml = m.img ? `<br><img src="${m.img}" class="preview-thumb">` : '';
+    return `<div class="chat-msg ${m.sender}">${m.sender === 'joe' ? '🤖 <b>Joe:</b> ' : '👤 <b>Tu:</b> '}${m.text}${imgHtml}</div>`;
+  }).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+function selectTicketOdd(odd) {
+  if (isGeneratingTicket) return;
+  targetTicketOdds = odd;
+  isGeneratingTicket = true;
+  renderViewport();
+
+  setTimeout(() => {
+    const stEl = document.getElementById("neuralStepText");
+    if (stEl) stEl.innerText = "🧠 Rulare model Poisson + Dixon-Coles...";
+  }, 360);
+
+  setTimeout(() => {
+    const stEl = document.getElementById("neuralStepText");
+    if (stEl) stEl.innerText = "🎯 Optimizare combinatorială cotă ~" + odd + "...";
+  }, 720);
+
+  setTimeout(() => {
+    isGeneratingTicket = false;
+    renderViewport();
+  }, 1100);
+}
+
+function renderSubBars() {
+  const sb = document.getElementById("subBars");
+  const searchBox = document.getElementById("searchContainer");
+  
+  if (currentNav === "admin") { 
+    sb.style.display = "none"; 
+    searchBox.style.display = "none";
+    return; 
+  }
+  
+  if (currentNav === "meciuri" || currentNav === "europa") {
+    searchBox.style.display = "block";
+  } else {
+    searchBox.style.display = "none";
+  }
+
+  const dates = getDatesList();
+  if (!selectedDate) selectedDate = dates[1].iso;
+  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
+  
+  if (currentNav === "europa") {
+    sb.style.display = "block";
+    dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
+    lBar.innerHTML = ""; return;
+  }
+  
+  sb.style.display = "block";
+  dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
+  if (currentNav === "proiect" || currentNav === "bilete") { lBar.innerHTML = ""; return; }
+  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
+  lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
+    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
+}
+
 function renderMatchCard(m) {
   const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
+  
   let cardStatusClass = "";
   if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
     const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT);
@@ -1061,10 +1428,18 @@ function renderMatchCard(m) {
   const joeBtnHtml = hasJoeAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>` : "";
 
   const derbyBadge = m.isDerby ? ` · <span style="color:var(--neon-gold);font-weight:800;">🔥 DERBY</span>` : "";
+  const lowDataBadge = m.lowData ? ` · <span style="color:var(--neon-red);">⚠️ Istoric limitat</span>` : "";
   const edgeBadge = (m.edgePct && m.edgePct > 0) ? ` · <span style="color:var(--neon-cyan);">📡 +${m.edgePct}% EV</span>` : "";
 
+  const cornersDisplay = m.actualCorners !== null 
+    ? `<b style="color:var(--neon-cyan);">${m.actualCorners} în meci</b> (Linie: ${m.cornerLine} · Est: ${m.expCorners})` 
+    : `<b style="color:var(--neon-cyan);">${m.cornerLine}</b> (Medie est: ~${m.expCorners})`;
+  const cardsDisplay = m.actualCards !== null 
+    ? `<b style="color:var(--neon-gold);">${m.actualCards} în meci</b> (Linie: ${m.cardLine} · Est: ${m.expCards})` 
+    : `<b style="color:var(--neon-gold);">${m.cardLine}</b> (Medie est: ~${m.expCards})`;
+
   return `<div class="cyber-card ${cardStatusClass}">
-    <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}${derbyBadge}</span><span class="status-badge ${stClass}">${stText}</span></div>
+    <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}${derbyBadge}${lowDataBadge}</span><span class="status-badge ${stClass}">${stText}</span></div>
     <div class="teams-container"><div class="team-name">${m.home}</div><div class="score-display">${center}</div><div class="team-name away">${m.away}</div></div>
     <div class="prediction-panel"><div><div class="pred-main">⭐ ${m.pick}</div><div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}${edgeBadge}</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>
     <div class="action-bar">
@@ -1078,8 +1453,9 @@ function renderMatchCard(m) {
         <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
       </div>
       <div style="line-height:1.7;">
-        🚩 Cornere: <b style="color:var(--neon-cyan);">${m.cornerLine}</b> (Medie est: ~${m.expCorners})<br>
-        🟨 Cartonașe: <b style="color:var(--neon-gold);">${m.cardLine}</b> (Medie est: ~${m.expCards})
+        📈 Clasament & Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b><br>
+        🚩 Cornere: ${cornersDisplay}<br>
+        🟨 Cartonașe: ${cardsDisplay}
       </div>
     </div>
   </div>`;
@@ -1103,15 +1479,19 @@ function renderAdminView() {
 
   return `<div class="cyber-card" style="border-color:var(--neon-gold);">
     <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:12px;">👑 CREARE CONT UTILIZATOR</div>
+    
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Nume utilizator (ex: alex)</label>
     <input type="text" id="newUsername" class="cyber-input" placeholder="ex: alex">
+
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă temporară</label>
     <input type="text" id="newPassword" class="cyber-input" placeholder="ex: parola123">
+
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Tip Pachet</label>
     <select id="newRole" class="cyber-input" style="background:#070d19;">
       <option value="standard">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
       <option value="vip" selected>⚡ VIP + JOE (Acces Total)</option>
     </select>
+
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Durată / Valabilitate</label>
     <select id="newDuration" class="cyber-input" style="background:#070d19;">
       <option value="trial">Test 2 Zile</option>
@@ -1120,8 +1500,10 @@ function renderAdminView() {
       <option value="6_months">6 Luni</option>
       <option value="1_year">1 An</option>
     </select>
+
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă Master Admin</label>
     <input type="password" id="adminSecretInput" class="cyber-input" placeholder="Parola ta secretă de admin">
+
     <button class="login-btn" onclick="createNewUser()">+ SALVEAZĂ UTILIZATORUL</button>
     <div id="formResultMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: bold; word-break: break-all;"></div>
   </div>
@@ -1144,7 +1526,7 @@ function renderProjectView() {
   const bestOfDay = candidates[0];
 
   const quotes = net >= 0 
-    ? `"Suntem pe verde, șefu'! Modelul matematic combină Power Rating-ul cluburilor cu cotele din piață."`
+    ? `"Suntem pe verde, șefu'! Modelul matematic se bazează strict pe clasamentele reale și distribuția Dixon-Coles."`
     : `"Capul sus! Gestionarea riguroasă a mizei ne protejează banca și ne ține în joc pe termen lung."`;
 
   let joeAutoPickHtml = "";
@@ -1234,6 +1616,7 @@ function renderProjectView() {
   setTimeout(updateChatUI, 50);
 }
 
+// ================= STATISTICI DE PERFORMANȚĂ 100% REALE =================
 function computeRealPerformanceStats(dayPool) {
   const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
   const wonBets = settledBets.filter(b => b.status === "WIN").length;
@@ -1277,7 +1660,7 @@ function renderTicketsView() {
 
   const realStats = computeRealPerformanceStats(dayPool);
   const potentialWin = +(customBudget * tot).toFixed(2);
-  const btns = [2, 5, 10, 20, 50, 100, 250, 500].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
+  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
   
   let contentBody = "";
   if (isGeneratingTicket) {
@@ -1296,7 +1679,7 @@ function renderTicketsView() {
     </div>`).join("");
 
     contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-      <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+      <span>Cotă Totală: <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
       <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
     </div>
     ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
@@ -1323,7 +1706,7 @@ function renderTicketsView() {
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">EMPIRICAL BAYES</div></div>
     </div>
   </div>`;
 }
@@ -1331,7 +1714,6 @@ function renderTicketsView() {
 function renderViewport() {
   renderSubBars();
   const vp = document.getElementById("viewport");
-  if(!vp) return;
   if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
   if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
   if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
