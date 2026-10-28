@@ -1,4 +1,38 @@
-// ================= PARTEA 2: RATINGURI REALE CLUBURI + MOTOR ANALIZĂ CALIBRAT PE COTE (FIXED) =================
+// ================= CONFIGURARE SUPABASE (FĂRĂ PAROLE ÎN CLIENT) =================
+const SUPABASE_URL = "https://edlfqiruegrmxcuubmil.supabase.co";
+const SUPABASE_KEY = "sb_publishable_b8npaox4JSEHkQzGC-SAjg_UHm_bOBE";
+const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1/create-user-admin";
+
+const isSupabaseConfigured = () => SUPABASE_URL.startsWith("https://") && SUPABASE_KEY.length > 20;
+
+function sbHeaders() {
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
+}
+
+let usersList = [];
+let currentUser = null;
+let adminSessionPass = null;
+
+const LEAGUES = [
+  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
+  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
+  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
+  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
+  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
+  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
+  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
+  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
+  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
+  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
+  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
+];
 
 const CLUB_POWER = [
   {k:"manchester city",p:0.55},{k:"real madrid",p:0.55},{k:"bayern",p:0.54},{k:"barcelona",p:0.52},
@@ -23,6 +57,291 @@ const CLUB_POWER = [
   {k:"kiel",p:-0.28},{k:"bochum",p:-0.28},{k:"st. pauli",p:-0.24},{k:"heidenheim",p:-0.20},{k:"augsburg",p:-0.14},
   {k:"le havre",p:-0.26},{k:"angers",p:-0.26},{k:"montpellier",p:-0.24},{k:"saint-etienne",p:-0.22},{k:"nantes",p:-0.18},{k:"auxerre",p:-0.16}
 ];
+
+let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
+let customBudget = 100;
+let isGeneratingTicket = false;
+let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
+let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
+
+let vipChatMessages = [
+  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
+];
+let lastUploadedImage = null;
+
+const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
+const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
+
+function hasJoeAccess() {
+  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
+}
+
+function isAdmin() {
+  return currentUser && currentUser.role === "admin";
+}
+
+function applyRolePermissions() {
+  const joeBtn = document.getElementById("nav-proiect");
+  const bankBtn = document.getElementById("topBankBtn");
+  const adminBtn = document.getElementById("nav-admin");
+  const titleEl = document.getElementById("hudAppTitle");
+
+  if (hasJoeAccess()) {
+    joeBtn.style.display = "flex";
+    bankBtn.style.display = "block";
+    titleEl.innerText = "JOE PREZICE";
+  } else {
+    joeBtn.style.display = "none";
+    bankBtn.style.display = "none";
+    titleEl.innerText = "JOE PREZICE";
+    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
+  }
+
+  adminBtn.style.display = isAdmin() ? "flex" : "none";
+}
+
+// ================= AUTENTIFICARE 100% SERVER-SIDE (RPC SUPABASE) =================
+async function attemptLogin() {
+  const u = document.getElementById("loginUser").value.trim().toLowerCase();
+  const p = document.getElementById("loginPass").value.trim();
+  const errEl = document.getElementById("loginErr");
+  const btnEl = document.getElementById("loginSubmitBtn");
+  errEl.style.display = "none";
+
+  if (!u || !p) {
+    errEl.innerText = "Introdu utilizatorul și parola!";
+    errEl.style.display = "block";
+    return;
+  }
+
+  if (btnEl) btnEl.innerText = "⏳ SE VERIFICĂ...";
+
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_username: u, p_password: p })
+    });
+
+    const data = await r.json();
+    if (btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+
+    if (!r.ok || !data || !data.ok) {
+      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
+      errEl.style.display = "block";
+      return;
+    }
+
+    currentUser = {
+      username: data.username,
+      role: data.role,
+      expires_at: data.expires_at
+    };
+
+    if (currentUser.role === "admin") {
+      adminSessionPass = p;
+      sessionStorage.setItem("xmts_adm_token", p);
+      await fetchAdminUsersList();
+    }
+
+    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
+    document.getElementById("loginScreen").style.display = "none";
+    applyRolePermissions();
+    renderViewport();
+  } catch (e) {
+    if (btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+    errEl.innerText = "Eroare de conexiune cu serverul!";
+    errEl.style.display = "block";
+  }
+}
+
+async function fetchAdminUsersList() {
+  if (!isAdmin() || !adminSessionPass) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
+    });
+    if (r.ok) {
+      const list = await r.json();
+      if (Array.isArray(list)) usersList = list;
+    }
+  } catch (e) { console.error(e); }
+}
+
+function logoutUser() {
+  currentUser = null;
+  adminSessionPass = null;
+  usersList = [];
+  localStorage.removeItem("xmts_logged_user");
+  sessionStorage.removeItem("xmts_adm_token");
+  document.getElementById("loginUser").value = "";
+  document.getElementById("loginPass").value = "";
+  document.getElementById("loginScreen").style.display = "flex";
+}
+
+function calculateExpiresAt(duration) {
+  const now = new Date();
+  if (duration === 'trial') now.setDate(now.getDate() + 2);
+  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
+  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
+  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
+  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
+}
+
+function formatExpiryDate(isoStr) {
+  if (!isoStr) return "Permanent / Nelimitat";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+async function createNewUser() {
+  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
+  const password = document.getElementById("newPassword").value.trim();
+  const tier = document.getElementById("newRole").value;
+  const duration = document.getElementById("newDuration").value;
+  const adminSecret = document.getElementById("adminSecretInput").value.trim();
+  const resultMsg = document.getElementById("formResultMsg");
+
+  if (!rawUsername || !password || !adminSecret) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
+    }
+    return;
+  }
+
+  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
+  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+  const expiresAt = calculateExpiresAt(duration);
+
+  if(resultMsg) {
+    resultMsg.style.color = "var(--neon-gold)";
+    resultMsg.innerText = "Se creează contul securizat și se setează abonamentul...";
+  }
+
+  try {
+    const response = await fetch(SUPABASE_EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, tier, duration, adminSecret })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
+
+    if (isSupabaseConfigured() && adminSessionPass) {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "upsert",
+          p_target_user: rawUsername,
+          p_target_pass: password,
+          p_target_role: mappedRole,
+          p_target_expires: expiresAt
+        })
+      });
+      await fetchAdminUsersList();
+    }
+
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-green)";
+      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
+    }
+    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
+    setTimeout(() => { renderViewport(); }, 1000);
+
+  } catch (err) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Eroare: " + err.message;
+    }
+  }
+}
+
+async function removeUser(uname) {
+  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
+  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
+
+  if (isSupabaseConfigured() && adminSessionPass) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "delete",
+          p_target_user: uname
+        })
+      });
+      await fetchAdminUsersList();
+    } catch (e) { console.error(e); }
+  }
+  renderViewport();
+}
+
+function copyText(txt) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
+  } else {
+    fallbackCopy(txt);
+  }
+  const t = document.getElementById("toastMsg");
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 1800);
+}
+
+function fallbackCopy(txt) {
+  const ta = document.createElement("textarea");
+  ta.value = txt; document.body.appendChild(ta); ta.select();
+  document.execCommand("copy"); document.body.removeChild(ta);
+}
+
+function copyCurrentTicket() {
+  const nl = String.fromCharCode(10);
+  const header = "🎟️ JOE PREZICE - BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2) + " | Buget: " + customBudget + " RON";
+  const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
+  copyText([header, ...lines].join(nl));
+}
+
+// ================= EXTRAGERE DATE REALE ȘI ANALIZĂ MATEMATICĂ =================
+
+function extractMarketOdds(comp) {
+  if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
+  const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
+  if (!oddObj) return null;
+
+  const mlToDec = (ml) => {
+    const n = parseFloat(ml);
+    if (isNaN(n) || n === 0) return null;
+    return n > 0 ? 1 + (n / 100) : 1 + (100 / Math.abs(n));
+  };
+
+  let mktPH = null, mktPD = null, mktPA = null, decH = null, decD = null, decA = null;
+  if (oddObj.homeTeamOdds && oddObj.awayTeamOdds) {
+    decH = mlToDec(oddObj.homeTeamOdds.moneyLine);
+    decA = mlToDec(oddObj.awayTeamOdds.moneyLine);
+    decD = oddObj.drawOdds ? mlToDec(oddObj.drawOdds.moneyLine) : null;
+    if (decH && decA) {
+      const effD = decD || 3.35;
+      const invH = 1 / decH, invD = 1 / effD, invA = 1 / decA;
+      const overround = invH + invD + invA;
+      mktPH = invH / overround;
+      mktPD = invD / overround;
+      mktPA = invA / overround;
+    }
+  }
+
+  const ouLine = oddObj.overUnder ? parseFloat(oddObj.overUnder) : null;
+  return { mktPH, mktPD, mktPA, decH, decD, decA, ouLine };
+}
 
 function getClubBasePower(name) {
   const low = (name || "").toLowerCase();
@@ -131,6 +450,84 @@ function extractTeamStrength(compObj, isHome, teamName) {
   };
 }
 
+function getDatesList() {
+  const list = [], now = new Date(), labels = {"-1":"Ieri","0":"Azi","1":"Mâine"};
+  for (let i = -1; i <= 5; i++) {
+    const d = new Date(now.getTime() + i * 86400000), iso = roDateStr(d), p = iso.split("-"), s = p[2] + "." + p[1];
+    list.push({ iso, ymd: iso.replace(/-/g, ""), label: labels[String(i)] ? `${labels[String(i)]} (${s})` : s });
+  }
+  return list;
+}
+
+function poissonPmf(k, lam) {
+  let f = 1;
+  for (let i = 2; i <= k; i++) f *= i;
+  return Math.exp(-lam) * Math.pow(lam, k) / f;
+}
+
+function poissonOverProb(line, lam) {
+  const minK = Math.floor(line) + 1;
+  let cdf = 0;
+  for (let k = 0; k < minK; k++) cdf += poissonPmf(k, lam);
+  return Math.max(0.05, Math.min(0.95, 1 - cdf));
+}
+
+function selectOptimalStatLine(expVal, overLines, underLines) {
+  const options = [];
+  for (let l of overLines) {
+    const p = poissonOverProb(l, expVal);
+    if (p >= 0.56 && p <= 0.80) {
+      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p });
+    }
+  }
+  for (let l of underLines) {
+    const p = 1 - poissonOverProb(l, expVal);
+    if (p >= 0.58 && p <= 0.80) {
+      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * 0.97 });
+    }
+  }
+  if (!options.length) {
+    const midLine = overLines[1] || overLines[0];
+    const p = poissonOverProb(midLine, expVal);
+    return p >= 0.50 
+      ? { label: `Peste ${midLine}`, prob: Math.round(p * 100) }
+      : { label: `Sub ${midLine + 1}`, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
+  }
+  options.sort((a, b) => b.score - a.score);
+  return options[0];
+}
+
+function dixonColesTau(h, a, lamH, lamA, rho = -0.09) {
+  if (h === 0 && a === 0) return Math.max(0.5, 1 - lamH * lamA * rho);
+  if (h === 0 && a === 1) return Math.max(0.5, 1 + lamH * rho);
+  if (h === 1 && a === 0) return Math.max(0.5, 1 + lamA * rho);
+  if (h === 1 && a === 1) return Math.max(0.5, 1 - rho);
+  return 1.0;
+}
+
+function calculateSmartStake(bankroll, m) {
+  let pct = 0.04;
+  if (m.edgePct && m.edgePct > 2) {
+    const p = m.prob / 100;
+    const b = Math.max(0.25, m.odd - 1);
+    const kelly = ((p * b - (1 - p)) / b) * 0.30;
+    pct = Math.max(0.03, Math.min(0.08, kelly));
+  } else {
+    if (m.prob >= 66) pct = 0.07;
+    else if (m.prob >= 60) pct = 0.06;
+    else if (m.prob >= 55) pct = 0.05;
+    else pct = 0.04;
+  }
+
+  if (m.lowData) pct = Math.min(pct, 0.03);
+
+  const rawStake = bankroll * pct;
+  return {
+    stake: Math.max(10, Math.round(rawStake / 5) * 5),
+    pct: Math.round(pct * 100)
+  };
+}
+
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -152,14 +549,13 @@ function analyzeMatch(ev, lg) {
   const isDerby = hBoost >= 0.22 && aBoost >= 0.22 && Math.abs(strengthDiff) <= 0.18;
 
   const lgGoals = lg.gBase || 2.62;
-  // Anulam avantajul terenului propriu dacă oaspeții sunt net superiori ca valoare de lot
   const homeAdvShare = strengthDiff < -0.35 ? 0.460 : (strengthDiff < -0.15 ? 0.490 : (strengthDiff > 0.25 ? 0.555 : 0.525));
   const baseH = lgGoals * homeAdvShare;
   const baseA = lgGoals * (1 - homeAdvShare);
   const paceMod = (0.26 - (hInfo.drawRatio + aInfo.drawRatio) / 2) * 0.45 + (hBoost + aBoost) * 0.16;
 
-  let lamH = Math.max(0.40, Math.min(3.35, baseH + strengthDiff * 1.05 + paceMod * 0.45));
-  let lamA = Math.max(0.40, Math.min(3.35, baseA - strengthDiff * 1.05 + paceMod * 0.45));
+  let lamH = Math.max(0.40, Math.min(3.35, baseH + strengthDiff * 1.05 + paceMod * 0.50));
+  let lamA = Math.max(0.40, Math.min(3.35, baseA - strengthDiff * 1.05 + paceMod * 0.50));
 
   const mkt = extractMarketOdds(comp);
   if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
@@ -234,30 +630,24 @@ function analyzeMatch(ev, lg) {
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
-  // 1. Soliști (1 / 2)
   if (pH >= 0.48) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.10);
   if (pA >= 0.48) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.10);
 
-  // 2. Solist & Peste 1.5 Goluri
   if (pH >= 0.62 && p1_O15 >= 0.53) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.07);
   if (pA >= 0.60 && p2_O15 >= 0.52) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.07);
 
-  // 3. Piețe de goluri
   if (pO25 >= 0.53 && totalXG >= 2.62) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.06);
   if (pGG >= 0.54 && lamH >= 1.12 && lamA >= 1.02) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.05);
   if (pU25 >= 0.56 && totalXG <= 2.26) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.04);
 
-  // 4. Combo Șansă Dublă & Goluri (interzise dacă echipa are xG negativ sau e net inferioară)
   if (xgDiff >= 0.18 && p1X_O15 >= 0.55 && totalXG >= 2.42) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.04);
   if (xgDiff <= -0.18 && pX2_O15 >= 0.54 && totalXG >= 2.42) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.04);
   if (xgDiff >= 0.14 && p1X_U35 >= 0.57 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.01);
   if (xgDiff <= -0.14 && pX2_U35 >= 0.57 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.01);
 
-  // 5. Pauză sau Final
   if (pH >= 0.42 && pH <= 0.52 && xgDiff >= 0.15) addCandidate(`PSF 1 (${hName})`, "PSF", pPSF1, null, 0.99);
   if (pA >= 0.42 && pA <= 0.52 && xgDiff <= -0.15) addCandidate(`PSF 2 (${aName})`, "PSF", pPSF2, null, 0.99);
 
-  // 6. Peste 1.5 / Șansă Dublă pură (Interzis 1X dacă oaspeții sunt favoriti clari!)
   if (pO15 >= 0.62 && pO15 <= 0.69) addCandidate("Peste 1.5 Goluri", "O15", pO15, null, 0.94);
   if (xgDiff >= 0.12 && p1X >= 0.58 && p1X <= 0.69) addCandidate("Șansă Dublă 1X", "DC", p1X, null, 0.92);
   if (xgDiff <= -0.12 && pX2 >= 0.58 && pX2 <= 0.69) addCandidate("Șansă Dublă X2", "DC", pX2, null, 0.92);
@@ -374,6 +764,19 @@ function buildOptimalTicket(pool, targetOdd) {
   return { picks, totalOdd: tot };
 }
 
+async function fetchWithTimeout(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 async function loadMatchesForDate(iso) {
   renderSubBars();
   if (cacheByDate[iso]) { renderViewport(); return; }
@@ -394,10 +797,10 @@ async function loadMatchesForDate(iso) {
 
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_v6_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_v7_cache_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
     try {
-      const backup = localStorage.getItem("joe_v6_cache_" + iso);
+      const backup = localStorage.getItem("joe_v7_cache_" + iso);
       cacheByDate[iso] = backup ? JSON.parse(backup) : [];
     } catch (e) { cacheByDate[iso] = []; }
   }
@@ -543,8 +946,8 @@ function toggleDrawer(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
-// ================= PARTEA 3: INIȚIALIZARE ȘI PORNIRE APLICAȚIE =================
 
+// ================= INIȚIALIZARE APLICAȚIE =================
 async function startApp() {
   selectedDate = getDatesList()[1].iso;
   const savedUser = localStorage.getItem("xmts_logged_user");
@@ -570,16 +973,4 @@ async function startApp() {
   await initProject();
 }
 
-// Pornim aplicația la încărcarea paginii
 startApp();
-// Forțăm legătura directă pe butonul de login ca să fim siguri că răspunde la click
-document.addEventListener("DOMContentLoaded", () => {
-  const loginBtn = document.querySelector(".login-btn") || document.getElementById("loginSubmitBtn");
-  if (loginBtn) {
-    loginBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      attemptLogin();
-    });
-  }
-});
-
