@@ -178,12 +178,12 @@
     </div>
   </div>
   
-  <div class="sub-bars" id="subBars" style="display:block;">
+  <div class="sub-bars" id="subBars">
     <div class="h-scroll" id="dateBar"></div>
     <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
   </div>
 
-  <div class="search-container" id="searchContainer" style="display:block;">
+  <div class="search-container" id="searchContainer">
     <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
   </div>
 
@@ -849,10 +849,10 @@ async function loadMatchesForDate(iso) {
 
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_v14_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_v15_cache_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
     try {
-      const backup = localStorage.getItem("joe_v14_cache_" + iso);
+      const backup = localStorage.getItem("joe_v15_cache_" + iso);
       if (backup) cacheByDate[iso] = JSON.parse(backup);
       else cacheByDate[iso] = [];
     } catch (e) { cacheByDate[iso] = []; }
@@ -930,7 +930,7 @@ function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
   if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
   if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
   if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && aHT !== null && aHT > hHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
   if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
   if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
   if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
