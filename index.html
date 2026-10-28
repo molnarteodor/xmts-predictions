@@ -14,7 +14,6 @@
   html, body { height:100%; width:100%; background:var(--bg); color:var(--text-main); overflow:hidden; }
   .app-shell { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto; position:relative; }
   
-  /* LOGIN OVERLAY */
   .login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
   .login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
   .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
@@ -22,7 +21,6 @@
   .cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
   .login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
   
-  /* TOP HUD */
   .top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
   .hud-brand { display:flex; align-items:center; gap:10px; }
   .hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
@@ -180,12 +178,12 @@
     </div>
   </div>
   
-  <div class="sub-bars" id="subBars">
+  <div class="sub-bars" id="subBars" style="display:block;">
     <div class="h-scroll" id="dateBar"></div>
     <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
   </div>
 
-  <div class="search-container" id="searchContainer">
+  <div class="search-container" id="searchContainer" style="display:block;">
     <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
   </div>
 
@@ -289,17 +287,17 @@ function applyRolePermissions() {
   const titleEl = document.getElementById("hudAppTitle");
 
   if (hasJoeAccess()) {
-    joeBtn.style.display = "flex";
-    bankBtn.style.display = "block";
-    titleEl.innerText = "JOE PREZICE";
+    if(joeBtn) joeBtn.style.display = "flex";
+    if(bankBtn) bankBtn.style.display = "block";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
   } else {
-    joeBtn.style.display = "none";
-    bankBtn.style.display = "none";
-    titleEl.innerText = "JOE PREZICE";
+    if(joeBtn) joeBtn.style.display = "none";
+    if(bankBtn) bankBtn.style.display = "none";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
     if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
   }
 
-  adminBtn.style.display = isAdmin() ? "flex" : "none";
+  if(adminBtn) adminBtn.style.display = isAdmin() ? "flex" : "none";
 }
 
 async function attemptLogin() {
@@ -307,15 +305,14 @@ async function attemptLogin() {
   const p = document.getElementById("loginPass").value.trim();
   const errEl = document.getElementById("loginErr");
   const btnEl = document.getElementById("loginSubmitBtn");
-  errEl.style.display = "none";
+  if(errEl) errEl.style.display = "none";
 
   if (!u || !p) {
-    errEl.innerText = "Introdu utilizatorul și parola!";
-    errEl.style.display = "block";
+    if(errEl) { errEl.innerText = "Introdu utilizatorul și parola!"; errEl.style.display = "block"; }
     return;
   }
 
-  btnEl.innerText = "⏳ SE VERIFICĂ...";
+  if(btnEl) btnEl.innerText = "⏳ SE VERIFICĂ...";
 
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
@@ -325,19 +322,14 @@ async function attemptLogin() {
     });
 
     const data = await r.json();
-    btnEl.innerText = "🔐 AUTENTIFICARE";
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
 
     if (!r.ok || !data || !data.ok) {
-      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
-      errEl.style.display = "block";
+      if(errEl) { errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!"; errEl.style.display = "block"; }
       return;
     }
 
-    currentUser = {
-      username: data.username,
-      role: data.role,
-      expires_at: data.expires_at
-    };
+    currentUser = { username: data.username, role: data.role, expires_at: data.expires_at };
 
     if (currentUser.role === "admin") {
       adminSessionPass = p;
@@ -346,13 +338,13 @@ async function attemptLogin() {
     }
 
     localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
-    document.getElementById("loginScreen").style.display = "none";
+    const lScreen = document.getElementById("loginScreen");
+    if(lScreen) lScreen.style.display = "none";
     applyRolePermissions();
     renderViewport();
   } catch (e) {
-    btnEl.innerText = "🔐 AUTENTIFICARE";
-    errEl.innerText = "Eroare de conexiune cu serverul!";
-    errEl.style.display = "block";
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+    if(errEl) { errEl.innerText = "Eroare de conexiune cu serverul!"; errEl.style.display = "block"; }
   }
 }
 
@@ -377,9 +369,12 @@ function logoutUser() {
   usersList = [];
   localStorage.removeItem("xmts_logged_user");
   sessionStorage.removeItem("xmts_adm_token");
-  document.getElementById("loginUser").value = "";
-  document.getElementById("loginPass").value = "";
-  document.getElementById("loginScreen").style.display = "flex";
+  const uInput = document.getElementById("loginUser");
+  const pInput = document.getElementById("loginPass");
+  const lScreen = document.getElementById("loginScreen");
+  if(uInput) uInput.value = "";
+  if(pInput) pInput.value = "";
+  if(lScreen) lScreen.style.display = "flex";
 }
 
 function calculateExpiresAt(duration) {
@@ -400,18 +395,15 @@ function formatExpiryDate(isoStr) {
 }
 
 async function createNewUser() {
-  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
-  const password = document.getElementById("newPassword").value.trim();
-  const tier = document.getElementById("newRole").value;
-  const duration = document.getElementById("newDuration").value;
-  const adminSecret = document.getElementById("adminSecretInput").value.trim();
+  const rawUsername = document.getElementById("newUsername")?.value.trim().toLowerCase();
+  const password = document.getElementById("newPassword")?.value.trim();
+  const tier = document.getElementById("newRole")?.value;
+  const duration = document.getElementById("newDuration")?.value;
+  const adminSecret = document.getElementById("adminSecretInput")?.value.trim();
   const resultMsg = document.getElementById("formResultMsg");
 
   if (!rawUsername || !password || !adminSecret) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
-    }
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!"; }
     return;
   }
 
@@ -419,10 +411,7 @@ async function createNewUser() {
   let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
   const expiresAt = calculateExpiresAt(duration);
 
-  if(resultMsg) {
-    resultMsg.style.color = "var(--neon-gold)";
-    resultMsg.innerText = "Se creează contul securizat și se setează abonamentul...";
-  }
+  if(resultMsg) { resultMsg.style.color = "var(--neon-gold)"; resultMsg.innerText = "Se creează contul securizat și se setează abonamentul..."; }
 
   try {
     const response = await fetch(SUPABASE_EDGE_URL, {
@@ -451,18 +440,12 @@ async function createNewUser() {
       await fetchAdminUsersList();
     }
 
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-green)";
-      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
-    }
+    if(resultMsg) { resultMsg.style.color = "var(--neon-green)"; resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`; }
     copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
     setTimeout(() => { renderViewport(); }, 1000);
 
   } catch (err) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Eroare: " + err.message;
-    }
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Eroare: " + err.message; }
   }
 }
 
@@ -495,8 +478,7 @@ function copyText(txt) {
     fallbackCopy(txt);
   }
   const t = document.getElementById("toastMsg");
-  t.style.display = "block";
-  setTimeout(() => { t.style.display = "none"; }, 1800);
+  if(t) { t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, 1800); }
 }
 
 function fallbackCopy(txt) {
@@ -512,7 +494,7 @@ function copyCurrentTicket() {
   copyText([header, ...lines].join(nl));
 }
 
-// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC CU SIGURANȚĂ MAXIMĂ =================
+// ================= EXTRAGERE DATE & MOTOR MATEMATIC =================
 
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
@@ -679,7 +661,7 @@ function analyzeMatch(ev, lg) {
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
 
   let pH = 0, pD = 0, pA = 0, p00 = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
-  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0, p1X_U35 = 0, pX2_U35 = 0;
+  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0;
   let totalProbMass = 0;
 
   for (let h = 0; h <= 7; h++) {
@@ -702,8 +684,6 @@ function analyzeMatch(ev, lg) {
       if (a > h && goals >= 2) p2_O15 += rawP;
       if (h >= a && goals >= 2) p1X_O15 += rawP;
       if (a >= h && goals >= 2) pX2_O15 += rawP;
-      if (h >= a && goals <= 3) p1X_U35 += rawP;
-      if (a >= h && goals <= 3) pX2_U35 += rawP;
     }
   }
 
@@ -711,15 +691,11 @@ function analyzeMatch(ev, lg) {
   pO15 /= totalProbMass; pO25 /= totalProbMass; pU25 /= totalProbMass; pGG /= totalProbMass;
   p1_O15 /= totalProbMass; p2_O15 /= totalProbMass;
   p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
-  p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
 
-  const p1X = pH + pD;
   const pX2 = pA + pD;
   const totalXG = lamH + lamA;
-  const xgDiff = lamH - lamA;
   const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
 
-  // ================= SELECȚIE DUPĂ SIGURANȚĂ MAXIMĂ (CEL MAI MARE PROCENTAJ) =================
   const candidates = [];
 
   const addCandidate = (name, mktType, prob, realOdd, safetyBonus = 1.0) => {
@@ -728,40 +704,25 @@ function analyzeMatch(ev, lg) {
     if (displayOdd < 1.25 || displayOdd > 2.35 || prob < 0.52) return;
 
     const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
-    // Ordonare direct după probabilitatea cea mai mare de reușită!
     const valueScore = prob * safetyBonus;
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
-  // 1. Peste 1.5 Goluri (Prioritate maximă când ambele echipe atacă)
   if (pO15 >= 0.62 && pO15 <= 0.85) {
     addCandidate("Peste 1.5 Goluri", "O15", pO15, null, bothTeamsDangerous ? 1.06 : 1.02);
   }
-
-  // 2. Șansă Dublă 1X / X2
   if (xgDiff >= 0.08 && p1X >= 0.60 && p1X <= 0.82) {
     addCandidate("Șansă Dublă 1X", "DC", p1X, null, bothTeamsDangerous ? 0.96 : 1.01);
   }
   if (xgDiff <= -0.08 && pX2 >= 0.60 && pX2 <= 0.82) {
     addCandidate("Șansă Dublă X2", "DC", pX2, null, bothTeamsDangerous ? 0.96 : 1.01);
   }
-
-  // 3. Combo-uri de siguranță superioară
-  if (xgDiff >= 0.12 && p1X_U35 >= 0.60 && totalXG <= 2.60) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.00);
-  if (xgDiff <= -0.12 && pX2_U35 >= 0.60 && totalXG <= 2.60) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.00);
-  if (xgDiff >= 0.22 && p1X_O15 >= 0.60 && lamA < 1.05) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.00);
-  if (xgDiff <= -0.22 && pX2_O15 >= 0.60 && lamH < 1.05) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.00);
-
-  // 4. Piețe principale de Goluri (Sub 2.5, Peste 2.5, GG)
   if (pU25 >= 0.58 && totalXG <= 2.25) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.01);
   if (pO25 >= 0.56 && totalXG >= 2.60) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.01);
   if (pGG >= 0.56 && bothTeamsDangerous) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.02);
-
-  // 5. Soliști
   if (pH >= 0.54 && pH <= 0.78) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.01);
   if (pA >= 0.54 && pA <= 0.78) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.01);
 
-  // Fallback bazat strict pe cel mai mare procentaj
   if (!candidates.length) {
     const basicOpts = [
       { name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15 },
@@ -829,7 +790,6 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// ================= GENERATOR BILETE (MAXIM 10 MECIURI) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
@@ -837,7 +797,6 @@ function buildOptimalTicket(pool, targetOdd) {
   const usedIds = new Set();
   let tot = 1.0;
 
-  // Setat strict la maxim 10 meciuri pe bilet
   while (picks.length < 10 && tot < targetOdd * 0.94 && sorted.length > picks.length) {
     let bestCandidate = null;
     let bestScore = -999;
@@ -890,10 +849,10 @@ async function loadMatchesForDate(iso) {
 
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_v13_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_v14_cache_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
     try {
-      const backup = localStorage.getItem("joe_v13_cache_" + iso);
+      const backup = localStorage.getItem("joe_v14_cache_" + iso);
       if (backup) cacheByDate[iso] = JSON.parse(backup);
       else cacheByDate[iso] = [];
     } catch (e) { cacheByDate[iso] = []; }
@@ -944,9 +903,11 @@ async function saveToDB() {
       headers: sbHeaders(),
       body: JSON.stringify({ data: project })
     });
-    document.getElementById("liveClock").innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
   } catch (e) {
-    document.getElementById("liveClock").innerText = "● Sync Error";
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = "● Sync Error";
   }
 }
 
@@ -957,7 +918,8 @@ function recalcBankroll(shouldSave = true) {
     else if (bet.status === "LOSS") b -= bet.stake;
   });
   project.bankroll = +b.toFixed(2);
-  document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
+  const topBankroll = document.getElementById("topBankroll");
+  if(topBankroll) topBankroll.innerText = project.bankroll.toFixed(2);
   if (shouldSave) saveToDB();
 }
 
@@ -1272,7 +1234,6 @@ function renderTicketsView() {
 
   const realStats = computeRealPerformanceStats(dayPool);
   const potentialWin = +(customBudget * tot).toFixed(2);
-  // Extins butoanele de cotă țintă până la 500 pentru modurile de cotă mare
   const btns = [2, 5, 10, 20, 50, 100, 250, 500].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
   
   let contentBody = "";
