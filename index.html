@@ -494,7 +494,7 @@ function copyCurrentTicket() {
   copyText([header, ...lines].join(nl));
 }
 
-// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC =================
+// ================= EXTRAGERE DATE & MOTOR MATEMATIC =================
 
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
@@ -1268,7 +1268,7 @@ function renderTicketsView() {
 
   const realStats = computeRealPerformanceStats(dayPool);
   const potentialWin = +(customBudget * tot).toFixed(2);
-  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
+  const btns = [2, 5, 10, 20, 50, 100, 250, 500].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
   
   let contentBody = "";
   if (isGeneratingTicket) {
@@ -1287,7 +1287,7 @@ function renderTicketsView() {
     </div>`).join("");
 
     contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-      <span>Cotă Totală: <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+      <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
       <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
     </div>
     ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
@@ -1314,7 +1314,7 @@ function renderTicketsView() {
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">EMPIRICAL BAYES</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
     </div>
   </div>`;
 }
@@ -1322,6 +1322,7 @@ function renderTicketsView() {
 function renderViewport() {
   renderSubBars();
   const vp = document.getElementById("viewport");
+  if(!vp) return;
   if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
   if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
   if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
