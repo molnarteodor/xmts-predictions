@@ -622,6 +622,40 @@ function calculateSmartStake(bankroll, m) {
   };
 }
 
+function renderSubBars() {
+  const sb = document.getElementById("subBars");
+  const searchBox = document.getElementById("searchContainer");
+  
+  if (currentNav === "admin") { 
+    if(sb) sb.style.display = "none"; 
+    if(searchBox) searchBox.style.display = "none";
+    return; 
+  }
+  
+  if (currentNav === "meciuri" || currentNav === "europa") {
+    if(searchBox) searchBox.style.display = "block";
+  } else {
+    if(searchBox) searchBox.style.display = "none";
+  }
+
+  const dates = getDatesList();
+  if (!selectedDate) selectedDate = dates[1].iso;
+  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
+  
+  if (currentNav === "europa") {
+    if(sb) sb.style.display = "block";
+    if(dBar) dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
+    if(lBar) lBar.innerHTML = ""; return;
+  }
+  
+  if(sb) sb.style.display = "block";
+  if(dBar) dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
+  if (currentNav === "proiect" || currentNav === "bilete") { if(lBar) lBar.innerHTML = ""; return; }
+  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
+  if(lBar) lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
+    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
+}
+
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
