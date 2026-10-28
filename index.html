@@ -525,6 +525,36 @@ function copyCurrentTicket() {
 
 // ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC COREQTAT =================
 
+// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC CALIBRAT =================
+
+const CLUB_POWER_CALIBRATED = [
+  // Elite & Forțe Europene
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
+  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
+  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
+  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
+  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  // Echipe Bune / Sub-Top
+  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
+  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  // SuperLiga României
+  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
+  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
+  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
+  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
+  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
+  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
+  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
+];
+
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
   const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
@@ -557,21 +587,111 @@ function extractMarketOdds(comp) {
 
 function getClubBasePower(name) {
   const low = (name || "").toLowerCase();
-  for (let c of CLUB_POWER) if (low.includes(c.k)) return c.p;
+  for (let c of CLUB_POWER_CALIBRATED) if (low.includes(c.k)) return c.p;
   return 0;
 }
 
+// Combină Clasamentul Real + Forma ultimelor 5 meciuri + Valoarea Lotului
 function extractTeamStrength(compObj, isHome, teamName) {
+  let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
+  let winsRate5 = 2.0, drawsRate5 = 1.4, lossesRate5 = 1.6, drawRatio = 0.26;
+  let hasRealRecord = false, hasRealForm = false;
+
   const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
+
+  if (compObj.records && Array.isArray(compObj.records)) {
+    const parseRec = (rec) => {
+      if (!rec || !rec.summary) return null;
+      const parts = rec.summary.split("-").map(x => parseInt(x, 10));
+      if (parts.length === 3 && !isNaN(parts[0])) {
+        const [w, d, l] = parts;
+        const tot = w + d + l;
+        if (tot > 0) return { w, d, l, tot, ppg: (w * 3 + d) / tot };
+      }
+      return null;
+    };
+
+    const totalRec = parseRec(compObj.records.find(r => r.type === "total") || compObj.records[0]);
+    const venueRec = parseRec(compObj.records.find(r =>
+      r.type === (isHome ? "home" : "road") ||
+      (r.name && r.name.toLowerCase() === (isHome ? "home" : "away"))
+    ));
+
+    if (totalRec) {
+      hasRealRecord = true;
+      const reliability = Math.min(1.0, totalRec.tot / (totalRec.tot + 4));
+      overallScore = (totalRec.ppg - 1.35) * 0.45 * reliability;
+      formDisplay = `${totalRec.w}V-${totalRec.d}E-${totalRec.l}Î`;
+      winsRate5 = (totalRec.w / totalRec.tot) * 5;
+      drawsRate5 = (totalRec.d / totalRec.tot) * 5;
+      lossesRate5 = (totalRec.l / totalRec.tot) * 5;
+      drawRatio = totalRec.d / totalRec.tot;
+    }
+
+    if (venueRec && venueRec.tot >= 2) {
+      const venueRel = Math.min(1.0, venueRec.tot / (venueRec.tot + 3));
+      const expectedVenuePpg = isHome ? 1.50 : 1.20;
+      venueScore = (venueRec.ppg - expectedVenuePpg) * 0.40 * venueRel;
+    }
+  }
+
+  if (compObj.form && typeof compObj.form === "string") {
+    const rawForm = compObj.form.toUpperCase().replace(/[^WDL]/g, "").slice(-5);
+    if (rawForm.length >= 3) {
+      hasRealForm = true;
+      let fW = 0, fD = 0, fL = 0;
+      formDisplay = formDisplay ? `${rawForm} (${formDisplay})` : rawForm;
+      const weights = [0.65, 0.80, 1.0, 1.20, 1.35];
+      for (let i = 0; i < rawForm.length; i++) {
+        const ch = rawForm[i];
+        if (ch === "W") fW++;
+        else if (ch === "D") fD++;
+        else if (ch === "L") fL++;
+        const w = weights[i + (5 - rawForm.length)] || 1.0;
+        formScore += (ch === "W" ? 0.065 : (ch === "D" ? 0.0 : -0.065)) * w;
+      }
+      const scale5 = 5 / rawForm.length;
+      if (hasRealRecord) {
+        winsRate5 = winsRate5 * 0.50 + (fW * scale5) * 0.50;
+        drawsRate5 = drawsRate5 * 0.50 + (fD * scale5) * 0.50;
+        lossesRate5 = lossesRate5 * 0.50 + (fL * scale5) * 0.50;
+      } else {
+        winsRate5 = fW * scale5;
+        drawsRate5 = fD * scale5;
+        lossesRate5 = fL * scale5;
+        drawRatio = fD / rawForm.length;
+      }
+    }
+  }
+
+  if (!hasRealRecord && !hasRealForm && clubPower !== 0) {
+    winsRate5 = Math.max(0.8, Math.min(4.2, 2.2 + clubPower * 3.0));
+    lossesRate5 = Math.max(0.5, Math.min(4.0, 1.6 - clubPower * 2.5));
+    drawRatio = Math.max(0.16, Math.min(0.34, 0.26 - Math.abs(clubPower) * 0.12));
+  }
+
+  const hasData = hasRealRecord || hasRealForm || clubPower !== 0;
+  if (!formDisplay) formDisplay = clubPower !== 0 ? "Rating Lot Activ" : "Echilibrat";
+
+  let tablePerf = venueScore !== 0 ? (overallScore * 0.65 + venueScore * 0.35) : overallScore;
+  let seasonStrength = hasRealRecord ? (hasRealForm ? tablePerf * 0.65 + formScore * 0.35 : tablePerf) : formScore;
+
+  let finalScore = seasonStrength;
+  if (clubPower !== 0 && (hasRealRecord || hasRealForm)) {
+    finalScore = seasonStrength * 0.50 + clubPower * 0.50;
+  } else if (clubPower !== 0) {
+    finalScore = clubPower * 0.85;
+  }
+
   return {
-    score: clubPower,
+    score: finalScore,
     clubPower,
-    hasData: true,
-    winsCount: 2.5,
-    drawsCount: 1.2,
-    lossesCount: 1.3,
-    drawRatio: 0.25,
-    formDisplay: clubPower !== 0 ? "Power Matrix Activ" : "Standard"
+    winsCount: +winsRate5.toFixed(2),
+    drawsCount: +drawsRate5.toFixed(2),
+    lossesCount: +lossesRate5.toFixed(2),
+    drawRatio,
+    hasData,
+    formDisplay
   };
 }
 
@@ -597,24 +717,27 @@ function poissonOverProb(line, lam) {
   return Math.max(0.05, Math.min(0.95, 1 - cdf));
 }
 
+// Alege pragul optim de cornere/cartonașe (sweet-spot în jur de 64%-68% siguranță, variind dinamic pe fiecare meci)
 function selectOptimalStatLine(expVal, overLines, underLines) {
   const options = [];
   for (let l of overLines) {
     const p = poissonOverProb(l, expVal);
-    if (p >= 0.56 && p <= 0.80) {
-      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p });
+    if (p >= 0.55 && p <= 0.78) {
+      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
+      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus });
     }
   }
   for (let l of underLines) {
     const p = 1 - poissonOverProb(l, expVal);
-    if (p >= 0.58 && p <= 0.80) {
-      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * 0.97 });
+    if (p >= 0.57 && p <= 0.78) {
+      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
+      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus * 0.98 });
     }
   }
   if (!options.length) {
     const midLine = overLines[1] || overLines[0];
     const p = poissonOverProb(midLine, expVal);
-    return p >= 0.50 
+    return p >= 0.50
       ? { label: `Peste ${midLine}`, prob: Math.round(p * 100) }
       : { label: `Sub ${midLine + 1}`, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
   }
@@ -643,7 +766,7 @@ function calculateSmartStake(bankroll, m) {
     else if (m.prob >= 55) pct = 0.05;
     else pct = 0.04;
   }
-
+  if (m.lowData) pct = Math.min(pct, 0.03);
   const rawStake = bankroll * pct;
   return {
     stake: Math.max(10, Math.round(rawStake / 5) * 5),
@@ -663,16 +786,25 @@ function analyzeMatch(ev, lg) {
 
   const hInfo = extractTeamStrength(home, true, hName);
   const aInfo = extractTeamStrength(away, false, aName);
+  const lowData = !hInfo.hasData && !aInfo.hasData;
 
   const hPower = hInfo.score;
   const aPower = aInfo.score;
   const strengthDiff = hPower - aPower;
 
-  const isDerby = Math.abs(strengthDiff) <= 0.12 && hPower >= 0.35;
+  const isDerby = hPower >= 0.22 && aPower >= 0.22 && Math.abs(strengthDiff) <= 0.16;
 
+  // Avantajul terenului propriu: 55% pentru gazde în meciurile normale, redus doar când oaspeții sunt net superiori
   const lgGoals = lg.gBase || 2.62;
-  let lamH = Math.max(0.40, Math.min(3.40, (lgGoals * 0.52) + strengthDiff * 1.35));
-  let lamA = Math.max(0.40, Math.min(3.40, (lgGoals * 0.48) - strengthDiff * 1.35));
+  const homeAdvShare = strengthDiff < -0.35 ? 0.485 : (strengthDiff < -0.18 ? 0.515 : (strengthDiff > 0.25 ? 0.565 : 0.550));
+  const avgDrawRatio = (hInfo.drawRatio + aInfo.drawRatio) / 2;
+
+  // Modificator dinamic de ritm ca totalXG să difere realist de la un meci la altul
+  const paceMod = (0.26 - avgDrawRatio) * 0.55 + (hPower + aPower) * 0.20 + Math.abs(strengthDiff) * 0.25;
+  const expectedMatchGoals = Math.max(2.05, Math.min(3.45, lgGoals + paceMod));
+
+  let lamH = Math.max(0.42, Math.min(3.30, expectedMatchGoals * homeAdvShare + strengthDiff * 0.92));
+  let lamA = Math.max(0.38, Math.min(3.10, expectedMatchGoals * (1 - homeAdvShare) - strengthDiff * 0.88));
 
   const mkt = extractMarketOdds(comp);
   if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
@@ -680,17 +812,17 @@ function analyzeMatch(ev, lg) {
     if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
       targetTotal = targetTotal * 0.55 + mkt.ouLine * 0.45;
     }
-    const mktShareH = Math.max(0.12, Math.min(0.88, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
+    const mktShareH = Math.max(0.14, Math.min(0.86, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
     const modShareH = lamH / (lamH + lamA);
-    const finalShareH = modShareH * 0.35 + mktShareH * 0.65;
-    lamH = Math.max(0.35, Math.min(3.40, targetTotal * finalShareH));
-    lamA = Math.max(0.35, Math.min(3.40, targetTotal * (1 - finalShareH)));
+    const finalShareH = modShareH * 0.45 + mktShareH * 0.55;
+    lamH = Math.max(0.38, Math.min(3.35, targetTotal * finalShareH));
+    lamA = Math.max(0.35, Math.min(3.25, targetTotal * (1 - finalShareH)));
   }
 
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
 
   let pH = 0, pD = 0, pA = 0, p00 = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
-  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0;
+  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0, p1X_U35 = 0, pX2_U35 = 0;
   let totalProbMass = 0;
 
   for (let h = 0; h <= 7; h++) {
@@ -712,7 +844,10 @@ function analyzeMatch(ev, lg) {
       if (h > a && goals >= 2) p1_O15 += rawP;
       if (a > h && goals >= 2) p2_O15 += rawP;
       if (h >= a && goals >= 2) p1X_O15 += rawP;
+      if (a >= a && goals >= 2) {} // păstrăm simetria mai jos
       if (a >= h && goals >= 2) pX2_O15 += rawP;
+      if (h >= a && goals <= 3) p1X_U35 += rawP;
+      if (a >= h && goals <= 3) pX2_U35 += rawP;
     }
   }
 
@@ -720,33 +855,63 @@ function analyzeMatch(ev, lg) {
   pO15 /= totalProbMass; pO25 /= totalProbMass; pU25 /= totalProbMass; pGG /= totalProbMass;
   p1_O15 /= totalProbMass; p2_O15 /= totalProbMass;
   p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
+  p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
 
+  const p1X = pH + pD;
   const pX2 = pA + pD;
+  const nonZeroDraw = Math.max(0, pD - p00);
+  const pPSF1 = Math.min(0.85, pH + nonZeroDraw * 0.34 + pA * 0.06);
+  const pPSF2 = Math.min(0.83, pA + nonZeroDraw * 0.34 + pH * 0.06);
+
   const totalXG = lamH + lamA;
+  const xgDiff = lamH - lamA;
 
   const candidates = [];
 
   const addCandidate = (name, mktType, prob, realOdd, specificityWeight) => {
     const fairOdd = 1 / Math.max(0.15, prob);
     const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.93 * fairOdd).toFixed(2);
-    if (displayOdd < 1.25 || displayOdd > 2.50 || prob < 0.48) return;
+    if (displayOdd < 1.32 || displayOdd > 2.35 || prob < 0.50) return;
 
     const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
-    const valueScore = prob * specificityWeight + (edgePct > 0 ? 0.05 : 0);
+    const edgeBonus = (realOdd && edgePct > 0) ? Math.min(0.08, edgePct * 0.008) : 0;
+    const valueScore = prob * specificityWeight + edgeBonus;
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
-  if (pA >= 0.46) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.15);
-  if (pX2 >= 0.52) addCandidate(`Șansă Dublă X2`, "DC", pX2, mkt?.decD ? 1.22 : null, 1.12);
-  if (p2_O15 >= 0.45) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.10);
+  // 1. Soliști (1 / 2)
   if (pH >= 0.48) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.10);
-  if (pA >= 0.44 && pX2_O15 >= 0.48) addCandidate(`X2 & Peste 1.5 Goluri`, "COMBO_DC", pX2_O15, null, 1.08);
-  if (pO25 >= 0.52 && totalXG >= 2.55) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.05);
-  if (pGG >= 0.52) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.04);
+  if (pA >= 0.48) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.10);
+
+  // 2. Solist & Peste 1.5 Goluri (când favorita e puternică)
+  if (pH >= 0.58 && p1_O15 >= 0.52) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.07);
+  if (pA >= 0.56 && p2_O15 >= 0.51) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.07);
+
+  // 3. Piețe de goluri (Peste 2.5, GG, Sub 2.5)
+  if (pO25 >= 0.53 && totalXG >= 2.62) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.06);
+  if (pGG >= 0.54 && lamH >= 1.10 && lamA >= 1.02) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.05);
+  if (pU25 >= 0.56 && totalXG <= 2.28) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.04);
+
+  // 4. Combo Șansă Dublă & Goluri (1X/X2 & Peste 1.5 sau Sub 3.5)
+  if (xgDiff >= 0.14 && p1X_O15 >= 0.54 && totalXG >= 2.42) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.04);
+  if (xgDiff <= -0.14 && pX2_O15 >= 0.54 && totalXG >= 2.42) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.04);
+  if (xgDiff >= 0.06 && p1X_U35 >= 0.56 && totalXG <= 2.55) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.02);
+  if (xgDiff <= -0.08 && pX2_U35 >= 0.56 && totalXG <= 2.55) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.02);
+
+  // 5. Pauză sau Final (PSF 1 / PSF 2)
+  if (pH >= 0.42 && pH <= 0.52 && xgDiff >= 0.12) addCandidate(`PSF 1 (${hName})`, "PSF", pPSF1, null, 0.99);
+  if (pA >= 0.42 && pA <= 0.52 && xgDiff <= -0.12) addCandidate(`PSF 2 (${aName})`, "PSF", pPSF2, null, 0.99);
+
+  // 6. Piețe de bază (Peste 1.5 / 1X / X2) - doar în direcția echipei cu xG superior
+  if (pO15 >= 0.62 && pO15 <= 0.70) addCandidate("Peste 1.5 Goluri", "O15", pO15, null, 0.94);
+  if (xgDiff >= 0.04 && p1X >= 0.57 && p1X <= 0.70) addCandidate("Șansă Dublă 1X", "DC", p1X, null, 0.93);
+  if (xgDiff <= -0.06 && pX2 >= 0.57 && pX2 <= 0.70) addCandidate("Șansă Dublă X2", "DC", pX2, null, 0.93);
 
   if (!candidates.length) {
-    if (strengthDiff < -0.15) candidates.push({ name: `Șansă Dublă X2`, mktType: "DC", prob: pX2, odd: 1.22, edgePct: 0, valueScore: pX2 });
-    else candidates.push({ name: `2 (${aName})`, mktType: "SOLO", prob: pA, odd: 1.65, edgePct: 0, valueScore: pA });
+    if (pH >= pA && pH >= 0.45) candidates.push({ name: `1 (${hName})`, mktType: "SOLO", prob: pH, odd: +(0.93 / pH).toFixed(2), edgePct: 0, valueScore: pH });
+    else if (pA > pH && pA >= 0.45) candidates.push({ name: `2 (${aName})`, mktType: "SOLO", prob: pA, odd: +(0.93 / pA).toFixed(2), edgePct: 0, valueScore: pA });
+    else if (xgDiff >= 0) candidates.push({ name: "Șansă Dublă 1X", mktType: "DC", prob: p1X, odd: Math.max(1.28, +(0.92 / p1X).toFixed(2)), edgePct: 0, valueScore: p1X * 0.9 });
+    else candidates.push({ name: "Șansă Dublă X2", mktType: "DC", prob: pX2, odd: Math.max(1.28, +(0.92 / pX2).toFixed(2)), edgePct: 0, valueScore: pX2 * 0.9 });
   }
 
   candidates.sort((a, b) => b.valueScore - a.valueScore);
@@ -771,12 +936,28 @@ function analyzeMatch(ev, lg) {
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  const expCornersNum = Math.max(7.2, Math.min(12.6, (lg.cBase || 9.5) + (totalXG - 2.6) * 1.3));
+  // Cornere dinamice: depind de ritmul meciului, presiunea favoritei, stilul ofensiv și derby
+  const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 3.8) * 0.30;
+  const openPlayFactor = (0.26 - avgDrawRatio) * 2.5;
+  const mismatchPressure = Math.abs(lamH - lamA) * 0.75;
+  const derbyCornerPush = isDerby ? 0.55 : 0;
+
+  const expCornersNum = Math.max(7.2, Math.min(12.6,
+    (lg.cBase || 9.5) + (totalXG - (lg.gBase || 2.62)) * 1.45 + mismatchPressure + offensiveMomentum + openPlayFactor + derbyCornerPush
+  ));
   const expCorners = expCornersNum.toFixed(1);
   const bestCornerOpt = selectOptimalStatLine(expCornersNum, [7.5, 8.5, 9.5], [9.5, 10.5]);
   const cornerLine = `${bestCornerOpt.label} (${bestCornerOpt.prob}%)`;
 
-  const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
+  // Cartonașe dinamice: depind de echilibrul meciului, rata de egaluri/înfrângeri și tensiunea de derby
+  const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.75);
+  const frustrationFactor = ((hInfo.lossesCount + aInfo.lossesCount) - 2.8) * 0.25;
+  const drawFriction = (avgDrawRatio - 0.25) * 1.8;
+  const derbyCardPush = isDerby ? 0.70 : 0;
+
+  const expCardsNum = Math.max(2.6, Math.min(6.4,
+    (lg.kBase || 4.3) + (closeness - 0.50) * 1.25 + frustrationFactor + drawFriction + derbyCardPush
+  ));
   const expCards = expCardsNum.toFixed(1);
   const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
   const cardLine = `${bestCardOpt.label} (${bestCardOpt.prob}%)`;
@@ -787,12 +968,12 @@ function analyzeMatch(ev, lg) {
   return {
     id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
-    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: "Power Matrix", aForm: "Power Matrix",
+    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
     lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
-    isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
+    isDerby, lowData, hasMktOdds: !!(mkt && (mkt.mktPH || mkt.ouLine)),
     edgePct: best.edgePct || 0,
     pick: best.name, mktType: best.mktType || "OTHER", prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
-    tipsterScore: best.valueScore,
+    tipsterScore: best.valueScore * (lowData ? 0.82 : 1.0),
     expCorners, cornerLine, actualCorners,
     expCards, cardLine, actualCards,
     probs: { p1: Math.round(pH*100), pX: Math.round(pD*100), p2: Math.round(pA*100), o25: Math.round(pO25*100), gg: Math.round(pGG*100), o15: Math.round(pO15*100) }
@@ -804,25 +985,42 @@ function buildOptimalTicket(pool, targetOdd) {
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
   const picks = [];
   const usedIds = new Set();
+  const marketCounts = {};
   let tot = 1.0;
 
   while (picks.length < 11 && tot < targetOdd * 0.94) {
+    const remainingNeeded = targetOdd / tot;
     let bestCandidate = null;
     let bestScore = -999;
+
     for (let m of sorted) {
       if (usedIds.has(m.id)) continue;
-      if (m.tipsterScore > bestScore) {
-        bestScore = m.tipsterScore;
+      const mCount = marketCounts[m.mktType] || 0;
+      const diversityPenalty = mCount >= 2 ? 0.78 : (mCount === 1 ? 0.92 : 1.05);
+
+      let targetFit = 1.0;
+      if (remainingNeeded <= 2.25) {
+        const dist = Math.abs(m.odd - remainingNeeded);
+        targetFit = Math.max(0.5, 1.35 - dist * 0.65);
+      }
+
+      const candidateScore = m.tipsterScore * diversityPenalty * targetFit;
+      if (candidateScore > bestScore) {
+        bestScore = candidateScore;
         bestCandidate = m;
       }
     }
+
     if (!bestCandidate) break;
     picks.push(bestCandidate);
     usedIds.add(bestCandidate.id);
+    marketCounts[bestCandidate.mktType] = (marketCounts[bestCandidate.mktType] || 0) + 1;
     tot *= bestCandidate.odd;
   }
+
   return { picks, totalOdd: tot };
 }
+
 
 async function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
