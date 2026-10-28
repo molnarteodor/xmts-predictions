@@ -543,3 +543,32 @@ function toggleDrawer(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
+// ================= PARTEA 3: INIȚIALIZARE ȘI PORNIRE APLICAȚIE =================
+
+async function startApp() {
+  selectedDate = getDatesList()[1].iso;
+  const savedUser = localStorage.getItem("xmts_logged_user");
+  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
+  if (savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
+      if (!isExpired && parsed.username) {
+        currentUser = parsed;
+        if (parsed.role === "admin" && savedAdmToken) {
+          adminSessionPass = savedAdmToken;
+          await fetchAdminUsersList();
+        }
+        document.getElementById("loginScreen").style.display = "none";
+        applyRolePermissions();
+      } else {
+        localStorage.removeItem("xmts_logged_user");
+      }
+    } catch (e) {}
+  }
+  loadMatchesForDate(selectedDate);
+  await initProject();
+}
+
+// Pornim aplicația la încărcarea paginii
+startApp();
