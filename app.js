@@ -572,3 +572,14 @@ async function startApp() {
 
 // Pornim aplicația la încărcarea paginii
 startApp();
+// Forțăm legătura directă pe butonul de login ca să fim siguri că răspunde la click
+document.addEventListener("DOMContentLoaded", () => {
+  const loginBtn = document.querySelector(".login-btn") || document.getElementById("loginSubmitBtn");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      attemptLogin();
+    });
+  }
+});
+
