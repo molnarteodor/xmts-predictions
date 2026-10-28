@@ -87,17 +87,17 @@ function applyRolePermissions() {
   const titleEl = document.getElementById("hudAppTitle");
 
   if (hasJoeAccess()) {
-    joeBtn.style.display = "flex";
-    bankBtn.style.display = "block";
-    titleEl.innerText = "JOE PREZICE";
+    if(joeBtn) joeBtn.style.display = "flex";
+    if(bankBtn) bankBtn.style.display = "block";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
   } else {
-    joeBtn.style.display = "none";
-    bankBtn.style.display = "none";
-    titleEl.innerText = "JOE PREZICE";
+    if(joeBtn) joeBtn.style.display = "none";
+    if(bankBtn) bankBtn.style.display = "none";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
     if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
   }
 
-  adminBtn.style.display = isAdmin() ? "flex" : "none";
+  if(adminBtn) adminBtn.style.display = isAdmin() ? "flex" : "none";
 }
 
 // ================= AUTENTIFICARE 100% SERVER-SIDE (RPC SUPABASE) =================
@@ -106,11 +106,13 @@ async function attemptLogin() {
   const p = document.getElementById("loginPass").value.trim();
   const errEl = document.getElementById("loginErr");
   const btnEl = document.getElementById("loginSubmitBtn");
-  errEl.style.display = "none";
+  if(errEl) errEl.style.display = "none";
 
   if (!u || !p) {
-    errEl.innerText = "Introdu utilizatorul și parola!";
-    errEl.style.display = "block";
+    if(errEl) {
+      errEl.innerText = "Introdu utilizatorul și parola!";
+      errEl.style.display = "block";
+    }
     return;
   }
 
@@ -127,8 +129,10 @@ async function attemptLogin() {
     if (btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
 
     if (!r.ok || !data || !data.ok) {
-      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
-      errEl.style.display = "block";
+      if(errEl) {
+        errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
+        errEl.style.display = "block";
+      }
       return;
     }
 
@@ -145,13 +149,16 @@ async function attemptLogin() {
     }
 
     localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
-    document.getElementById("loginScreen").style.display = "none";
+    const loginScreen = document.getElementById("loginScreen");
+    if(loginScreen) loginScreen.style.display = "none";
     applyRolePermissions();
     renderViewport();
   } catch (e) {
     if (btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
-    errEl.innerText = "Eroare de conexiune cu serverul!";
-    errEl.style.display = "block";
+    if(errEl) {
+      errEl.innerText = "Eroare de conexiune cu serverul!";
+      errEl.style.display = "block";
+    }
   }
 }
 
@@ -176,9 +183,12 @@ function logoutUser() {
   usersList = [];
   localStorage.removeItem("xmts_logged_user");
   sessionStorage.removeItem("xmts_adm_token");
-  document.getElementById("loginUser").value = "";
-  document.getElementById("loginPass").value = "";
-  document.getElementById("loginScreen").style.display = "flex";
+  const uInput = document.getElementById("loginUser");
+  const pInput = document.getElementById("loginPass");
+  const lScreen = document.getElementById("loginScreen");
+  if(uInput) uInput.value = "";
+  if(pInput) pInput.value = "";
+  if(lScreen) lScreen.style.display = "flex";
 }
 
 function calculateExpiresAt(duration) {
@@ -199,11 +209,11 @@ function formatExpiryDate(isoStr) {
 }
 
 async function createNewUser() {
-  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
-  const password = document.getElementById("newPassword").value.trim();
-  const tier = document.getElementById("newRole").value;
-  const duration = document.getElementById("newDuration").value;
-  const adminSecret = document.getElementById("adminSecretInput").value.trim();
+  const rawUsername = document.getElementById("newUsername")?.value.trim().toLowerCase();
+  const password = document.getElementById("newPassword")?.value.trim();
+  const tier = document.getElementById("newRole")?.value;
+  const duration = document.getElementById("newDuration")?.value;
+  const adminSecret = document.getElementById("adminSecretInput")?.value.trim();
   const resultMsg = document.getElementById("formResultMsg");
 
   if (!rawUsername || !password || !adminSecret) {
@@ -294,8 +304,10 @@ function copyText(txt) {
     fallbackCopy(txt);
   }
   const t = document.getElementById("toastMsg");
-  t.style.display = "block";
-  setTimeout(() => { t.style.display = "none"; }, 1800);
+  if(t) {
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 1800);
+  }
 }
 
 function fallbackCopy(txt) {
@@ -780,7 +792,8 @@ async function fetchWithTimeout(url, timeoutMs = 8000) {
 async function loadMatchesForDate(iso) {
   renderSubBars();
   if (cacheByDate[iso]) { renderViewport(); return; }
-  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează clasamentele și datele xG pentru <b>${iso}</b>...</div>`;
+  const viewport = document.getElementById("viewport");
+  if(viewport) viewport.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează clasamentele și datele xG pentru <b>${iso}</b>...</div>`;
   const ymd = iso.replace(/-/g, "");
   const res = await Promise.all(LEAGUES.map(l =>
     fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`)
@@ -797,10 +810,10 @@ async function loadMatchesForDate(iso) {
 
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_v7_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_v8_cache_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
     try {
-      const backup = localStorage.getItem("joe_v7_cache_" + iso);
+      const backup = localStorage.getItem("joe_v8_cache_" + iso);
       cacheByDate[iso] = backup ? JSON.parse(backup) : [];
     } catch (e) { cacheByDate[iso] = []; }
   }
@@ -812,7 +825,8 @@ async function loadMatchesForDate(iso) {
 async function loadEuropaMatches() {
   renderSubBars();
   if (europaMatches.length) { renderViewport(); return; }
-  document.getElementById("viewport").innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
+  const viewport = document.getElementById("viewport");
+  if(viewport) viewport.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
   const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
   const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
     fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
@@ -849,9 +863,11 @@ async function saveToDB() {
       headers: sbHeaders(),
       body: JSON.stringify({ data: project })
     });
-    document.getElementById("liveClock").innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
   } catch (e) {
-    document.getElementById("liveClock").innerText = "● Sync Error";
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = "● Sync Error";
   }
 }
 
@@ -862,7 +878,8 @@ function recalcBankroll(shouldSave = true) {
     else if (bet.status === "LOSS") b -= bet.stake;
   });
   project.bankroll = +b.toFixed(2);
-  document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
+  const topBankroll = document.getElementById("topBankroll");
+  if(topBankroll) topBankroll.innerText = project.bankroll.toFixed(2);
   if (shouldSave) saveToDB();
 }
 
@@ -949,28 +966,40 @@ function toggleDrawer(id) {
 
 // ================= INIȚIALIZARE APLICAȚIE =================
 async function startApp() {
-  selectedDate = getDatesList()[1].iso;
-  const savedUser = localStorage.getItem("xmts_logged_user");
-  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
-  if (savedUser) {
-    try {
-      const parsed = JSON.parse(savedUser);
-      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
-      if (!isExpired && parsed.username) {
-        currentUser = parsed;
-        if (parsed.role === "admin" && savedAdmToken) {
-          adminSessionPass = savedAdmToken;
-          await fetchAdminUsersList();
+  try {
+    const dates = getDatesList();
+    if (dates && dates[1]) selectedDate = dates[1].iso;
+    
+    const savedUser = localStorage.getItem("xmts_logged_user");
+    const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
+        if (!isExpired && parsed.username) {
+          currentUser = parsed;
+          if (parsed.role === "admin" && savedAdmToken) {
+            adminSessionPass = savedAdmToken;
+            await fetchAdminUsersList();
+          }
+          const lScreen = document.getElementById("loginScreen");
+          if(lScreen) lScreen.style.display = "none";
+          applyRolePermissions();
+        } else {
+          localStorage.removeItem("xmts_logged_user");
         }
-        document.getElementById("loginScreen").style.display = "none";
-        applyRolePermissions();
-      } else {
-        localStorage.removeItem("xmts_logged_user");
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
+    await loadMatchesForDate(selectedDate);
+    await initProject();
+  } catch (err) {
+    console.error("Eroare la pornirea aplicației:", err);
   }
-  loadMatchesForDate(selectedDate);
-  await initProject();
 }
 
-startApp();
+// Pornire automată sigură
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
