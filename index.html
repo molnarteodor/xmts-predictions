@@ -225,10 +225,9 @@ function sbHeaders() {
   };
 }
 
-// NU mai stocăm niciodată parole în codul sursă!
 let usersList = [];
 let currentUser = null;
-let adminSessionPass = null; // Ținută doar în memoria RAM a sesiunii curente pt apelurile RPC de admin
+let adminSessionPass = null;
 
 const LEAGUES = [
   {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
@@ -328,7 +327,7 @@ async function attemptLogin() {
 
     if (currentUser.role === "admin") {
       adminSessionPass = p;
-      sessionStorage.setItem("xmts_adm_ token", p);
+      sessionStorage.setItem("xmts_adm_token", p);
       await fetchAdminUsersList();
     }
 
@@ -363,7 +362,7 @@ function logoutUser() {
   adminSessionPass = null;
   usersList = [];
   localStorage.removeItem("xmts_logged_user");
-  sessionStorage.removeItem("xmts_adm_ token");
+  sessionStorage.removeItem("xmts_adm_token");
   document.getElementById("loginUser").value = "";
   document.getElementById("loginPass").value = "";
   document.getElementById("loginScreen").style.display = "flex";
@@ -421,7 +420,6 @@ async function createNewUser() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
 
-    // Salvăm în jack_users prin RPC-ul securizat de admin
     if (isSupabaseConfigured() && adminSessionPass) {
       await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
         method: "POST",
@@ -532,7 +530,6 @@ function extractMarketOdds(comp) {
   return { mktPH, mktPD, mktPA, decH, decD, decA, ouLine };
 }
 
-// Forța echipei este calculată 100% din datele sezonului curent (Empirical Bayes Shrinkage pe clasament + forma reală)
 function extractTeamStrength(compObj, isHome) {
   let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
   let winsRate5 = 2.0, drawsRate5 = 1.4, lossesRate5 = 1.6, drawRatio = 0.26;
@@ -560,7 +557,6 @@ function extractTeamStrength(compObj, isHome) {
     if (totalRec) {
       hasRealRecord = true;
       matchesPlayed = totalRec.tot;
-      // Empirical Bayes Shrinkage: ponderăm cu n / (n + 6) ca să nu exagerăm după doar 2-3 etape
       const reliability = totalRec.tot / (totalRec.tot + 6);
       overallScore = (totalRec.ppg - 1.36) * 0.48 * reliability;
       formDisplay = `${totalRec.w}V-${totalRec.d}E-${totalRec.l}Î`;
@@ -607,9 +603,7 @@ function extractTeamStrength(compObj, isHome) {
   }
 
   const hasData = hasRealRecord || hasRealForm;
-  if (!hasData) {
-    formDisplay = "Date limitate";
-  }
+  if (!hasData) formDisplay = "Date limitate";
 
   let combinedRecord = overallScore;
   if (venueScore !== 0) combinedRecord = overallScore * 0.60 + venueScore * 0.40;
@@ -652,7 +646,6 @@ function poissonOverProb(line, lam) {
   return Math.max(0.05, Math.min(0.95, 1 - cdf));
 }
 
-// Alegem pragul de cornere/cartonașe care oferă cea mai solidă probabilitate statistică în zona 60% - 76%
 function selectOptimalStatLine(expVal, overLines, underLines) {
   const options = [];
   for (let l of overLines) {
@@ -686,29 +679,167 @@ function dixonColesTau(h, a, lamH, lamA, rho = -0.09) {
   return 1.0;
 }
 
-// Miză bazată pe Siguranța Statistică & Calitatea Datelor (sau Kelly real doar când avem cotă externă cu EV > 0)
 function calculateSmartStake(bankroll, m) {
   let pct = 0.04;
   if (m.edgePct && m.edgePct > 2) {
-    // Avem cotă reală din piață și avantaj matematic pozitiv (True Kelly Fracționat 30%)
     const p = m.prob / 100;
     const b = Math.max(0.25, m.odd - 1);
     const kelly = ((p * b - (1 - p)) / b) * 0.30;
     pct = Math.max(0.03, Math.min(0.08, kelly));
   } else {
-    // Confidence Staking proporțional cu probabilitatea modelului
     if (m.prob >= 66) pct = 0.07;
     else if (m.prob >= 60) pct = 0.06;
     else if (m.prob >= 55) pct = 0.05;
     else pct = 0.04;
   }
 
-  if (m.lowData) pct = Math.min(pct, 0.03); // Reducem automat miza dacă echipele au istoric limitat
+  if (m.lowData) pct = Math.min(pct, 0.03);
 
   const rawStake = bankroll * pct;
   return {
     stake: Math.max(10, Math.round(rawStake / 5) * 5),
     pct: Math.round(pct * 100)
+  };
+}
+// === CONTINUĂ CU PARTEA 2 DE AICI ÎN JOS ===
+// ================= PARTEA 2: RATINGURI REALE CLUBURI + MOTOR ANALIZĂ CALIBRAT PE COTE =================
+
+// Indice Power Rating (Elo + Valoare Lot): + pentru forțe, - pentru echipe din subsol/retrogradare
+const CLUB_POWER = [
+  // Elite & Top Champions League
+  {k:"manchester city",p:0.55},{k:"real madrid",p:0.55},{k:"bayern",p:0.54},{k:"barcelona",p:0.52},
+  {k:"liverpool",p:0.50},{k:"inter",p:0.48},{k:"arsenal",p:0.48},{k:"paris saint-germain",p:0.48},{k:"psg",p:0.48},
+  {k:"leverkusen",p:0.42},{k:"napoli",p:0.44},{k:"atletico",p:0.40},{k:"atlético",p:0.40},{k:"dortmund",p:0.38},
+  {k:"juventus",p:0.38},{k:"milan",p:0.36},{k:"atalanta",p:0.39},{k:"chelsea",p:0.36},{k:"tottenham",p:0.32},
+  {k:"aston villa",p:0.31},{k:"newcastle",p:0.30},{k:"manchester united",p:0.26},{k:"leipzig",p:0.34},
+  {k:"sporting",p:0.44},{k:"benfica",p:0.42},{k:"porto",p:0.40},{k:"psv",p:0.44},{k:"feyenoord",p:0.34},{k:"ajax",p:0.32},
+  {k:"galatasaray",p:0.42},{k:"fenerbahce",p:0.40},{k:"fenerbahçe",p:0.40},{k:"besiktas",p:0.28},
+  {k:"olympiacos",p:0.34},{k:"paok",p:0.31},{k:"panathinaikos",p:0.29},{k:"aek",p:0.29},
+  // Echipe bune / Europa League
+  {k:"lazio",p:0.30},{k:"roma",p:0.29},{k:"fiorentina",p:0.27},{k:"bologna",p:0.20},{k:"torino",p:0.12},
+  {k:"athletic",p:0.28},{k:"villarreal",p:0.27},{k:"real sociedad",p:0.24},{k:"betis",p:0.22},{k:"girona",p:0.18},
+  {k:"frankfurt",p:0.27},{k:"stuttgart",p:0.27},{k:"monaco",p:0.32},{k:"marseille",p:0.31},{k:"lille",p:0.28},{k:"lyon",p:0.25},
+  {k:"brighton",p:0.22},{k:"fulham",p:0.15},{k:"bournemouth",p:0.14},{k:"west ham",p:0.14},{k:"braga",p:0.25},
+  // SuperLiga României (Top vs Subsol)
+  {k:"fcsb",p:0.32},{k:"cfr cluj",p:0.28},{k:"universitatea craiova",p:0.26},{k:"craiova",p:0.26},
+  {k:"universitatea cluj",p:0.22},{k:"u cluj",p:0.22},{k:"rapid",p:0.22},{k:"dinamo",p:0.16},{k:"sepsi",p:0.12},{k:"farul",p:0.10},
+  {k:"slobozia",p:-0.24},{k:"botoșani",p:-0.20},{k:"botosani",p:-0.20},{k:"buzău",p:-0.25},{k:"buzau",p:-0.25},{k:"poli iași",p:-0.18},{k:"ermannstadt",p:-0.10},
+  // Echipe mici / Subsol Serie A, La Liga, Premier League, Ligue 1, Bundesliga (Previne eroarea Monza vs Napoli!)
+  {k:"monza",p:-0.24},{k:"lecce",p:-0.26},{k:"venezia",p:-0.28},{k:"empoli",p:-0.20},{k:"cagliari",p:-0.20},
+  {k:"verona",p:-0.22},{k:"parma",p:-0.16},{k:"como",p:-0.14},{k:"genoa",p:-0.16},{k:"udinese",p:-0.06},{k:"sassuolo",p:-0.12},
+  {k:"valladolid",p:-0.28},{k:"las palmas",p:-0.24},{k:"leganes",p:-0.22},{k:"espanyol",p:-0.22},{k:"getafe",p:-0.14},{k:"alaves",p:-0.18},
+  {k:"southampton",p:-0.30},{k:"ipswich",p:-0.28},{k:"leicester",p:-0.24},{k:"wolves",p:-0.18},{k:"everton",p:-0.14},{k:"crystal palace",p:-0.08},
+  {k:"kiel",p:-0.28},{k:"bochum",p:-0.28},{k:"st. pauli",p:-0.24},{k:"heidenheim",p:-0.20},{k:"augsburg",p:-0.14},
+  {k:"le havre",p:-0.26},{k:"angers",p:-0.26},{k:"montpellier",p:-0.24},{k:"saint-etienne",p:-0.22},{k:"nantes",p:-0.18},{k:"auxerre",p:-0.16}
+];
+
+function getClubBasePower(name) {
+  const low = (name || "").toLowerCase();
+  for (let c of CLUB_POWER) if (low.includes(c.k)) return c.p;
+  return 0;
+}
+
+// Suprascriem extractTeamStrength pentru a combina Clasamentul la zi (fără comprimare excesivă) cu Power Rating-ul clubului
+function extractTeamStrength(compObj, isHome, teamName) {
+  let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
+  let winsRate5 = 2.0, drawsRate5 = 1.4, lossesRate5 = 1.6, drawRatio = 0.26;
+  let hasRealRecord = false, hasRealForm = false;
+
+  const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
+
+  if (compObj.records && Array.isArray(compObj.records)) {
+    const parseRec = (rec) => {
+      if (!rec || !rec.summary) return null;
+      const parts = rec.summary.split("-").map(x => parseInt(x, 10));
+      if (parts.length === 3 && !isNaN(parts[0])) {
+        const [w, d, l] = parts;
+        const tot = w + d + l;
+        if (tot > 0) return { w, d, l, tot, ppg: (w * 3 + d) / tot };
+      }
+      return null;
+    };
+
+    const totalRec = parseRec(compObj.records.find(r => r.type === "total") || compObj.records[0]);
+    const venueRec = parseRec(compObj.records.find(r => 
+      r.type === (isHome ? "home" : "road") || 
+      (r.name && r.name.toLowerCase() === (isHome ? "home" : "away"))
+    ));
+
+    if (totalRec) {
+      hasRealRecord = true;
+      const reliability = Math.min(1.0, totalRec.tot / (totalRec.tot + 3));
+      // Multiplicator puternic (0.62) pe PPG ca diferența dintre 2.2 PPG și 0.8 PPG să fie majoră
+      overallScore = (totalRec.ppg - 1.35) * 0.62 * reliability;
+      formDisplay = `${totalRec.w}V-${totalRec.d}E-${totalRec.l}Î`;
+      winsRate5 = (totalRec.w / totalRec.tot) * 5;
+      drawsRate5 = (totalRec.d / totalRec.tot) * 5;
+      lossesRate5 = (totalRec.l / totalRec.tot) * 5;
+      drawRatio = totalRec.d / totalRec.tot;
+    }
+
+    if (venueRec && venueRec.tot >= 2) {
+      const venueRel = Math.min(1.0, venueRec.tot / (venueRec.tot + 3));
+      const expectedVenuePpg = isHome ? 1.50 : 1.20;
+      venueScore = (venueRec.ppg - expectedVenuePpg) * 0.50 * venueRel;
+    }
+  }
+
+  if (compObj.form && typeof compObj.form === "string") {
+    const rawForm = compObj.form.toUpperCase().replace(/[^WDL]/g, "").slice(-5);
+    if (rawForm.length >= 3) {
+      hasRealForm = true;
+      let fW = 0, fD = 0, fL = 0;
+      formDisplay = formDisplay ? `${rawForm} (${formDisplay})` : rawForm;
+      const weights = [0.60, 0.80, 1.0, 1.25, 1.50];
+      for (let i = 0; i < rawForm.length; i++) {
+        const ch = rawForm[i];
+        if (ch === "W") fW++;
+        else if (ch === "D") fD++;
+        else if (ch === "L") fL++;
+        const w = weights[i + (5 - rawForm.length)] || 1.0;
+        formScore += (ch === "W" ? 0.075 : (ch === "D" ? 0.0 : -0.075)) * w;
+      }
+      const scale5 = 5 / rawForm.length;
+      if (hasRealRecord) {
+        winsRate5 = winsRate5 * 0.50 + (fW * scale5) * 0.50;
+        drawsRate5 = drawsRate5 * 0.50 + (fD * scale5) * 0.50;
+        lossesRate5 = lossesRate5 * 0.50 + (fL * scale5) * 0.50;
+      } else {
+        winsRate5 = fW * scale5;
+        drawsRate5 = fD * scale5;
+        lossesRate5 = fL * scale5;
+        drawRatio = fD / rawForm.length;
+      }
+    }
+  }
+
+  const hasData = hasRealRecord || hasRealForm || clubPower !== 0;
+  if (!formDisplay) formDisplay = clubPower !== 0 ? "Rating Lot Activ" : "Date limitate";
+
+  let tablePerf = overallScore;
+  if (venueScore !== 0) tablePerf = overallScore * 0.62 + venueScore * 0.38;
+
+  let statsStrength = hasRealRecord
+    ? (hasRealForm ? tablePerf * 0.68 + formScore * 0.32 : tablePerf)
+    : formScore;
+
+  // Combinăm performanța din sezonul curent cu valoarea structurală a clubului (Power Rating)
+  let totalStrength = statsStrength;
+  if (clubPower !== 0 && (hasRealRecord || hasRealForm)) {
+    totalStrength = statsStrength * 0.55 + clubPower * 0.65;
+  } else if (clubPower !== 0) {
+    totalStrength = clubPower * 0.85;
+  }
+
+  return {
+    score: totalStrength,
+    clubPower,
+    winsCount: +winsRate5.toFixed(2),
+    drawsCount: +drawsRate5.toFixed(2),
+    lossesCount: +lossesRate5.toFixed(2),
+    drawRatio,
+    hasData,
+    formDisplay
   };
 }
 
@@ -722,27 +853,40 @@ function analyzeMatch(ev, lg) {
   const hHT = (home.linescores && home.linescores.length > 0 && home.linescores[0].value !== undefined) ? parseInt(home.linescores[0].value, 10) : null;
   const aHT = (away.linescores && away.linescores.length > 0 && away.linescores[0].value !== undefined) ? parseInt(away.linescores[0].value, 10) : null;
 
-  const hInfo = extractTeamStrength(home, true);
-  const aInfo = extractTeamStrength(away, false);
-  const lowData = !hInfo.hasData || !aInfo.hasData;
+  const hInfo = extractTeamStrength(home, true, hName);
+  const aInfo = extractTeamStrength(away, false, aName);
+  const lowData = !hInfo.hasData && !aInfo.hasData;
 
   const hBoost = hInfo.score;
   const aBoost = aInfo.score;
+  const strengthDiff = hBoost - aBoost; // Ex: Monza (-0.28) vs Napoli (+0.44) => strengthDiff = -0.72!
 
-  // Derby detectat dinamic: două echipe de top din clasamentul actual (ambele cu formă/clasament peste +0.16)
-  const isDerby = hInfo.hasData && aInfo.hasData && hBoost >= 0.16 && aBoost >= 0.16 && Math.abs(hBoost - aBoost) <= 0.15;
+  const isDerby = hBoost >= 0.22 && aBoost >= 0.22 && Math.abs(strengthDiff) <= 0.18;
 
+  // Avantajul terenului propriu scade când oaspeții sunt mult mai valoroși decât gazdele
   const lgGoals = lg.gBase || 2.62;
-  const baseH = lgGoals * 0.545;
-  const baseA = lgGoals * 0.455;
-  const strengthDiff = hBoost - aBoost;
-  const paceMod = (0.26 - (hInfo.drawRatio + aInfo.drawRatio) / 2) * 0.50 + (hBoost + aBoost) * 0.15;
+  const homeAdvShare = strengthDiff < -0.25 ? 0.510 : (strengthDiff > 0.25 ? 0.555 : 0.535);
+  const baseH = lgGoals * homeAdvShare;
+  const baseA = lgGoals * (1 - homeAdvShare);
+  const paceMod = (0.26 - (hInfo.drawRatio + aInfo.drawRatio) / 2) * 0.45 + (hBoost + aBoost) * 0.16;
 
-  // Rata pură de goluri a modelului statistic (fără contaminare cu cotele caselor)
-  const lamH = Math.max(0.50, Math.min(3.25, baseH + strengthDiff * 0.90 + paceMod * 0.52));
-  const lamA = Math.max(0.38, Math.min(2.85, baseA - strengthDiff * 0.72 + paceMod * 0.48));
+  let lamH = Math.max(0.45, Math.min(3.35, baseH + strengthDiff * 0.98 + paceMod * 0.50));
+  let lamA = Math.max(0.38, Math.min(3.10, baseA - strengthDiff * 0.88 + paceMod * 0.50));
 
+  // Dacă ESPN trimite cotele reale ale caselor de pariuri, calibrăm xG-ul cu piața
   const mkt = extractMarketOdds(comp);
+  if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
+    let targetTotal = lamH + lamA;
+    if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
+      targetTotal = targetTotal * 0.65 + mkt.ouLine * 0.35;
+    }
+    const mktShareH = Math.max(0.20, Math.min(0.80, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
+    const modShareH = lamH / (lamH + lamA);
+    const finalShareH = modShareH * 0.55 + mktShareH * 0.45;
+    lamH = Math.max(0.45, Math.min(3.35, targetTotal * finalShareH));
+    lamA = Math.max(0.38, Math.min(3.10, targetTotal * (1 - finalShareH)));
+  }
+
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
 
   let pH = 0, pD = 0, pA = 0, p00 = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
@@ -790,7 +934,6 @@ function analyzeMatch(ev, lg) {
   const totalXG = lamH + lamA;
   const xgDiff = lamH - lamA;
 
-  // ================= SELECȚIE BAZATĂ PE PROBABILITATE STATISTICĂ REALĂ & EDGE (FĂRĂ BELL-CURVE PE COTA 1.62) =================
   const candidates = [];
 
   const addCandidate = (name, mktType, prob, realOdd, specificityWeight) => {
@@ -798,46 +941,45 @@ function analyzeMatch(ev, lg) {
     const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.93 * fairOdd).toFixed(2);
     if (displayOdd < 1.33 || displayOdd > 2.35 || prob < 0.50) return;
 
-    // Dacă avem cotă reală din piață, calculăm avantajul matematic real (Edge)
     const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
     const edgeBonus = (realOdd && edgePct > 0) ? Math.min(0.08, edgePct * 0.008) : 0;
-
-    // Scor bazat direct pe probabilitatea reală de reușită + specificitatea tactică
     const valueScore = prob * specificityWeight + edgeBonus;
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
   // 1. Soliști (1 / 2)
-  if (pH >= 0.49) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.08);
-  if (pA >= 0.49) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.08);
+  if (pH >= 0.48) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.10);
+  if (pA >= 0.48) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.10);
 
-  // 2. Solist & Peste 1.5 Goluri (când favorita e prea clară pt 1 simplu)
-  if (pH >= 0.62 && p1_O15 >= 0.53) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.06);
-  if (pA >= 0.60 && p2_O15 >= 0.52) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.06);
+  // 2. Solist & Peste 1.5 Goluri
+  if (pH >= 0.62 && p1_O15 >= 0.53) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.07);
+  if (pA >= 0.60 && p2_O15 >= 0.52) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.07);
 
-  // 3. Piețe de goluri (Peste 2.5, GG, Sub 2.5)
+  // 3. Piețe de goluri
   if (pO25 >= 0.53 && totalXG >= 2.62) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.06);
   if (pGG >= 0.54 && lamH >= 1.12 && lamA >= 1.02) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.05);
   if (pU25 >= 0.56 && totalXG <= 2.26) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.04);
 
-  // 4. Combo Șansă Dublă & Goluri
-  if (xgDiff >= 0.16 && p1X_O15 >= 0.55 && totalXG >= 2.48) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.02);
-  if (xgDiff <= -0.16 && pX2_O15 >= 0.54 && totalXG >= 2.48) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.02);
-  if (xgDiff >= 0.10 && p1X_U35 >= 0.57 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.01);
+  // 4. Combo Șansă Dublă & Goluri (strict în direcția echipei favorite!)
+  if (xgDiff >= 0.18 && p1X_O15 >= 0.55 && totalXG >= 2.42) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.04);
+  if (xgDiff <= -0.18 && pX2_O15 >= 0.54 && totalXG >= 2.42) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.04);
+  if (xgDiff >= 0.14 && p1X_U35 >= 0.57 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.01);
+  if (xgDiff <= -0.14 && pX2_U35 >= 0.57 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.01);
 
   // 5. Pauză sau Final (PSF 1 / PSF 2)
-  if (pH >= 0.42 && pH <= 0.52 && xgDiff >= 0.14) addCandidate(`PSF 1 (${hName})`, "PSF", pPSF1, null, 0.98);
-  if (pA >= 0.42 && pA <= 0.52 && xgDiff <= -0.14) addCandidate(`PSF 2 (${aName})`, "PSF", pPSF2, null, 0.98);
+  if (pH >= 0.42 && pH <= 0.52 && xgDiff >= 0.15) addCandidate(`PSF 1 (${hName})`, "PSF", pPSF1, null, 0.99);
+  if (pA >= 0.42 && pA <= 0.52 && xgDiff <= -0.15) addCandidate(`PSF 2 (${aName})`, "PSF", pPSF2, null, 0.99);
 
-  // 6. Piețe de siguranță ridicată (Peste 1.5 Goluri / 1X / X2) - doar dacă au cotă >= 1.34
+  // 6. Peste 1.5 Goluri / 1X / X2 (Interzis 1X dacă oaspeții sunt mai buni!)
   if (pO15 >= 0.62 && pO15 <= 0.69) addCandidate("Peste 1.5 Goluri", "O15", pO15, null, 0.94);
-  if (xgDiff >= 0.0 && p1X >= 0.58 && p1X <= 0.69) addCandidate("Șansă Dublă 1X", "DC", p1X, null, 0.93);
-  if (xgDiff <= 0.0 && pX2 >= 0.58 && pX2 <= 0.69) addCandidate("Șansă Dublă X2", "DC", pX2, null, 0.93);
+  if (xgDiff >= 0.10 && p1X >= 0.58 && p1X <= 0.69) addCandidate("Șansă Dublă 1X", "DC", p1X, null, 0.92);
+  if (xgDiff <= -0.10 && pX2 >= 0.58 && pX2 <= 0.69) addCandidate("Șansă Dublă X2", "DC", pX2, null, 0.92);
 
   if (!candidates.length) {
-    if (pH >= pA && pH >= 0.45) candidates.push({ name: `1 (${hName})`, mktType: "SOLO", prob: pH, odd: +(0.93 / pH).toFixed(2), edgePct: 0, valueScore: pH });
-    else if (pA > pH && pA >= 0.45) candidates.push({ name: `2 (${aName})`, mktType: "SOLO", prob: pA, odd: +(0.93 / pA).toFixed(2), edgePct: 0, valueScore: pA });
-    else candidates.push({ name: "Șansă Dublă 1X", mktType: "DC", prob: p1X, odd: Math.max(1.28, +(0.92 / p1X).toFixed(2)), edgePct: 0, valueScore: p1X * 0.9 });
+    if (pH >= pA && pH >= 0.44) candidates.push({ name: `1 (${hName})`, mktType: "SOLO", prob: pH, odd: +(0.93 / pH).toFixed(2), edgePct: 0, valueScore: pH });
+    else if (pA > pH && pA >= 0.44) candidates.push({ name: `2 (${aName})`, mktType: "SOLO", prob: pA, odd: +(0.93 / pA).toFixed(2), edgePct: 0, valueScore: pA });
+    else if (xgDiff < 0) candidates.push({ name: "Șansă Dublă X2", mktType: "DC", prob: pX2, odd: Math.max(1.25, +(0.92 / pX2).toFixed(2)), edgePct: 0, valueScore: pX2 * 0.9 });
+    else candidates.push({ name: "Șansă Dublă 1X", mktType: "DC", prob: p1X, odd: Math.max(1.25, +(0.92 / p1X).toFixed(2)), edgePct: 0, valueScore: p1X * 0.9 });
   }
 
   candidates.sort((a, b) => b.valueScore - a.valueScore);
@@ -862,7 +1004,6 @@ function analyzeMatch(ev, lg) {
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  // ================= CALCUL CORNERE & CARTONAȘE 100% DIN DATE FOTBALISTICE (FĂRĂ HASH!) =================
   const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 3.8) * 0.28;
   const openPlayFactor = (0.26 - (hInfo.drawRatio + aInfo.drawRatio) / 2) * 2.4;
   const mismatchPressure = Math.abs(lamH - lamA) * 0.65;
@@ -946,7 +1087,6 @@ function buildOptimalTicket(pool, targetOdd) {
   return { picks, totalOdd: tot };
 }
 
-// ================= PROTECȚIE REZILIENȚĂ API ESPN (TIMEOUT + FALLBACK CACHE LOCAL) =================
 async function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -978,15 +1118,13 @@ async function loadMatchesForDate(iso) {
     } catch (e) {}
   }));
 
-  // Dacă API-ul ESPN are o întrerupere, încărcăm automat backup-ul din localStorage
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_v5_cache_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
     try {
-      const backup = localStorage.getItem("joe_cache_" + iso);
-      if (backup) cacheByDate[iso] = JSON.parse(backup);
-      else cacheByDate[iso] = [];
+      const backup = localStorage.getItem("joe_v5_cache_" + iso);
+      cacheByDate[iso] = backup ? JSON.parse(backup) : [];
     } catch (e) { cacheByDate[iso] = []; }
   }
 
@@ -1389,19 +1527,15 @@ function renderAdminView() {
 
   return `<div class="cyber-card" style="border-color:var(--neon-gold);">
     <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:12px;">👑 CREARE CONT UTILIZATOR</div>
-    
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Nume utilizator (ex: alex)</label>
     <input type="text" id="newUsername" class="cyber-input" placeholder="ex: alex">
-
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă temporară</label>
     <input type="text" id="newPassword" class="cyber-input" placeholder="ex: parola123">
-
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Tip Pachet</label>
     <select id="newRole" class="cyber-input" style="background:#070d19;">
       <option value="standard">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
       <option value="vip" selected>⚡ VIP + JOE (Acces Total)</option>
     </select>
-
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Durată / Valabilitate</label>
     <select id="newDuration" class="cyber-input" style="background:#070d19;">
       <option value="trial">Test 2 Zile</option>
@@ -1410,10 +1544,8 @@ function renderAdminView() {
       <option value="6_months">6 Luni</option>
       <option value="1_year">1 An</option>
     </select>
-
     <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă Master Admin</label>
     <input type="password" id="adminSecretInput" class="cyber-input" placeholder="Parola ta secretă de admin">
-
     <button class="login-btn" onclick="createNewUser()">+ SALVEAZĂ UTILIZATORUL</button>
     <div id="formResultMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: bold; word-break: break-all;"></div>
   </div>
@@ -1436,7 +1568,7 @@ function renderProjectView() {
   const bestOfDay = candidates[0];
 
   const quotes = net >= 0 
-    ? `"Suntem pe verde, șefu'! Modelul matematic se bazează strict pe clasamentele reale și distribuția Dixon-Coles."`
+    ? `"Suntem pe verde, șefu'! Modelul matematic combină Power Rating-ul cluburilor cu clasamentul la zi."`
     : `"Capul sus! Gestionarea riguroasă a mizei ne protejează banca și ne ține în joc pe termen lung."`;
 
   let joeAutoPickHtml = "";
@@ -1526,7 +1658,6 @@ function renderProjectView() {
   setTimeout(updateChatUI, 50);
 }
 
-// ================= STATISTICI DE PERFORMANȚĂ 100% REALE (FĂRĂ CIFRE INVENTATE) =================
 function computeRealPerformanceStats(dayPool) {
   const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
   const wonBets = settledBets.filter(b => b.status === "WIN").length;
@@ -1616,7 +1747,7 @@ function renderTicketsView() {
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
       <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">EMPIRICAL BAYES</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">POWER + BAYES</div></div>
     </div>
   </div>`;
 }
@@ -1673,11 +1804,10 @@ async function switchNav(tab) {
 (async function startApp() {
   selectedDate = getDatesList()[1].iso;
   const savedUser = localStorage.getItem("xmts_logged_user");
-  const savedAdmToken = sessionStorage.getItem("xmts_adm_ token");
+  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
   if (savedUser) {
     try {
       const parsed = JSON.parse(savedUser);
-      // Verificăm dacă abonamentul nu a expirat între timp
       const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
       if (!isExpired && parsed.username) {
         currentUser = parsed;
