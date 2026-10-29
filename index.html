@@ -156,56 +156,56 @@
 
 <!-- ECRAN DE LOGARE SECURIZAT SERVER-SIDE -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
-    </div>
-    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
-    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
-    <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
-    <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
-    <button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
-    <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
-  </div>
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+    </div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
+    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
+    <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
+    <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
+    <button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
+    <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
+  </div>
 </div>
 
 <!-- APLICATIA PRINCIPALA -->
 <div class="app-shell">
-  <div class="top-hud">
-    <div class="hud-brand">
-      <div class="hud-logo">
-        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
-      </div>
-      <div>
-        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
-        <span class="hud-status" id="liveClock">● Live 24/7</span>
-      </div>
-    </div>
-    <div class="hud-right">
-      <div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
-      <button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
-    </div>
-  </div>
-  
-  <div class="sub-bars" id="subBars">
-    <div class="h-scroll" id="dateBar"></div>
-    <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
-  </div>
+  <div class="top-hud">
+    <div class="hud-brand">
+      <div class="hud-logo">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div>
+        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
+        <span class="hud-status" id="liveClock">● Live 24/7</span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
+      <button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
+    </div>
+  </div>
+  
+  <div class="sub-bars" id="subBars">
+    <div class="h-scroll" id="dateBar"></div>
+    <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
+  </div>
 
-  <!-- Căsuță de căutare echipe -->
-  <div class="search-container" id="searchContainer">
-    <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
-  </div>
+  <!-- Căsuță de căutare echipe -->
+  <div class="search-container" id="searchContainer">
+    <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
+  </div>
 
-  <div class="viewport" id="viewport"></div>
+  <div class="viewport" id="viewport"></div>
 
-  <nav class="bottom-hud-nav">
-    <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
-    <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
-    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
-    <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
-    <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
-  </nav>
+  <nav class="bottom-hud-nav">
+    <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
+    <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
+    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
+    <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
+    <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
+  </nav>
 </div>
 
 <script>
@@ -217,12 +217,12 @@ const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1
 const isSupabaseConfigured = () => SUPABASE_URL.startsWith("https://") && SUPABASE_KEY.length > 20;
 
 function sbHeaders() {
-  return {
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY,
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-  };
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
 }
 
 let usersList = [];
@@ -230,44 +230,48 @@ let currentUser = null;
 let adminSessionPass = null;
 
 const LEAGUES = [
-  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
-  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
-  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
-  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
-  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
-  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
-  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
-  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
-  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
-  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
-  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
-  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
-  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
+  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
+  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
+  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
+  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
+  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
+  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
+  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
+  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
+  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
+  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
+  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
 ];
 
 // Matrice solidă de putere cluburi (Power Rating pe loturi) corectată pentru a elimina anomaliile de tip Monza vs Napoli
-const CLUB_POWER = [
-  {k:"manchester city",p:0.65},{k:"real madrid",p:0.65},{k:"bayern",p:0.62},{k:"barcelona",p:0.60},
-  {k:"liverpool",p:0.58},{k:"inter",p:0.55},{k:"arsenal",p:0.55},{k:"paris saint-germain",p:0.55},{k:"psg",p:0.55},
-  {k:"leverkusen",p:0.48},{k:"napoli",p:0.52},{k:"atletico",p:0.45},{k:"atlético",p:0.45},{k:"dortmund",p:0.44},
-  {k:"juventus",p:0.44},{k:"milan",p:0.42},{k:"atalanta",p:0.45},{k:"chelsea",p:0.42},{k:"tottenham",p:0.38},
-  {k:"aston villa",p:0.36},{k:"newcastle",p:0.35},{k:"manchester united",p:0.30},{k:"leipzig",p:0.40},
-  {k:"sporting",p:0.50},{k:"benfica",p:0.48},{k:"porto",p:0.45},{k:"psv",p:0.50},{k:"feyenoord",p:0.38},{k:"ajax",p:0.36},
-  {k:"galatasaray",p:0.48},{k:"fenerbahce",p:0.45},{k:"fenerbahçe",p:0.45},{k:"besiktas",p:0.32},
-  {k:"olympiacos",p:0.38},{k:"paok",p:0.35},{k:"panathinaikos",p:0.32},{k:"aek",p:0.32},
-  {k:"lazio",p:0.35},{k:"roma",p:0.34},{k:"fiorentina",p:0.32},{k:"bologna",p:0.24},{k:"torino",p:0.15},
-  {k:"athletic",p:0.32},{k:"villarreal",p:0.30},{k:"real sociedad",p:0.28},{k:"betis",p:0.25},{k:"girona",p:0.22},
-  {k:"frankfurt",p:0.32},{k:"stuttgart",p:0.32},{k:"monaco",p:0.38},{k:"marseille",p:0.36},{k:"lille",p:0.32},{k:"lyon",p:0.28},
-  {k:"brighton",p:0.26},{k:"fulham",p:0.18},{k:"bournemouth",p:0.16},{k:"west ham",p:0.16},{k:"braga",p:0.30},
-  {k:"fcsb",p:0.35},{k:"cfr cluj",p:0.30},{k:"universitatea craiova",p:0.28},{k:"craiova",p:0.28},
-  {k:"universitatea cluj",p:0.22},{k:"u cluj",p:0.22},{k:"rapid",p:0.22},{k:"dinamo",p:0.15},{k:"sepsi",p:0.10},{k:"farul",p:0.10},
-  {k:"slobozia",p:-0.35},{k:"botoșani",p:-0.30},{k:"botosani",p:-0.30},{k:"buzău",p:-0.35},{k:"buzau",p:-0.35},{k:"poli iași",p:-0.28},{k:"ermannstadt",p:-0.15},
-  {k:"monza",p:-0.40},{k:"lecce",p:-0.38},{k:"venezia",p:-0.42},{k:"empoli",p:-0.30},{k:"cagliari",p:-0.30},
-  {k:"verona",p:-0.32},{k:"parma",p:-0.25},{k:"como",p:-0.22},{k:"genoa",p:-0.25},{k:"udinese",p:-0.10},{k:"sassuolo",p:-0.18},
-  {k:"valladolid",p:-0.40},{k:"las palmas",p:-0.35},{k:"leganes",p:-0.32},{k:"espanyol",p:-0.32},{k:"getafe",p:-0.20},{k:"alaves",p:-0.25},
-  {k:"southampton",p:-0.42},{k:"ipswich",p:-0.40},{k:"leicester",p:-0.35},{k:"wolves",p:-0.25},{k:"everton",p:-0.20},{k:"crystal palace",p:-0.12},
-  {k:"kiel",p:-0.40},{k:"bochum",p:-0.40},{k:"st. pauli",p:-0.35},{k:"heidenheim",p:-0.30},{k:"augsburg",p:-0.20},
-  {k:"le havre",p:-0.38},{k:"angers",p:-0.38},{k:"montpellier",p:-0.35},{k:"saint-etienne",p:-0.32},{k:"nantes",p:-0.25},{k:"auxerre",p:-0.22}
+const CLUB_POWER_CALIBRATED = [
+  // Elite & Forțe Europene
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
+  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
+  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
+  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
+  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  // Echipe Bune / Sub-Top
+  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
+  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  // SuperLiga României
+  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
+  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
+  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
+  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
+  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
+  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
+  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
@@ -277,7 +281,7 @@ let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
 let vipChatMessages = [
-  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
+  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
 ];
 let lastUploadedImage = null;
 
@@ -285,229 +289,229 @@ const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Buchare
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
 
 function hasJoeAccess() {
-  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
+  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
 }
 
 function isAdmin() {
-  return currentUser && currentUser.role === "admin";
+  return currentUser && currentUser.role === "admin";
 }
 
 function applyRolePermissions() {
-  const joeBtn = document.getElementById("nav-proiect");
-  const bankBtn = document.getElementById("topBankBtn");
-  const adminBtn = document.getElementById("nav-admin");
-  const titleEl = document.getElementById("hudAppTitle");
+  const joeBtn = document.getElementById("nav-proiect");
+  const bankBtn = document.getElementById("topBankBtn");
+  const adminBtn = document.getElementById("nav-admin");
+  const titleEl = document.getElementById("hudAppTitle");
 
-  if (hasJoeAccess()) {
-    joeBtn.style.display = "flex";
-    bankBtn.style.display = "block";
-    titleEl.innerText = "JOE PREZICE";
-  } else {
-    joeBtn.style.display = "none";
-    bankBtn.style.display = "none";
-    titleEl.innerText = "JOE PREZICE";
-    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
-  }
+  if (hasJoeAccess()) {
+    joeBtn.style.display = "flex";
+    bankBtn.style.display = "block";
+    titleEl.innerText = "JOE PREZICE";
+  } else {
+    joeBtn.style.display = "none";
+    bankBtn.style.display = "none";
+    titleEl.innerText = "JOE PREZICE";
+    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
+  }
 
-  adminBtn.style.display = isAdmin() ? "flex" : "none";
+  adminBtn.style.display = isAdmin() ? "flex" : "none";
 }
 
 // ================= AUTENTIFICARE 100% SERVER-SIDE (RPC SUPABASE) =================
 async function attemptLogin() {
-  const u = document.getElementById("loginUser").value.trim().toLowerCase();
-  const p = document.getElementById("loginPass").value.trim();
-  const errEl = document.getElementById("loginErr");
-  const btnEl = document.getElementById("loginSubmitBtn");
-  errEl.style.display = "none";
+  const u = document.getElementById("loginUser").value.trim().toLowerCase();
+  const p = document.getElementById("loginPass").value.trim();
+  const errEl = document.getElementById("loginErr");
+  const btnEl = document.getElementById("loginSubmitBtn");
+  errEl.style.display = "none";
 
-  if (!u || !p) {
-    errEl.innerText = "Introdu utilizatorul și parola!";
-    errEl.style.display = "block";
-    return;
-  }
+  if (!u || !p) {
+    errEl.innerText = "Introdu utilizatorul și parola!";
+    errEl.style.display = "block";
+    return;
+  }
 
-  btnEl.innerText = "⏳ SE VERIFICĂ...";
+  btnEl.innerText = "⏳ SE VERIFICĂ...";
 
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
-      method: "POST",
-      headers: sbHeaders(),
-      body: JSON.stringify({ p_username: u, p_password: p })
-    });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_username: u, p_password: p })
+    });
 
-    const data = await r.json();
-    btnEl.innerText = "🔐 AUTENTIFICARE";
+    const data = await r.json();
+    btnEl.innerText = "🔐 AUTENTIFICARE";
 
-    if (!r.ok || !data || !data.ok) {
-      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
-      errEl.style.display = "block";
-      return;
-    }
+    if (!r.ok || !data || !data.ok) {
+      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
+      errEl.style.display = "block";
+      return;
+    }
 
-    currentUser = {
-      username: data.username,
-      role: data.role,
-      expires_at: data.expires_at
-    };
+    currentUser = {
+      username: data.username,
+      role: data.role,
+      expires_at: data.expires_at
+    };
 
-    if (currentUser.role === "admin") {
-      adminSessionPass = p;
-      sessionStorage.setItem("xmts_adm_token", p);
-      await fetchAdminUsersList();
-    }
+    if (currentUser.role === "admin") {
+      adminSessionPass = p;
+      sessionStorage.setItem("xmts_adm_token", p);
+      await fetchAdminUsersList();
+    }
 
-    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
-    document.getElementById("loginScreen").style.display = "none";
-    applyRolePermissions();
-    renderViewport();
-  } catch (e) {
-    btnEl.innerText = "🔐 AUTENTIFICARE";
-    errEl.innerText = "Eroare de conexiune cu serverul!";
-    errEl.style.display = "block";
-  }
+    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
+    document.getElementById("loginScreen").style.display = "none";
+    applyRolePermissions();
+    renderViewport();
+  } catch (e) {
+    btnEl.innerText = "🔐 AUTENTIFICARE";
+    errEl.innerText = "Eroare de conexiune cu serverul!";
+    errEl.style.display = "block";
+  }
 }
 
 async function fetchAdminUsersList() {
-  if (!isAdmin() || !adminSessionPass) return;
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
-      method: "POST",
-      headers: sbHeaders(),
-      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
-    });
-    if (r.ok) {
-      const list = await r.json();
-      if (Array.isArray(list)) usersList = list;
-    }
-  } catch (e) { console.error(e); }
+  if (!isAdmin() || !adminSessionPass) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
+    });
+    if (r.ok) {
+      const list = await r.json();
+      if (Array.isArray(list)) usersList = list;
+    }
+  } catch (e) { console.error(e); }
 }
 
 function logoutUser() {
-  currentUser = null;
-  adminSessionPass = null;
-  usersList = [];
-  localStorage.removeItem("xmts_logged_user");
-  sessionStorage.removeItem("xmts_adm_token");
-  document.getElementById("loginUser").value = "";
-  document.getElementById("loginPass").value = "";
-  document.getElementById("loginScreen").style.display = "flex";
+  currentUser = null;
+  adminSessionPass = null;
+  usersList = [];
+  localStorage.removeItem("xmts_logged_user");
+  sessionStorage.removeItem("xmts_adm_token");
+  document.getElementById("loginUser").value = "";
+  document.getElementById("loginPass").value = "";
+  document.getElementById("loginScreen").style.display = "flex";
 }
 
 function calculateExpiresAt(duration) {
-  const now = new Date();
-  if (duration === 'trial') now.setDate(now.getDate() + 2);
-  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
-  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
-  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
-  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
-  else now.setMonth(now.getMonth() + 1);
-  return now.toISOString();
+  const now = new Date();
+  if (duration === 'trial') now.setDate(now.getDate() + 2);
+  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
+  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
+  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
+  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
 }
 
 function formatExpiryDate(isoStr) {
-  if (!isoStr) return "Permanent / Nelimitat";
-  const d = new Date(isoStr);
-  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (!isoStr) return "Permanent / Nelimitat";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 async function createNewUser() {
-  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
-  const password = document.getElementById("newPassword").value.trim();
-  const tier = document.getElementById("newRole").value;
-  const duration = document.getElementById("newDuration").value;
-  const adminSecret = document.getElementById("adminSecretInput").value.trim();
-  const resultMsg = document.getElementById("formResultMsg");
+  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
+  const password = document.getElementById("newPassword").value.trim();
+  const tier = document.getElementById("newRole").value;
+  const duration = document.getElementById("newDuration").value;
+  const adminSecret = document.getElementById("adminSecretInput").value.trim();
+  const resultMsg = document.getElementById("formResultMsg");
 
-  if (!rawUsername || !password || !adminSecret) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
-    }
-    return;
-  }
+  if (!rawUsername || !password || !adminSecret) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
+    }
+    return;
+  }
 
-  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
-  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
-  const expiresAt = calculateExpiresAt(duration);
+  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
+  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+  const expiresAt = calculateExpiresAt(duration);
 
-  if(resultMsg) {
-    resultMsg.style.color = "var(--neon-gold)";
-    resultMsg.innerText = "Se creează contul securizat și se setează abonamentul...";
-  }
+  if(resultMsg) {
+    resultMsg.style.color = "var(--neon-gold)";
+    resultMsg.innerText = "Se creează contul securizat și se setează abonamentul...";
+  }
 
-  try {
-    const response = await fetch(SUPABASE_EDGE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, tier, duration, adminSecret })
-    });
+  try {
+    const response = await fetch(SUPABASE_EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, tier, duration, adminSecret })
+    });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
 
-    if (isSupabaseConfigured() && adminSessionPass) {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
-        method: "POST",
-        headers: sbHeaders(),
-        body: JSON.stringify({
-          p_admin_user: currentUser.username,
-          p_admin_pass: adminSessionPass,
-          p_action: "upsert",
-          p_target_user: rawUsername,
-          p_target_pass: password,
-          p_target_role: mappedRole,
-          p_target_expires: expiresAt
-        })
-      });
-      await fetchAdminUsersList();
-    }
+    if (isSupabaseConfigured() && adminSessionPass) {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "upsert",
+          p_target_user: rawUsername,
+          p_target_pass: password,
+          p_target_role: mappedRole,
+          p_target_expires: expiresAt
+        })
+      });
+      await fetchAdminUsersList();
+    }
 
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-green)";
-      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
-    }
-    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
-    setTimeout(() => { renderViewport(); }, 1000);
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-green)";
+      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
+    }
+    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
+    setTimeout(() => { renderViewport(); }, 1000);
 
-  } catch (err) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Eroare: " + err.message;
-    }
-  }
+  } catch (err) {
+    if(resultMsg) {
+      resultMsg.style.color = "var(--neon-red)";
+      resultMsg.innerText = "Eroare: " + err.message;
+    }
+  }
 }
 
 async function removeUser(uname) {
-  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
-  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
+  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
+  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
 
-  if (isSupabaseConfigured() && adminSessionPass) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
-        method: "POST",
-        headers: sbHeaders(),
-        body: JSON.stringify({
-          p_admin_user: currentUser.username,
-          p_admin_pass: adminSessionPass,
-          p_action: "delete",
-          p_target_user: uname
-        })
-      });
-      await fetchAdminUsersList();
-    } catch (e) { console.error(e); }
-  }
-  renderViewport();
+  if (isSupabaseConfigured() && adminSessionPass) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "delete",
+          p_target_user: uname
+        })
+      });
+      await fetchAdminUsersList();
+    } catch (e) { console.error(e); }
+  }
+  renderViewport();
 }
 
 function copyText(txt) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
-  } else {
-    fallbackCopy(txt);
-  }
-  const t = document.getElementById("toastMsg");
-  t.style.display = "block";
-  setTimeout(() => { t.style.display = "none"; }, 1800);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
+  } else {
+    fallbackCopy(txt);
+  }
+  const t = document.getElementById("toastMsg");
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 1800);
 }
 
 function fallbackCopy(txt) {
@@ -522,38 +526,6 @@ function copyCurrentTicket() {
   const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
   copyText([header, ...lines].join(nl));
 }
-
-// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC COREQTAT =================
-
-// ================= EXTRAGERE DATE REALE & MOTOR MATEMATIC CALIBRAT =================
-
-const CLUB_POWER_CALIBRATED = [
-  // Elite & Forțe Europene
-  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
-  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
-  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
-  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
-  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
-  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
-  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
-  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
-  // Echipe Bune / Sub-Top
-  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
-  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
-  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
-  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
-  // SuperLiga României
-  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
-  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
-  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
-  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
-  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
-  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
-  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
-  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
-  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
-  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
-];
 
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
@@ -591,107 +563,17 @@ function getClubBasePower(name) {
   return 0;
 }
 
-// Combină Clasamentul Real + Forma ultimelor 5 meciuri + Valoarea Lotului
 function extractTeamStrength(compObj, isHome, teamName) {
-  let formScore = 0, overallScore = 0, venueScore = 0, formDisplay = "";
-  let winsRate5 = 2.0, drawsRate5 = 1.4, lossesRate5 = 1.6, drawRatio = 0.26;
-  let hasRealRecord = false, hasRealForm = false;
-
   const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
-
-  if (compObj.records && Array.isArray(compObj.records)) {
-    const parseRec = (rec) => {
-      if (!rec || !rec.summary) return null;
-      const parts = rec.summary.split("-").map(x => parseInt(x, 10));
-      if (parts.length === 3 && !isNaN(parts[0])) {
-        const [w, d, l] = parts;
-        const tot = w + d + l;
-        if (tot > 0) return { w, d, l, tot, ppg: (w * 3 + d) / tot };
-      }
-      return null;
-    };
-
-    const totalRec = parseRec(compObj.records.find(r => r.type === "total") || compObj.records[0]);
-    const venueRec = parseRec(compObj.records.find(r =>
-      r.type === (isHome ? "home" : "road") ||
-      (r.name && r.name.toLowerCase() === (isHome ? "home" : "away"))
-    ));
-
-    if (totalRec) {
-      hasRealRecord = true;
-      const reliability = Math.min(1.0, totalRec.tot / (totalRec.tot + 4));
-      overallScore = (totalRec.ppg - 1.35) * 0.45 * reliability;
-      formDisplay = `${totalRec.w}V-${totalRec.d}E-${totalRec.l}Î`;
-      winsRate5 = (totalRec.w / totalRec.tot) * 5;
-      drawsRate5 = (totalRec.d / totalRec.tot) * 5;
-      lossesRate5 = (totalRec.l / totalRec.tot) * 5;
-      drawRatio = totalRec.d / totalRec.tot;
-    }
-
-    if (venueRec && venueRec.tot >= 2) {
-      const venueRel = Math.min(1.0, venueRec.tot / (venueRec.tot + 3));
-      const expectedVenuePpg = isHome ? 1.50 : 1.20;
-      venueScore = (venueRec.ppg - expectedVenuePpg) * 0.40 * venueRel;
-    }
-  }
-
-  if (compObj.form && typeof compObj.form === "string") {
-    const rawForm = compObj.form.toUpperCase().replace(/[^WDL]/g, "").slice(-5);
-    if (rawForm.length >= 3) {
-      hasRealForm = true;
-      let fW = 0, fD = 0, fL = 0;
-      formDisplay = formDisplay ? `${rawForm} (${formDisplay})` : rawForm;
-      const weights = [0.65, 0.80, 1.0, 1.20, 1.35];
-      for (let i = 0; i < rawForm.length; i++) {
-        const ch = rawForm[i];
-        if (ch === "W") fW++;
-        else if (ch === "D") fD++;
-        else if (ch === "L") fL++;
-        const w = weights[i + (5 - rawForm.length)] || 1.0;
-        formScore += (ch === "W" ? 0.065 : (ch === "D" ? 0.0 : -0.065)) * w;
-      }
-      const scale5 = 5 / rawForm.length;
-      if (hasRealRecord) {
-        winsRate5 = winsRate5 * 0.50 + (fW * scale5) * 0.50;
-        drawsRate5 = drawsRate5 * 0.50 + (fD * scale5) * 0.50;
-        lossesRate5 = lossesRate5 * 0.50 + (fL * scale5) * 0.50;
-      } else {
-        winsRate5 = fW * scale5;
-        drawsRate5 = fD * scale5;
-        lossesRate5 = fL * scale5;
-        drawRatio = fD / rawForm.length;
-      }
-    }
-  }
-
-  if (!hasRealRecord && !hasRealForm && clubPower !== 0) {
-    winsRate5 = Math.max(0.8, Math.min(4.2, 2.2 + clubPower * 3.0));
-    lossesRate5 = Math.max(0.5, Math.min(4.0, 1.6 - clubPower * 2.5));
-    drawRatio = Math.max(0.16, Math.min(0.34, 0.26 - Math.abs(clubPower) * 0.12));
-  }
-
-  const hasData = hasRealRecord || hasRealForm || clubPower !== 0;
-  if (!formDisplay) formDisplay = clubPower !== 0 ? "Rating Lot Activ" : "Echilibrat";
-
-  let tablePerf = venueScore !== 0 ? (overallScore * 0.65 + venueScore * 0.35) : overallScore;
-  let seasonStrength = hasRealRecord ? (hasRealForm ? tablePerf * 0.65 + formScore * 0.35 : tablePerf) : formScore;
-
-  let finalScore = seasonStrength;
-  if (clubPower !== 0 && (hasRealRecord || hasRealForm)) {
-    finalScore = seasonStrength * 0.50 + clubPower * 0.50;
-  } else if (clubPower !== 0) {
-    finalScore = clubPower * 0.85;
-  }
-
   return {
-    score: finalScore,
+    score: clubPower,
     clubPower,
-    winsCount: +winsRate5.toFixed(2),
-    drawsCount: +drawsRate5.toFixed(2),
-    lossesCount: +lossesRate5.toFixed(2),
-    drawRatio,
-    hasData,
-    formDisplay
+    hasData: true,
+    winsCount: 2.5,
+    drawsCount: 1.2,
+    lossesCount: 1.3,
+    drawRatio: 0.25,
+    formDisplay: clubPower !== 0 ? "Power Matrix Activ" : "Standard"
   };
 }
 
@@ -717,27 +599,24 @@ function poissonOverProb(line, lam) {
   return Math.max(0.05, Math.min(0.95, 1 - cdf));
 }
 
-// Alege pragul optim de cornere/cartonașe (sweet-spot în jur de 64%-68% siguranță, variind dinamic pe fiecare meci)
 function selectOptimalStatLine(expVal, overLines, underLines) {
   const options = [];
   for (let l of overLines) {
     const p = poissonOverProb(l, expVal);
-    if (p >= 0.55 && p <= 0.78) {
-      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
-      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus });
+    if (p >= 0.55 && p <= 0.80) {
+      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p });
     }
   }
   for (let l of underLines) {
     const p = 1 - poissonOverProb(l, expVal);
-    if (p >= 0.57 && p <= 0.78) {
-      const sweetSpotBonus = 1 - Math.abs(p - 0.66) * 1.4;
-      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * sweetSpotBonus * 0.98 });
+    if (p >= 0.57 && p <= 0.80) {
+      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * 0.98 });
     }
   }
   if (!options.length) {
     const midLine = overLines[1] || overLines[0];
     const p = poissonOverProb(midLine, expVal);
-    return p >= 0.50
+    return p >= 0.50 
       ? { label: `Peste ${midLine}`, prob: Math.round(p * 100) }
       : { label: `Sub ${midLine + 1}`, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
   }
@@ -766,7 +645,6 @@ function calculateSmartStake(bankroll, m) {
     else if (m.prob >= 55) pct = 0.05;
     else pct = 0.04;
   }
-  if (m.lowData) pct = Math.min(pct, 0.03);
   const rawStake = bankroll * pct;
   return {
     stake: Math.max(10, Math.round(rawStake / 5) * 5),
@@ -774,6 +652,41 @@ function calculateSmartStake(bankroll, m) {
   };
 }
 
+function renderSubBars() {
+  const sb = document.getElementById("subBars");
+  const searchBox = document.getElementById("searchContainer");
+  
+  if (currentNav === "admin") { 
+    if(sb) sb.style.display = "none"; 
+    if(searchBox) searchBox.style.display = "none";
+    return; 
+  }
+  
+  if (currentNav === "meciuri" || currentNav === "europa") {
+    if(searchBox) searchBox.style.display = "block";
+  } else {
+    if(searchBox) searchBox.style.display = "none";
+  }
+
+  const dates = getDatesList();
+  if (!selectedDate) selectedDate = dates[1].iso;
+  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
+  
+  if (currentNav === "europa") {
+    if(sb) sb.style.display = "block";
+    if(dBar) dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
+    if(lBar) lBar.innerHTML = ""; return;
+  }
+  
+  if(sb) sb.style.display = "block";
+  if(dBar) dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
+  if (currentNav === "proiect" || currentNav === "bilete") { if(lBar) lBar.innerHTML = ""; return; }
+  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
+  if(lBar) lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
+    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
+}
+
+// ================= ANALIZĂ MECI (SIGURANȚĂ MAXIMĂ) =================
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -786,25 +699,16 @@ function analyzeMatch(ev, lg) {
 
   const hInfo = extractTeamStrength(home, true, hName);
   const aInfo = extractTeamStrength(away, false, aName);
-  const lowData = !hInfo.hasData && !aInfo.hasData;
 
   const hPower = hInfo.score;
   const aPower = aInfo.score;
   const strengthDiff = hPower - aPower;
 
-  const isDerby = hPower >= 0.22 && aPower >= 0.22 && Math.abs(strengthDiff) <= 0.16;
+  const isDerby = Math.abs(strengthDiff) <= 0.12 && hPower >= 0.35;
 
-  // Avantajul terenului propriu: 55% pentru gazde în meciurile normale, redus doar când oaspeții sunt net superiori
   const lgGoals = lg.gBase || 2.62;
-  const homeAdvShare = strengthDiff < -0.35 ? 0.485 : (strengthDiff < -0.18 ? 0.515 : (strengthDiff > 0.25 ? 0.565 : 0.550));
-  const avgDrawRatio = (hInfo.drawRatio + aInfo.drawRatio) / 2;
-
-  // Modificator dinamic de ritm ca totalXG să difere realist de la un meci la altul
-  const paceMod = (0.26 - avgDrawRatio) * 0.55 + (hPower + aPower) * 0.20 + Math.abs(strengthDiff) * 0.25;
-  const expectedMatchGoals = Math.max(2.05, Math.min(3.45, lgGoals + paceMod));
-
-  let lamH = Math.max(0.42, Math.min(3.30, expectedMatchGoals * homeAdvShare + strengthDiff * 0.92));
-  let lamA = Math.max(0.38, Math.min(3.10, expectedMatchGoals * (1 - homeAdvShare) - strengthDiff * 0.88));
+  let lamH = Math.max(0.40, Math.min(3.40, (lgGoals * 0.52) + strengthDiff * 1.35));
+  let lamA = Math.max(0.40, Math.min(3.40, (lgGoals * 0.48) - strengthDiff * 1.35));
 
   const mkt = extractMarketOdds(comp);
   if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
@@ -812,11 +716,11 @@ function analyzeMatch(ev, lg) {
     if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
       targetTotal = targetTotal * 0.55 + mkt.ouLine * 0.45;
     }
-    const mktShareH = Math.max(0.14, Math.min(0.86, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
+    const mktShareH = Math.max(0.12, Math.min(0.88, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
     const modShareH = lamH / (lamH + lamA);
-    const finalShareH = modShareH * 0.45 + mktShareH * 0.55;
-    lamH = Math.max(0.38, Math.min(3.35, targetTotal * finalShareH));
-    lamA = Math.max(0.35, Math.min(3.25, targetTotal * (1 - finalShareH)));
+    const finalShareH = modShareH * 0.35 + mktShareH * 0.65;
+    lamH = Math.max(0.35, Math.min(3.40, targetTotal * finalShareH));
+    lamA = Math.max(0.35, Math.min(3.40, targetTotal * (1 - finalShareH)));
   }
 
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
@@ -844,7 +748,6 @@ function analyzeMatch(ev, lg) {
       if (h > a && goals >= 2) p1_O15 += rawP;
       if (a > h && goals >= 2) p2_O15 += rawP;
       if (h >= a && goals >= 2) p1X_O15 += rawP;
-      if (a >= a && goals >= 2) {} // păstrăm simetria mai jos
       if (a >= h && goals >= 2) pX2_O15 += rawP;
       if (h >= a && goals <= 3) p1X_U35 += rawP;
       if (a >= h && goals <= 3) pX2_U35 += rawP;
@@ -859,59 +762,41 @@ function analyzeMatch(ev, lg) {
 
   const p1X = pH + pD;
   const pX2 = pA + pD;
-  const nonZeroDraw = Math.max(0, pD - p00);
-  const pPSF1 = Math.min(0.85, pH + nonZeroDraw * 0.34 + pA * 0.06);
-  const pPSF2 = Math.min(0.83, pA + nonZeroDraw * 0.34 + pH * 0.06);
-
   const totalXG = lamH + lamA;
   const xgDiff = lamH - lamA;
+  const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
 
   const candidates = [];
-  const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
 
   const addCandidate = (name, mktType, prob, realOdd, safetyBonus = 1.0) => {
     const fairOdd = 1 / Math.max(0.15, prob);
     const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.95 * fairOdd).toFixed(2);
-    // Păstrăm doar pronosticurile cu cotă jucabilă (>= 1.25) și șanse reale ridicate (>= 55%)
     if (displayOdd < 1.25 || displayOdd > 2.25 || prob < 0.55) return;
 
     const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
-    // Ordonăm direct după probabilitatea cea mai mare de reușită!
     const valueScore = prob * safetyBonus;
     candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
   };
 
-  // 1. Peste 1.5 Goluri (Dacă ambele echipe au xG >= 1.00, primește prioritate maximă contra surprizelor!)
-  if (pO15 >= 0.62 && pO15 <= 0.79) {
+  if (pO15 >= 0.62 && pO15 <= 0.85) {
     addCandidate("Peste 1.5 Goluri", "O15", pO15, null, bothTeamsDangerous ? 1.05 : 1.01);
   }
-
-  // 2. Șansă Dublă 1X / X2 (Doar când adversarul nu are xG mare sau diferența de valoare e clară)
   if (xgDiff >= 0.08 && p1X >= 0.62 && p1X <= 0.78) {
     addCandidate("Șansă Dublă 1X", "DC", p1X, null, bothTeamsDangerous ? 0.95 : 1.00);
   }
   if (xgDiff <= -0.08 && pX2 >= 0.62 && pX2 <= 0.78) {
     addCandidate("Șansă Dublă X2", "DC", pX2, null, bothTeamsDangerous ? 0.95 : 1.00);
   }
-
-  // 3. Combo-uri de siguranță (Intrate în joc când 1X/X2 simplu sare de 78% și are cotă prea mică)
   if (xgDiff >= 0.15 && p1X_U35 >= 0.62 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.00);
   if (xgDiff <= -0.15 && pX2_U35 >= 0.62 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.00);
   if (xgDiff >= 0.25 && p1X_O15 >= 0.63 && lamA < 1.02) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.00);
   if (xgDiff <= -0.25 && pX2_O15 >= 0.63 && lamH < 1.02) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.00);
-
-  // 4. Piețe principale de Goluri (Sub 2.5, Peste 2.5, GG)
   if (pU25 >= 0.60 && totalXG <= 2.25) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.01);
   if (pO25 >= 0.58 && totalXG >= 2.65) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.01);
   if (pGG >= 0.58 && bothTeamsDangerous) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.01);
-
-  // 5. Soliști & Combo Favorită Puternică (Când o echipă domină categoric meciul)
   if (pH >= 0.56 && pH <= 0.76) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.01);
   if (pA >= 0.56 && pA <= 0.76) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.01);
-  if (pH >= 0.65 && p1_O15 >= 0.60) addCandidate(`1 & Peste 1.5 Goluri`, "COMBO_SOLO", p1_O15, null, 1.00);
-  if (pA >= 0.65 && p2_O15 >= 0.60) addCandidate(`2 & Peste 1.5 Goluri`, "COMBO_SOLO", p2_O15, null, 1.00);
 
-  // Fallback: alegem matematic varianta cu cea mai mare probabilitate dintre Peste 1.5, 1X și X2
   if (!candidates.length) {
     const basicOpts = [
       { name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15 },
@@ -931,7 +816,6 @@ function analyzeMatch(ev, lg) {
 
   candidates.sort((a, b) => b.valueScore - a.valueScore);
   const best = candidates[0];
-;
 
   const getStat = (compObj, names) => {
     if (!compObj.statistics) return null;
@@ -952,28 +836,12 @@ function analyzeMatch(ev, lg) {
   const realHRed = getStat(home, ["redCards", "RC"]) || 0;
   const realARed = getStat(away, ["redCards", "RC"]) || 0;
 
-  // Cornere dinamice: depind de ritmul meciului, presiunea favoritei, stilul ofensiv și derby
-  const offensiveMomentum = ((hInfo.winsCount + aInfo.winsCount) - 3.8) * 0.30;
-  const openPlayFactor = (0.26 - avgDrawRatio) * 2.5;
-  const mismatchPressure = Math.abs(lamH - lamA) * 0.75;
-  const derbyCornerPush = isDerby ? 0.55 : 0;
-
-  const expCornersNum = Math.max(7.2, Math.min(12.6,
-    (lg.cBase || 9.5) + (totalXG - (lg.gBase || 2.62)) * 1.45 + mismatchPressure + offensiveMomentum + openPlayFactor + derbyCornerPush
-  ));
+  const expCornersNum = Math.max(7.2, Math.min(12.6, (lg.cBase || 9.5) + (totalXG - 2.6) * 1.3));
   const expCorners = expCornersNum.toFixed(1);
   const bestCornerOpt = selectOptimalStatLine(expCornersNum, [7.5, 8.5, 9.5], [9.5, 10.5]);
   const cornerLine = `${bestCornerOpt.label} (${bestCornerOpt.prob}%)`;
 
-  // Cartonașe dinamice: depind de echilibrul meciului, rata de egaluri/înfrângeri și tensiunea de derby
-  const closeness = 1 - Math.min(1, Math.abs(pH - pA) * 1.75);
-  const frustrationFactor = ((hInfo.lossesCount + aInfo.lossesCount) - 2.8) * 0.25;
-  const drawFriction = (avgDrawRatio - 0.25) * 1.8;
-  const derbyCardPush = isDerby ? 0.70 : 0;
-
-  const expCardsNum = Math.max(2.6, Math.min(6.4,
-    (lg.kBase || 4.3) + (closeness - 0.50) * 1.25 + frustrationFactor + drawFriction + derbyCardPush
-  ));
+  const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
   const expCards = expCardsNum.toFixed(1);
   const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
   const cardLine = `${bestCardOpt.label} (${bestCardOpt.prob}%)`;
@@ -986,57 +854,42 @@ function analyzeMatch(ev, lg) {
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
     home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
     lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
-    isDerby, lowData, hasMktOdds: !!(mkt && (mkt.mktPH || mkt.ouLine)),
+    isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
     edgePct: best.edgePct || 0,
     pick: best.name, mktType: best.mktType || "OTHER", prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
-    tipsterScore: best.valueScore * (lowData ? 0.82 : 1.0),
+    tipsterScore: best.valueScore,
     expCorners, cornerLine, actualCorners,
     expCards, cardLine, actualCards,
     probs: { p1: Math.round(pH*100), pX: Math.round(pD*100), p2: Math.round(pA*100), o25: Math.round(pO25*100), gg: Math.round(pGG*100), o15: Math.round(pO15*100) }
   };
 }
 
+// ================= GENERATOR BILETE (MAXIM 10 MECIURI) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
   const picks = [];
   const usedIds = new Set();
-  const marketCounts = {};
   let tot = 1.0;
 
-  while (picks.length < 11 && tot < targetOdd * 0.94) {
-    const remainingNeeded = targetOdd / tot;
+  // Limită strictă maxim 10 meciuri pe bilet
+  while (picks.length < 10 && tot < targetOdd * 0.94 && sorted.length > picks.length) {
     let bestCandidate = null;
     let bestScore = -999;
-
     for (let m of sorted) {
       if (usedIds.has(m.id)) continue;
-      const mCount = marketCounts[m.mktType] || 0;
-      const diversityPenalty = mCount >= 2 ? 0.78 : (mCount === 1 ? 0.92 : 1.05);
-
-      let targetFit = 1.0;
-      if (remainingNeeded <= 2.25) {
-        const dist = Math.abs(m.odd - remainingNeeded);
-        targetFit = Math.max(0.5, 1.35 - dist * 0.65);
-      }
-
-      const candidateScore = m.tipsterScore * diversityPenalty * targetFit;
-      if (candidateScore > bestScore) {
-        bestScore = candidateScore;
+      if (m.tipsterScore > bestScore) {
+        bestScore = m.tipsterScore;
         bestCandidate = m;
       }
     }
-
     if (!bestCandidate) break;
     picks.push(bestCandidate);
     usedIds.add(bestCandidate.id);
-    marketCounts[bestCandidate.mktType] = (marketCounts[bestCandidate.mktType] || 0) + 1;
     tot *= bestCandidate.odd;
   }
-
   return { picks, totalOdd: tot };
 }
-
 
 async function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
@@ -1148,7 +1001,7 @@ function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
   if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
   if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
   if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && aHT !== null && aHT > hHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
   if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
   if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
   if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
@@ -1379,40 +1232,6 @@ function selectTicketOdd(odd) {
   }, 1100);
 }
 
-function renderSubBars() {
-  const sb = document.getElementById("subBars");
-  const searchBox = document.getElementById("searchContainer");
-  
-  if (currentNav === "admin") { 
-    sb.style.display = "none"; 
-    searchBox.style.display = "none";
-    return; 
-  }
-  
-  if (currentNav === "meciuri" || currentNav === "europa") {
-    searchBox.style.display = "block";
-  } else {
-    searchBox.style.display = "none";
-  }
-
-  const dates = getDatesList();
-  if (!selectedDate) selectedDate = dates[1].iso;
-  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
-  
-  if (currentNav === "europa") {
-    sb.style.display = "block";
-    dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
-    lBar.innerHTML = ""; return;
-  }
-  
-  sb.style.display = "block";
-  dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
-  if (currentNav === "proiect" || currentNav === "bilete") { lBar.innerHTML = ""; return; }
-  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
-  lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
-    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
-}
-
 function renderMatchCard(m) {
   const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
   
@@ -1618,169 +1437,170 @@ function renderProjectView() {
 
 // ================= STATISTICI DE PERFORMANȚĂ 100% REALE =================
 function computeRealPerformanceStats(dayPool) {
-  const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
-  const wonBets = settledBets.filter(b => b.status === "WIN").length;
+  const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
+  const wonBets = settledBets.filter(b => b.status === "WIN").length;
 
-  const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
-  let ftHits = 0;
-  ftMatches.forEach(m => {
-    if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
-  });
+  const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
+  let ftHits = 0;
+  ftMatches.forEach(m => {
+    if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
+  });
 
-  let winRateText = "În calcul";
-  if (settledBets.length > 0) {
-    winRateText = `${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})`;
-  } else if (ftMatches.length > 0) {
-    winRateText = `${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)`;
-  }
+  let winRateText = "În calcul";
+  if (settledBets.length > 0) {
+    winRateText = `${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})`;
+  } else if (ftMatches.length > 0) {
+    winRateText = `${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)`;
+  }
 
-  let avgOddText = "—";
-  if ((project.bets || []).length > 0) {
-    const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
-    avgOddText = (sumOdds / project.bets.length).toFixed(2);
-  } else if (dayPool && dayPool.length > 0) {
-    const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
-    avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
-  }
+  let avgOddText = "—";
+  if ((project.bets || []).length > 0) {
+    const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
+    avgOddText = (sumOdds / project.bets.length).toFixed(2);
+  } else if (dayPool && dayPool.length > 0) {
+    const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
+    avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
+  }
 
-  return { winRateText, avgOddText };
+  return { winRateText, avgOddText };
 }
 
 function renderTicketsView() {
-  const dayPool = cacheByDate[selectedDate] || [];
-  let pool = dayPool.filter(m => m.status === "NS");
-  if (!pool.length) pool = [...dayPool];
+  const dayPool = cacheByDate[selectedDate] || [];
+  let pool = dayPool.filter(m => m.status === "NS");
+  if (!pool.length) pool = [...dayPool];
 
-  const built = buildOptimalTicket(pool, targetTicketOdds);
-  const picks = built.picks;
-  const tot = built.totalOdd;
+  const built = buildOptimalTicket(pool, targetTicketOdds);
+  const picks = built.picks;
+  const tot = built.totalOdd;
 
-  currentTicketPicks = picks;
-  currentTicketTotalOdd = tot;
+  currentTicketPicks = picks;
+  currentTicketTotalOdd = tot;
 
-  const realStats = computeRealPerformanceStats(dayPool);
-  const potentialWin = +(customBudget * tot).toFixed(2);
-  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
-  
-  let contentBody = "";
-  if (isGeneratingTicket) {
-    contentBody = `<div class="neural-loader-box">
-      <div class="neural-loader-title" id="neuralStepText">⚡ Extragere date clasament & xG...</div>
-      <div class="neural-scan-bar"><div class="neural-scan-fill"></div></div>
-      <div style="font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">NEURAL ENGINE · COTA ȚINTĂ ~${targetTicketOdds}</div>
-    </div>`;
-  } else {
-    const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
-      <div>
-        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
-        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
-      </div>
-      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
-    </div>`).join("");
+  const realStats = computeRealPerformanceStats(dayPool);
+  const potentialWin = +(customBudget * tot).toFixed(2);
+  const btns = [2, 5, 10, 20, 50, 100, 250, 500].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
+  
+  let contentBody = "";
+  if (isGeneratingTicket) {
+    contentBody = `<div class="neural-loader-box">
+      <div class="neural-loader-title" id="neuralStepText">⚡ Extragere date clasament & xG...</div>
+      <div class="neural-scan-bar"><div class="neural-scan-fill"></div></div>
+      <div style="font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">NEURAL ENGINE · COTA ȚINTĂ ~${targetTicketOdds}</div>
+    </div>`;
+  } else {
+    const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
+      <div>
+        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
+        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
+      </div>
+      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
+    </div>`).join("");
 
-    contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-      <span>Cotă Totală: <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
-      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
-    </div>
-    ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
-  }
+    contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
+      <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
+    </div>
+    ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
+  }
 
-  return `<div class="cyber-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
-      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
-    </div>
-    
-    <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
-      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
-    </div>
+  return `<div class="cyber-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
+      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
+    </div>
+    
+    <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
+      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
+    </div>
 
-    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
-    ${contentBody}
-  </div>
+    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
+    ${contentBody}
+  </div>
 
-  <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
-    <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
-    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">EMPIRICAL BAYES</div></div>
-    </div>
-  </div>`;
+  <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
+    <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
+    </div>
+  </div>`;
 }
 
 function renderViewport() {
-  renderSubBars();
-  const vp = document.getElementById("viewport");
-  if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
-  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
-  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
-  
-  const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
+  renderSubBars();
+  const vp = document.getElementById("viewport");
+  if(!vp) return;
+  if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
+  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
+  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
+  
+  const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
 
-  let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
-  
-  if (searchTerm) {
-    list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
-  }
+  let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
+  
+  if (searchTerm) {
+    list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
+  }
 
-  if (!list.length) { 
-    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
-    return; 
-  }
+  if (!list.length) { 
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
+    return; 
+  }
 
-  const groups = {};
-  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
-  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
+  const groups = {};
+  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
+  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
 }
 
-function selectDay(iso) { 
-  selectedDate = iso; 
-  selectedLeague = "ALL"; 
-  const searchInput = document.getElementById("matchSearchInput");
-  if(searchInput) searchInput.value = "";
-  loadMatchesForDate(iso); 
+function selectDay(iso) { 
+  selectedDate = iso; 
+  selectedLeague = "ALL"; 
+  const searchInput = document.getElementById("matchSearchInput");
+  if(searchInput) searchInput.value = "";
+  loadMatchesForDate(iso); 
 }
 
-function selectLeague(lg) { 
-  selectedLeague = lg; 
-  renderViewport(); 
+function selectLeague(lg) { 
+  selectedLeague = lg; 
+  renderViewport(); 
 }
 
 async function switchNav(tab) {
-  if (tab === "proiect" && !hasJoeAccess()) return;
-  if (tab === "admin" && !isAdmin()) return;
-  currentNav = tab;
-  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
-  const btn = document.getElementById("nav-" + tab);
-  if (btn) btn.classList.add("active");
-  if (tab === "admin") await fetchAdminUsersList();
-  if (tab === "europa") loadEuropaMatches(); else renderViewport();
+  if (tab === "proiect" && !hasJoeAccess()) return;
+  if (tab === "admin" && !isAdmin()) return;
+  currentNav = tab;
+  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById("nav-" + tab);
+  if (btn) btn.classList.add("active");
+  if (tab === "admin") await fetchAdminUsersList();
+  if (tab === "europa") loadEuropaMatches(); else renderViewport();
 }
 
 (async function startApp() {
-  selectedDate = getDatesList()[1].iso;
-  const savedUser = localStorage.getItem("xmts_logged_user");
-  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
-  if (savedUser) {
-    try {
-      const parsed = JSON.parse(savedUser);
-      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
-      if (!isExpired && parsed.username) {
-        currentUser = parsed;
-        if (parsed.role === "admin" && savedAdmToken) {
-          adminSessionPass = savedAdmToken;
-          await fetchAdminUsersList();
-        }
-        document.getElementById("loginScreen").style.display = "none";
-        applyRolePermissions();
-      } else {
-        localStorage.removeItem("xmts_logged_user");
-      }
-    } catch (e) {}
-  }
+  selectedDate = getDatesList()[1].iso;
+  const savedUser = localStorage.getItem("xmts_logged_user");
+  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
+  if (savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
+      if (!isExpired && parsed.username) {
+        currentUser = parsed;
+        if (parsed.role === "admin" && savedAdmToken) {
+          adminSessionPass = savedAdmToken;
+          await fetchAdminUsersList();
+        }
+        document.getElementById("loginScreen").style.display = "none";
+        applyRolePermissions();
+      } else {
+        localStorage.removeItem("xmts_logged_user");
+      }
+    } catch (e) {}
+  }
   loadMatchesForDate(selectedDate);
   await initProject();
 })();
