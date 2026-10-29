@@ -7,1212 +7,1431 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" href="favicon.jpg">
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
+
 <style>
-:root { --bg:#020408; --card-bg:rgba(10,15,28,0.82); --card-border:rgba(0,243,255,0.22); --neon-cyan:#00f3ff; --neon-gold:#ffb703; --neon-green:#06d6a0; --neon-red:#ef476f; --text-main:#f8fafc; --text-muted:#64748b; }
- { box-sizing:border-box; margin:0; padding:0; font-family:'Plus Jakarta Sans',sans-serif; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; width:100%; background:var(--bg); color:var(--text-main); overflow:hidden; }
-.app-shell { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto; position:relative; }
-/* LOGIN OVERLAY */
-.login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
-.login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
-.login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
-.cyber-input { width:100%; background:rgba(2,4,8,0.85); border:1px solid var(--card-border); color:#fff; padding:12px 14px; border-radius:12px; font-size:13px; margin-bottom:12px; outline:none; }
-.cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
-.login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
-/* TOP HUD */
-.top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
-.hud-brand { display:flex; align-items:center; gap:10px; }
-.hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
-.hud-title { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1px; color:#fff; display:block; }
-.hud-status { font-size:9px; color:var(--neon-green); font-weight:700; text-transform:uppercase; }
-.hud-right { display:flex; align-items:center; gap:8px; }
-.hud-bank { background:rgba(6,214,160,0.1); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); padding:7px 11px; border-radius:12px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; cursor:pointer; }
-.logout-btn { background:rgba(239,71,111,0.15); border:1px solid var(--neon-red); color:var(--neon-red); padding:7px 10px; border-radius:12px; font-size:11px; font-weight:800; cursor:pointer; }
-.sub-bars { background:rgba(5,9,18,0.6); border-bottom:1px solid var(--card-border); padding:10px 14px 8px; }
-.h-scroll { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
-.h-scroll::-webkit-scrollbar { display:none; }
-.cyber-chip { background:rgba(15,23,42,0.8); border:1px solid var(--card-border); color:var(--text-muted); padding:7px 14px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; transition:0.2s; }
-.cyber-chip.active { background:var(--neon-cyan); color:#020408; border-color:var(--neon-cyan); font-weight:800; }
-.cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); box-shadow:0 0 12px rgba(255,183,3,0.4); }
-.search-container { padding:8px 14px 2px; background:rgba(5,9,18,0.6); }
-.search-input { width:100%; background:rgba(15,23,42,0.85); border:1px solid var(--card-border); color:#fff; padding:9px 12px; border-radius:10px; font-size:12px; outline:none; }
-.search-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 10px rgba(0,243,255,0.25); }
-.viewport { flex:1; overflow-y:auto; padding:14px 14px 90px; -webkit-overflow-scrolling:touch; }
-.cyber-sec-head { display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg,rgba(0,243,255,0.1),rgba(10,15,28,0.6)); border-left:3px solid var(--neon-cyan); border-radius:8px; padding:9px 14px; margin:14px 0 10px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:var(--neon-cyan); }
-.cyber-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); transition:0.3s; }
-.cyber-card.match-win { border-color:var(--neon-green); box-shadow:0 0 20px rgba(6,214,160,0.25); background:linear-gradient(145deg,rgba(6,214,160,0.08),rgba(10,15,28,0.85)); }
-.cyber-card.match-loss { border-color:var(--neon-red); box-shadow:0 0 20px rgba(239,71,111,0.25); background:linear-gradient(145deg,rgba(239,71,111,0.08),rgba(10,15,28,0.85)); }
-.card-top { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
-.status-badge { padding:3px 9px; border-radius:6px; font-weight:800; font-size:9px; font-family:'Orbitron',sans-serif; }
-.st-live { background:rgba(239,71,111,0.2); color:var(--neon-red); border:1px solid var(--neon-red); }
-.st-ft { background:rgba(6,214,160,0.2); color:var(--neon-green); border:1px solid var(--neon-green); }
-.st-ns { background:rgba(255,255,255,0.05); color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); }
-.teams-container { display:flex; justify-content:space-between; align-items:center; margin:8px 0 12px; }
-.team-name { width:40%; font-size:14px; font-weight:800; line-height:1.3; user-select:text; }
-.team-name.away { text-align:right; }
-.score-display { background:rgba(15,23,42,0.9); border:1px solid var(--card-border); padding:6px 14px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; color:var(--neon-gold); }
-.prediction-panel { background:rgba(2,4,8,0.8); border:1px solid var(--card-border); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
-.pred-main { font-size:12px; font-weight:800; color:#fff; user-select:text; }
-.pred-sub { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.4; }
-.odd-chip { background:rgba(255,183,3,0.12); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:5px 11px; border-radius:10px; font-family:'Orbitron',sans-serif; font-weight:800; font-size:12px; }
-.action-bar { display:flex; gap:6px; margin-top:10px; }
-.cyber-btn { flex:1; background:rgba(15,23,42,0.9); border:1px solid var(--card-border); color:var(--text-main); padding:9px 6px; border-radius:12px; font-size:11px; font-weight:700; cursor:pointer; }
-.cyber-btn.accent { background:rgba(6,214,160,0.15); border-color:rgba(6,214,160,0.5); color:var(--neon-green); }
-.cyber-btn.copy-btn { flex:0.45; background:rgba(0,243,255,0.1); border-color:rgba(0,243,255,0.4); color:var(--neon-cyan); }
-.analytics-drawer { display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--card-border); font-size:11px; }
-.matrix-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
-.matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
-.matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
-/* CHAT VIP STYLES */
-.joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
-.chat-messages { height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
-.chat-msg { max-width:86%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.45; word-break:break-word; }
-.chat-msg.joe { background:rgba(0,243,255,0.1); border:1px solid rgba(0,243,255,0.3); color:#fff; align-self:flex-start; border-top-left-radius:3px; }
-.chat-msg.user { background:rgba(6,214,160,0.15); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); align-self:flex-end; border-top-right-radius:3px; }
-.chat-form { display:flex; gap:6px; align-items:center; }
-.chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; position:relative; }
-.chat-file-btn.has-img { background:rgba(6,214,160,0.22); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 10px rgba(6,214,160,0.35); }
-.preview-thumb { width:100%; max-height:140px; object-fit:contain; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); background:#020408; }
-@keyframes pulseGlow {
-0%, 100% { opacity: 1; text-shadow: 0 0 14px var(--neon-cyan); }
-50% { opacity: 0.45; text-shadow: none; }
-}
-@keyframes scanBarProgress {
-0% { width: 5%; }
-45% { width: 65%; }
-100% { width: 100%; }
-}
-@keyframes ticketRowSlide {
-0% { opacity: 0; transform: translateY(12px) scale(0.97); border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
-100% { opacity: 1; transform: translateY(0) scale(1); border-color: var(--card-border); box-shadow: none; }
-}
-.ticket-row-item {
-display: flex; justify-content: space-between; align-items: center;
-padding: 10px; background: rgba(15,23,42,0.8); border-radius: 10px;
-margin-bottom: 6px; border: 1px solid var(--card-border);
-opacity: 0;
-animation: ticketRowSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.neural-loader-box {
-padding: 30px 16px; text-align: center;
-background: radial-gradient(circle at 50% 50%, rgba(0,243,255,0.08), rgba(2,4,8,0.9));
-border: 1px dashed var(--neon-cyan); border-radius: 14px; margin: 8px 0;
-}
-.neural-loader-title {
-font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900;
-color: var(--neon-cyan); animation: pulseGlow 0.7s infinite; margin-bottom: 12px;
-}
-.neural-scan-bar {
-width: 100%; max-width: 240px; height: 7px; background: rgba(255,255,255,0.06);
-border-radius: 99px; overflow: hidden; margin: 0 auto 10px; border: 1px solid var(--card-border);
-}
-.neural-scan-fill {
-height: 100%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green), var(--neon-gold));
-border-radius: 99px; animation: scanBarProgress 1.1s ease-out forwards;
-}
-/* EFECT DE BOOM CIBERNETIC PENTRU MODUL COTA 500+ */
-@keyframes boomEffect {
-0% { transform: scale(1); box-shadow: 0 0 5px rgba(255,183,3,0.2); border-color: var(--card-border); }
-30% { transform: scale(1.03); box-shadow: 0 0 45px var(--neon-gold), inset 0 0 20px rgba(255,183,3,0.6); border-color: var(--neon-gold); }
-60% { transform: scale(0.98); box-shadow: 0 0 25px rgba(255,183,3,0.4); border-color: var(--neon-gold); }
-100% { transform: scale(1); box-shadow: 0 0 30px rgba(255,183,3,0.3); border-color: var(--neon-gold); }
-}
-.boom-active {
-animation: boomEffect 0.55s ease-in-out forwards;
-background: radial-gradient(circle at 50% 50%, rgba(255,183,3,0.2), rgba(10,15,28,0.95)) !important;
-}
-.vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
-.vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
-.joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
-.joe-status-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:var(--neon-green); border:2px solid #020408; border-radius:50%; z-index:2; }
-.vault-quote { font-style:italic; font-size:11.5px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:10px 14px; border-radius:12px; border-left:3px solid var(--neon-cyan); line-height:1.4; }
-.vault-kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
-.vault-kpi { background:rgba(2,4,8,0.6); border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center; }
-.v-lbl { font-size:9px; color:var(--text-muted); text-transform:uppercase; font-family:'Orbitron',sans-serif; }
-.v-val { font-size:13px; font-family:'Orbitron',sans-serif; font-weight:900; margin-top:4px; }
-.cyber-progress { width:100%; height:10px; background:rgba(255,255,255,0.04); border-radius:99px; margin-top:14px; overflow:hidden; border:1px solid var(--card-border); }
-.cyber-progress-fill { height:100%; background:linear-gradient(90deg,var(--neon-green),var(--neon-cyan)); border-radius:99px; transition:0.4s; }
-.joe-pick-card { background:linear-gradient(145deg,rgba(6,214,160,0.12),rgba(2,4,8,0.95)); border:1.5px solid var(--neon-green); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 0 25px rgba(6,214,160,0.15); }
-.bet-ticket { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:14px; margin-bottom:10px; }
-.bet-ticket-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
-.t-btn { flex:1; padding:7px; border-radius:10px; border:1px solid var(--card-border); font-size:11px; font-weight:800; cursor:pointer; background:rgba(15,23,42,0.9); color:#fff; min-width:65px; }
-.t-win { background:rgba(6,214,160,0.15); border-color:var(--neon-green); color:var(--neon-green); }
-.t-loss { background:rgba(239,71,111,0.15); border-color:var(--neon-red); color:var(--neon-red); }
-.t-edit { background:rgba(0,243,255,0.15); border-color:var(--neon-cyan); color:var(--neon-cyan); }
-.bottom-hud-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:520px; height:72px; background:rgba(2,4,8,0.94); backdrop-filter:blur(22px); border-top:1px solid var(--card-border); display:flex; justify-content:space-around; align-items:center; z-index:30; }
-.hud-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); font-size:9px; font-family:'Orbitron',sans-serif; font-weight:700; gap:4px; cursor:pointer; background:none; border:none; flex:1; height:100%; text-transform:uppercase; }
-.hud-nav-item .ico { font-size:20px; }
-.hud-nav-item.active { color:var(--neon-cyan); text-shadow:0 0 12px rgba(0,243,255,0.6); }
-.toast-msg { position:fixed; top:76px; left:50%; transform:translateX(-50%); background:rgba(6,214,160,0.95); color:#020408; padding:8px 18px; border-radius:12px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:900; z-index:300; display:none; box-shadow:0 0 20px rgba(6,214,160,0.6); }
-/* TOGGLE SWITCH STYLE */
-.toggle-container { display: flex; align-items: center; justify-content: space-between; background: rgba(2,4,8,0.7); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--card-border); margin-bottom: 12px; transition: 0.3s; }
-.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; transition: .3s; border-radius: 24px; border: 1px solid var(--card-border); }
-.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: #fff; transition: .3s; border-radius: 50%; }
-input:checked + .slider { background-color: var(--neon-gold); }
-input:checked + .slider:before { transform: translateX(20px); background-color: #020408; }
+  :root { --bg:#020408; --card-bg:rgba(10,15,28,0.82); --card-border:rgba(0,243,255,0.22); --neon-cyan:#00f3ff; --neon-gold:#ffb703; --neon-green:#06d6a0; --neon-red:#ef476f; --text-main:#f8fafc; --text-muted:#64748b; }
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Plus Jakarta Sans',sans-serif; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; width:100%; background:var(--bg); color:var(--text-main); overflow:hidden; }
+  .app-shell { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto; position:relative; }
+  
+  /* LOGIN OVERLAY */
+  .login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
+  .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
+  .cyber-input { width:100%; background:rgba(2,4,8,0.85); border:1px solid var(--card-border); color:#fff; padding:12px 14px; border-radius:12px; font-size:13px; margin-bottom:12px; outline:none; }
+  .cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
+  .login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
+  
+  /* TOP HUD */
+  .top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
+  .hud-brand { display:flex; align-items:center; gap:10px; }
+  .hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
+  .hud-title { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1px; color:#fff; display:block; }
+  .hud-status { font-size:9px; color:var(--neon-green); font-weight:700; text-transform:uppercase; }
+  .hud-right { display:flex; align-items:center; gap:8px; }
+  .hud-bank { background:rgba(6,214,160,0.1); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); padding:7px 11px; border-radius:12px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; cursor:pointer; }
+  .logout-btn { background:rgba(239,71,111,0.15); border:1px solid var(--neon-red); color:var(--neon-red); padding:7px 10px; border-radius:12px; font-size:11px; font-weight:800; cursor:pointer; }
+
+  .sub-bars { background:rgba(5,9,18,0.6); border-bottom:1px solid var(--card-border); padding:10px 14px 8px; }
+  .h-scroll { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .h-scroll::-webkit-scrollbar { display:none; }
+  .cyber-chip { background:rgba(15,23,42,0.8); border:1px solid var(--card-border); color:var(--text-muted); padding:7px 14px; border-radius:10px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; transition:0.2s; }
+  .cyber-chip.active { background:var(--neon-cyan); color:#020408; border-color:var(--neon-cyan); font-weight:800; }
+  .cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); box-shadow:0 0 12px rgba(255,183,3,0.4); }
+  
+  .search-container { padding:8px 14px 2px; background:rgba(5,9,18,0.6); }
+  .search-input { width:100%; background:rgba(15,23,42,0.85); border:1px solid var(--card-border); color:#fff; padding:9px 12px; border-radius:10px; font-size:12px; outline:none; }
+  .search-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 10px rgba(0,243,255,0.25); }
+
+  .viewport { flex:1; overflow-y:auto; padding:14px 14px 90px; -webkit-overflow-scrolling:touch; }
+  .cyber-sec-head { display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg,rgba(0,243,255,0.1),rgba(10,15,28,0.6)); border-left:3px solid var(--neon-cyan); border-radius:8px; padding:9px 14px; margin:14px 0 10px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:var(--neon-cyan); }
+  .cyber-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6); transition:0.3s; }
+  .cyber-card.match-win { border-color:var(--neon-green); box-shadow:0 0 20px rgba(6,214,160,0.25); background:linear-gradient(145deg,rgba(6,214,160,0.08),rgba(10,15,28,0.85)); }
+  .cyber-card.match-loss { border-color:var(--neon-red); box-shadow:0 0 20px rgba(239,71,111,0.25); background:linear-gradient(145deg,rgba(239,71,111,0.08),rgba(10,15,28,0.85)); }
+
+  .card-top { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
+  .status-badge { padding:3px 9px; border-radius:6px; font-weight:800; font-size:9px; font-family:'Orbitron',sans-serif; }
+  .st-live { background:rgba(239,71,111,0.2); color:var(--neon-red); border:1px solid var(--neon-red); }
+  .st-ft { background:rgba(6,214,160,0.2); color:var(--neon-green); border:1px solid var(--neon-green); }
+  .st-ns { background:rgba(255,255,255,0.05); color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); }
+  .teams-container { display:flex; justify-content:space-between; align-items:center; margin:8px 0 12px; }
+  .team-name { width:40%; font-size:14px; font-weight:800; line-height:1.3; user-select:text; }
+  .team-name.away { text-align:right; }
+  .score-display { background:rgba(15,23,42,0.9); border:1px solid var(--card-border); padding:6px 14px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; color:var(--neon-gold); }
+  .prediction-panel { background:rgba(2,4,8,0.8); border:1px solid var(--card-border); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .pred-main { font-size:12px; font-weight:800; color:#fff; user-select:text; }
+  .pred-sub { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.4; }
+  .odd-chip { background:rgba(255,183,3,0.12); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:5px 11px; border-radius:10px; font-family:'Orbitron',sans-serif; font-weight:800; font-size:12px; }
+  .action-bar { display:flex; gap:6px; margin-top:10px; }
+  .cyber-btn { flex:1; background:rgba(15,23,42,0.9); border:1px solid var(--card-border); color:var(--text-main); padding:9px 6px; border-radius:12px; font-size:11px; font-weight:700; cursor:pointer; }
+  .cyber-btn.accent { background:rgba(6,214,160,0.15); border-color:rgba(6,214,160,0.5); color:var(--neon-green); }
+  .cyber-btn.copy-btn { flex:0.45; background:rgba(0,243,255,0.1); border-color:rgba(0,243,255,0.4); color:var(--neon-cyan); }
+  .analytics-drawer { display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--card-border); font-size:11px; }
+  .matrix-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+  .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
+  .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
+  
+  /* CHAT VIP STYLES */
+  .joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
+  .chat-messages { height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
+  .chat-msg { max-width:86%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.45; word-break:break-word; }
+  .chat-msg.joe { background:rgba(0,243,255,0.1); border:1px solid rgba(0,243,255,0.3); color:#fff; align-self:flex-start; border-top-left-radius:3px; }
+  .chat-msg.user { background:rgba(6,214,160,0.15); border:1px solid rgba(6,214,160,0.4); color:var(--neon-green); align-self:flex-end; border-top-right-radius:3px; }
+  .chat-form { display:flex; gap:6px; align-items:center; }
+  .chat-file-btn { background:rgba(255,183,3,0.15); border:1px solid var(--neon-gold); color:var(--neon-gold); padding:9px 11px; border-radius:10px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .chat-file-btn.has-img { background:rgba(6,214,160,0.22); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 10px rgba(6,214,160,0.35); }
+  .preview-thumb { width:100%; max-height:140px; object-fit:contain; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); background:#020408; }
+
+  @keyframes ticketRowSlide {
+    0% { opacity: 0; transform: translateY(12px) scale(0.97); border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0,243,255,0.3); }
+    100% { opacity: 1; transform: translateY(0) scale(1); border-color: var(--card-border); box-shadow: none; }
+  }
+  .ticket-row-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px; background: rgba(15,23,42,0.8); border-radius: 10px;
+    margin-bottom: 6px; border: 1px solid var(--card-border);
+    opacity: 0;
+    animation: ticketRowSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* EFECT DE BOOM CIBERNETIC PENTRU MODUL COTA 500+ */
+  @keyframes boomEffect {
+    0% { transform: scale(1); box-shadow: 0 0 5px rgba(255,183,3,0.2); border-color: var(--card-border); }
+    30% { transform: scale(1.02); box-shadow: 0 0 35px var(--neon-gold), inset 0 0 15px rgba(255,183,3,0.5); border-color: var(--neon-gold); }
+    60% { transform: scale(0.99); box-shadow: 0 0 20px rgba(255,183,3,0.4); border-color: var(--neon-gold); }
+    100% { transform: scale(1); box-shadow: 0 0 25px rgba(255,183,3,0.3); border-color: var(--neon-gold); }
+  }
+  .boom-active {
+    animation: boomEffect 0.5s ease-in-out forwards;
+    background: radial-gradient(circle at 50% 50%, rgba(255,183,3,0.15), rgba(10,15,28,0.95)) !important;
+  }
+
+  .vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
+  .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
+  .joe-status-dot { position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:var(--neon-green); border:2px solid #020408; border-radius:50%; z-index:2; }
+  .vault-quote { font-style:italic; font-size:11.5px; color:var(--neon-cyan); background:rgba(0,243,255,0.06); padding:10px 14px; border-radius:12px; border-left:3px solid var(--neon-cyan); line-height:1.4; }
+  
+  .vault-kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .vault-kpi { background:rgba(2,4,8,0.6); border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center; }
+  .v-lbl { font-size:9px; color:var(--text-muted); text-transform:uppercase; font-family:'Orbitron',sans-serif; }
+  .v-val { font-size:13px; font-family:'Orbitron',sans-serif; font-weight:900; margin-top:4px; }
+  .cyber-progress { width:100%; height:10px; background:rgba(255,255,255,0.04); border-radius:99px; margin-top:14px; overflow:hidden; border:1px solid var(--card-border); }
+  .cyber-progress-fill { height:100%; background:linear-gradient(90deg,var(--neon-green),var(--neon-cyan)); border-radius:99px; transition:0.4s; }
+  .joe-pick-card { background:linear-gradient(145deg,rgba(6,214,160,0.12),rgba(2,4,8,0.95)); border:1.5px solid var(--neon-green); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 0 25px rgba(6,214,160,0.15); }
+  .bet-ticket { background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:14px; margin-bottom:10px; }
+  .bet-ticket-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .t-btn { flex:1; padding:7px; border-radius:10px; border:1px solid var(--card-border); font-size:11px; font-weight:800; cursor:pointer; background:rgba(15,23,42,0.9); color:#fff; min-width:65px; }
+  .t-win { background:rgba(6,214,160,0.15); border-color:var(--neon-green); color:var(--neon-green); }
+  .t-loss { background:rgba(239,71,111,0.15); border-color:var(--neon-red); color:var(--neon-red); }
+  .t-edit { background:rgba(0,243,255,0.15); border-color:var(--neon-cyan); color:var(--neon-cyan); }
+  .bottom-hud-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:520px; height:72px; background:rgba(2,4,8,0.94); backdrop-filter:blur(22px); border-top:1px solid var(--card-border); display:flex; justify-content:space-around; align-items:center; z-index:30; }
+  .hud-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); font-size:9px; font-family:'Orbitron',sans-serif; font-weight:700; gap:4px; cursor:pointer; background:none; border:none; flex:1; height:100%; text-transform:uppercase; }
+  .hud-nav-item .ico { font-size:20px; }
+  .hud-nav-item.active { color:var(--neon-cyan); text-shadow:0 0 12px rgba(0,243,255,0.6); }
+  .toast-msg { position:fixed; top:76px; left:50%; transform:translateX(-50%); background:rgba(6,214,160,0.95); color:#020408; padding:8px 18px; border-radius:12px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:900; z-index:300; display:none; box-shadow:0 0 20px rgba(6,214,160,0.6); }
+
+  /* TOGGLE SWITCH STYLE */
+  .toggle-container { display: flex; align-items: center; justify-content: space-between; background: rgba(2,4,8,0.7); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--card-border); margin-bottom: 12px; transition: 0.3s; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; transition: .3s; border-radius: 24px; border: 1px solid var(--card-border); }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: #fff; transition: .3s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--neon-gold); }
+  input:checked + .slider:before { transform: translateX(20px); background-color: #020408; }
 </style>
 </head>
 <body>
+
 <div class="toast-msg" id="toastMsg">✅ COPIAT ÎN CLIPBOARD!</div>
+
 <div class="login-screen" id="loginScreen">
-<div class="login-box">
-<div class="login-logo">
-<img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+    </div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
+    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
+    <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
+    <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
+    <button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
+    <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
+  </div>
 </div>
-<div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
-<div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
-<input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
-<input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
-<button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
-<div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
-</div>
-</div>
+
 <div class="app-shell">
-<div class="top-hud">
-<div class="hud-brand">
-<div class="hud-logo">
-<img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+  <div class="top-hud">
+    <div class="hud-brand">
+      <div class="hud-logo">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div>
+        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
+        <span class="hud-status" id="liveClock">● Live 24/7</span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
+      <button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
+    </div>
+  </div>
+  
+  <div class="sub-bars" id="subBars">
+    <div class="h-scroll" id="dateBar"></div>
+    <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="search-container" id="searchContainer">
+    <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
+  </div>
+
+  <div class="viewport" id="viewport"></div>
+
+  <nav class="bottom-hud-nav">
+    <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
+    <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
+    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
+    <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
+    <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
+  </nav>
 </div>
-<div>
-<span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
-<span class="hud-status" id="liveClock">● Live 24/7</span>
-</div>
-</div>
-<div class="hud-right">
-<div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
-<button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
-</div>
-</div>
-<div class="sub-bars" id="subBars">
-<div class="h-scroll" id="dateBar"></div>
-<div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
-</div>
-<div class="search-container" id="searchContainer">
-<input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
-</div>
-<div class="viewport" id="viewport"></div>
-<nav class="bottom-hud-nav">
-<button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
-<button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
-<button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
-<button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
-<button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
-</nav>
-</div>
+
 <script>
 const SUPABASE_URL = "https://edlfqiruegrmxcuubmil.supabase.co";
 const SUPABASE_KEY = "sb_publishable_b8npaox4JSEHkQzGC-SAjg_UHm_bOBE";
 const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1/create-user-admin";
+
 const isSupabaseConfigured = () => SUPABASE_URL.startsWith("https://") && SUPABASE_KEY.length > 20;
+
 function sbHeaders() {
-return {
-"apikey": SUPABASE_KEY,
-"Authorization": "Bearer " + SUPABASE_KEY,
-"Content-Type": "application/json",
-"Prefer": "return=representation"
-};
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
 }
+
 let usersList = [];
 let currentUser = null;
 let adminSessionPass = null;
+
 const LEAGUES = [
-{slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
-{slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
-{slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
-{slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
-{slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
-{slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
-{slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
-{slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
-{slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
-{slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
-{slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
-{slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
-{slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
+  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
+  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
+  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
+  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
+  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
+  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
+  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
+  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
+  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
+  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
+  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
 ];
+
 const CLUB_POWER_CALIBRATED = [
-{k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
-{k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
-{k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
-{k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
-{k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
-{k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
-{k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
-{k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
-{k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
-{k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
-{k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
-{k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
-{k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
-{k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
-{k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
-{k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
-{k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
-{k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
-{k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
-{k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
-{k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
+  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
+  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
+  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
+  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
+  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
+  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
+  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
+  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
+  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
+  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
 ];
+
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
 let customBudget = 100;
+let isGeneratingTicket = false;
+let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
 let cota500Mode = false;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
+
 let vipChatMessages = [
-{ sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
+  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
 ];
 let lastUploadedImage = null;
+
 const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Bucharest" });
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
+
 function hasJoeAccess() {
-return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
+  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
 }
+
 function isAdmin() {
-return currentUser && currentUser.role === "admin";
+  return currentUser && currentUser.role === "admin";
 }
+
 function applyRolePermissions() {
-const joeBtn = document.getElementById("nav-proiect");
-const bankBtn = document.getElementById("topBankBtn");
-const adminBtn = document.getElementById("nav-admin");
-const titleEl = document.getElementById("hudAppTitle");
-if (hasJoeAccess()) {
-if(joeBtn) joeBtn.style.display = "flex";
-if(bankBtn) bankBtn.style.display = "block";
-if(titleEl) titleEl.innerText = "JOE PREZICE";
-} else {
-if(joeBtn) joeBtn.style.display = "none";
-if(bankBtn) bankBtn.style.display = "none";
-if(titleEl) titleEl.innerText = "JOE PREZICE";
-if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
+  const joeBtn = document.getElementById("nav-proiect");
+  const bankBtn = document.getElementById("topBankBtn");
+  const adminBtn = document.getElementById("nav-admin");
+  const titleEl = document.getElementById("hudAppTitle");
+
+  if (hasJoeAccess()) {
+    if(joeBtn) joeBtn.style.display = "flex";
+    if(bankBtn) bankBtn.style.display = "block";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
+  } else {
+    if(joeBtn) joeBtn.style.display = "none";
+    if(bankBtn) bankBtn.style.display = "none";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
+    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
+  }
+
+  if(adminBtn) adminBtn.style.display = isAdmin() ? "flex" : "none";
 }
-if(adminBtn) adminBtn.style.display = isAdmin() ? "flex" : "none";
-}
+
 async function attemptLogin() {
-const u = document.getElementById("loginUser").value.trim().toLowerCase();
-const p = document.getElementById("loginPass").value.trim();
-const errEl = document.getElementById("loginErr");
-const btnEl = document.getElementById("loginSubmitBtn");
-if(errEl) errEl.style.display = "none";
-if (!u || !p) {
-if(errEl) { errEl.innerText = "Introdu utilizatorul și parola!"; errEl.style.display = "block"; }
-return;
+  const u = document.getElementById("loginUser").value.trim().toLowerCase();
+  const p = document.getElementById("loginPass").value.trim();
+  const errEl = document.getElementById("loginErr");
+  const btnEl = document.getElementById("loginSubmitBtn");
+  if(errEl) errEl.style.display = "none";
+
+  if (!u || !p) {
+    if(errEl) { errEl.innerText = "Introdu utilizatorul și parola!"; errEl.style.display = "block"; }
+    return;
+  }
+
+  if(btnEl) btnEl.innerText = "⏳ SE VERIFICĂ...";
+
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_username: u, p_password: p })
+    });
+
+    const data = await r.json();
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+
+    if (!r.ok || !data || !data.ok) {
+      if(errEl) { errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!"; errEl.style.display = "block"; }
+      return;
+    }
+
+    currentUser = { username: data.username, role: data.role, expires_at: data.expires_at };
+
+    if (currentUser.role === "admin") {
+      adminSessionPass = p;
+      sessionStorage.setItem("xmts_adm_token", p);
+      await fetchAdminUsersList();
+    }
+
+    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
+    const lScreen = document.getElementById("loginScreen");
+    if(lScreen) lScreen.style.display = "none";
+    applyRolePermissions();
+    renderViewport();
+  } catch (e) {
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+    if(errEl) { errEl.innerText = "Eroare de conexiune cu serverul!"; errEl.style.display = "block"; }
+  }
 }
-if(btnEl) btnEl.innerText = "⏳ SE VERIFICĂ...";
-try {
-const r = await fetch(⁠${SUPABASE_URL}/rest/v1/rpc/verify_user_login⁠, {
-method: "POST",
-headers: sbHeaders(),
-body: JSON.stringify({ p_username: u, p_password: p })
-});
-const data = await r.json();
-if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
-if (!r.ok || !data || !data.ok) {
-if(errEl) { errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!"; errEl.style.display = "block"; }
-return;
-}
-currentUser = { username: data.username, role: data.role, expires_at: data.expires_at };
-if (currentUser.role === "admin") {
-adminSessionPass = p;
-sessionStorage.setItem("xmts_adm_token", p);
-await fetchAdminUsersList();
-}
-localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
-const lScreen = document.getElementById("loginScreen");
-if(lScreen) lScreen.style.display = "none";
-applyRolePermissions();
-renderViewport();
-} catch (e) {
-if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
-if(errEl) { errEl.innerText = "Eroare de conexiune cu serverul!"; errEl.style.display = "block"; }
-}
-}
+
 async function fetchAdminUsersList() {
-if (!isAdmin() || !adminSessionPass) return;
-try {
-const r = await fetch(⁠${SUPABASE_URL}/rest/v1/rpc/admin_list_users⁠, {
-method: "POST",
-headers: sbHeaders(),
-body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
-});
-if (r.ok) {
-const list = await r.json();
-if (Array.isArray(list)) usersList = list;
+  if (!isAdmin() || !adminSessionPass) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
+    });
+    if (r.ok) {
+      const list = await r.json();
+      if (Array.isArray(list)) usersList = list;
+    }
+  } catch (e) { console.error(e); }
 }
-} catch (e) { console.error(e); }
-}
+
 function logoutUser() {
-currentUser = null;
-adminSessionPass = null;
-usersList = [];
-localStorage.removeItem("xmts_logged_user");
-sessionStorage.removeItem("xmts_adm_token");
-const uInput = document.getElementById("loginUser");
-const pInput = document.getElementById("loginPass");
-const lScreen = document.getElementById("loginScreen");
-if(uInput) uInput.value = "";
-if(pInput) pInput.value = "";
-if(lScreen) lScreen.style.display = "flex";
+  currentUser = null;
+  adminSessionPass = null;
+  usersList = [];
+  localStorage.removeItem("xmts_logged_user");
+  sessionStorage.removeItem("xmts_adm_token");
+  const uInput = document.getElementById("loginUser");
+  const pInput = document.getElementById("loginPass");
+  const lScreen = document.getElementById("loginScreen");
+  if(uInput) uInput.value = "";
+  if(pInput) pInput.value = "";
+  if(lScreen) lScreen.style.display = "flex";
 }
+
 function calculateExpiresAt(duration) {
-const now = new Date();
-if (duration === 'trial') now.setDate(now.getDate() + 2);
-else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
-else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
-else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
-else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
-else now.setMonth(now.getMonth() + 1);
-return now.toISOString();
+  const now = new Date();
+  if (duration === 'trial') now.setDate(now.getDate() + 2);
+  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
+  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
+  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
+  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
 }
+
 function formatExpiryDate(isoStr) {
-if (!isoStr) return "Permanent / Nelimitat";
-const d = new Date(isoStr);
-return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (!isoStr) return "Permanent / Nelimitat";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
+
 async function createNewUser() {
-const rawUsername = document.getElementById("newUsername")?.value.trim().toLowerCase();
-const password = document.getElementById("newPassword")?.value.trim();
-const tier = document.getElementById("newRole")?.value;
-const duration = document.getElementById("newDuration")?.value;
-const adminSecret = document.getElementById("adminSecretInput")?.value.trim();
-const resultMsg = document.getElementById("formResultMsg");
-if (!rawUsername || !password || !adminSecret) {
-if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!"; }
-return;
+  const rawUsername = document.getElementById("newUsername")?.value.trim().toLowerCase();
+  const password = document.getElementById("newPassword")?.value.trim();
+  const tier = document.getElementById("newRole")?.value;
+  const duration = document.getElementById("newDuration")?.value;
+  const adminSecret = document.getElementById("adminSecretInput")?.value.trim();
+  const resultMsg = document.getElementById("formResultMsg");
+
+  if (!rawUsername || !password || !adminSecret) {
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!"; }
+    return;
+  }
+
+  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
+  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+  const expiresAt = calculateExpiresAt(duration);
+
+  if(resultMsg) { resultMsg.style.color = "var(--neon-gold)"; resultMsg.innerText = "Se creează contul securizat și se setează abonamentul..."; }
+
+  try {
+    const response = await fetch(SUPABASE_EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, tier, duration, adminSecret })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
+
+    if (isSupabaseConfigured() && adminSessionPass) {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "upsert",
+          p_target_user: rawUsername,
+          p_target_pass: password,
+          p_target_role: mappedRole,
+          p_target_expires: expiresAt
+        })
+      });
+      await fetchAdminUsersList();
+    }
+
+    if(resultMsg) { resultMsg.style.color = "var(--neon-green)"; resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`; }
+    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
+    setTimeout(() => { renderViewport(); }, 1000);
+
+  } catch (err) {
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Eroare: " + err.message; }
+  }
 }
-const email = rawUsername.includes('@') ? rawUsername : ⁠${rawUsername}@joeprezice.online⁠;
-let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
-const expiresAt = calculateExpiresAt(duration);
-if(resultMsg) { resultMsg.style.color = "var(--neon-gold)"; resultMsg.innerText = "Se creează contul securizat și se setează abonamentul..."; }
-try {
-const response = await fetch(SUPABASE_EDGE_URL, {
-method: "POST",
-headers: { "Content-Type": "application/json" },
-body: JSON.stringify({ email, password, tier, duration, adminSecret })
-});
-const data = await response.json();
-if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
-if (isSupabaseConfigured() && adminSessionPass) {
-await fetch(⁠${SUPABASE_URL}/rest/v1/rpc/admin_manage_user⁠, {
-method: "POST",
-headers: sbHeaders(),
-body: JSON.stringify({
-p_admin_user: currentUser.username,
-p_admin_pass: adminSessionPass,
-p_action: "upsert",
-p_target_user: rawUsername,
-p_target_pass: password,
-p_target_role: mappedRole,
-p_target_expires: expiresAt
-})
-});
-await fetchAdminUsersList();
-}
-if(resultMsg) { resultMsg.style.color = "var(--neon-green)"; resultMsg.innerText = ⁠✅ Contul "${rawUsername}" a fost creat cu succes!⁠; }
-copyText(⁠Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}⁠);
-setTimeout(() => { renderViewport(); }, 1000);
-} catch (err) {
-if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Eroare: " + err.message; }
-}
-}
+
 async function removeUser(uname) {
-if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
-if (!confirm(⁠Ștergi utilizatorul ${uname}?⁠)) return;
-if (isSupabaseConfigured() && adminSessionPass) {
-try {
-await fetch(⁠${SUPABASE_URL}/rest/v1/rpc/admin_manage_user⁠, {
-method: "POST",
-headers: sbHeaders(),
-body: JSON.stringify({
-p_admin_user: currentUser.username,
-p_admin_pass: adminSessionPass,
-p_action: "delete",
-p_target_user: uname
-})
-});
-await fetchAdminUsersList();
-} catch (e) { console.error(e); }
+  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
+  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
+
+  if (isSupabaseConfigured() && adminSessionPass) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "delete",
+          p_target_user: uname
+        })
+      });
+      await fetchAdminUsersList();
+    } catch (e) { console.error(e); }
+  }
+  renderViewport();
 }
-renderViewport();
-}
+
 function copyText(txt) {
-if (navigator.clipboard && navigator.clipboard.writeText) {
-navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
-} else {
-fallbackCopy(txt);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
+  } else {
+    fallbackCopy(txt);
+  }
+  const t = document.getElementById("toastMsg");
+  if(t) { t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, 1800); }
 }
-const t = document.getElementById("toastMsg");
-if(t) { t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, 1800); }
-}
+
 function fallbackCopy(txt) {
-const ta = document.createElement("textarea");
-ta.value = txt; document.body.appendChild(ta); ta.select();
-document.execCommand("copy"); document.body.removeChild(ta);
+  const ta = document.createElement("textarea");
+  ta.value = txt; document.body.appendChild(ta); ta.select();
+  document.execCommand("copy"); document.body.removeChild(ta);
 }
+
 function copyCurrentTicket() {
-const nl = String.fromCharCode(10);
-const header = "🎟️ JOE PREZICE - BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2) + " | Buget: " + customBudget + " RON";
-const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
-copyText([header, ...lines].join(nl));
+  const nl = String.fromCharCode(10);
+  const header = "🎟️ JOE PREZICE - BILETUL ZILEI (" + selectedDate + ") — Cotă Totală: @" + currentTicketTotalOdd.toFixed(2) + " | Buget: " + customBudget + " RON";
+  const lines = currentTicketPicks.map((m, i) => (i + 1) + ". " + m.home + " vs " + m.away + " -> " + m.pick + " (@" + m.odd.toFixed(2) + ")");
+  copyText([header, ...lines].join(nl));
 }
+
 function extractMarketOdds(comp) {
-if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
-const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
-if (!oddObj) return null;
-const mlToDec = (ml) => {
-const n = parseFloat(ml);
-if (isNaN(n) || n === 0) return null;
-return n > 0 ? 1 + (n / 100) : 1 + (100 / Math.abs(n));
-};
-let mktPH = null, mktPD = null, mktPA = null, decH = null, decD = null, decA = null;
-if (oddObj.homeTeamOdds && oddObj.awayTeamOdds) {
-decH = mlToDec(oddObj.homeTeamOdds.moneyLine);
-decA = mlToDec(oddObj.awayTeamOdds.moneyLine);
-decD = oddObj.drawOdds ? mlToDec(oddObj.drawOdds.moneyLine) : null;
-if (decH && decA) {
-const effD = decD || 3.35;
-const invH = 1 / decH, invD = 1 / effD, invA = 1 / decA;
-const overround = invH + invD + invA;
-mktPH = invH / overround;
-mktPD = invD / overround;
-mktPA = invA / overround;
+  if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
+  const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
+  if (!oddObj) return null;
+
+  const mlToDec = (ml) => {
+    const n = parseFloat(ml);
+    if (isNaN(n) || n === 0) return null;
+    return n > 0 ? 1 + (n / 100) : 1 + (100 / Math.abs(n));
+  };
+
+  let mktPH = null, mktPD = null, mktPA = null, decH = null, decD = null, decA = null;
+  if (oddObj.homeTeamOdds && oddObj.awayTeamOdds) {
+    decH = mlToDec(oddObj.homeTeamOdds.moneyLine);
+    decA = mlToDec(oddObj.awayTeamOdds.moneyLine);
+    decD = oddObj.drawOdds ? mlToDec(oddObj.drawOdds.moneyLine) : null;
+    if (decH && decA) {
+      const effD = decD || 3.35;
+      const invH = 1 / decH, invD = 1 / effD, invA = 1 / decA;
+      const overround = invH + invD + invA;
+      mktPH = invH / overround;
+      mktPD = invD / overround;
+      mktPA = invA / overround;
+    }
+  }
+
+  const ouLine = oddObj.overUnder ? parseFloat(oddObj.overUnder) : null;
+  return { mktPH, mktPD, mktPA, decH, decD, decA, ouLine };
 }
-}
-const ouLine = oddObj.overUnder ? parseFloat(oddObj.overUnder) : null;
-return { mktPH, mktPD, mktPA, decH, decD, decA, ouLine };
-}
+
 function getClubBasePower(name) {
-const low = (name || "").toLowerCase();
-for (let c of CLUB_POWER_CALIBRATED) if (low.includes(c.k)) return c.p;
-return 0;
+  const low = (name || "").toLowerCase();
+  for (let c of CLUB_POWER_CALIBRATED) if (low.includes(c.k)) return c.p;
+  return 0;
 }
+
 function extractTeamStrength(compObj, isHome, teamName) {
-const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
-return {
-score: clubPower,
-clubPower,
-hasData: true,
-winsCount: 2.5,
-drawsCount: 1.2,
-lossesCount: 1.3,
-drawRatio: 0.25,
-formDisplay: clubPower !== 0 ? "Power Matrix Activ" : "Standard"
-};
+  const clubPower = getClubBasePower(teamName || (compObj.team && (compObj.team.displayName || compObj.team.name)) || "");
+  return {
+    score: clubPower,
+    clubPower,
+    hasData: true,
+    winsCount: 2.5,
+    drawsCount: 1.2,
+    lossesCount: 1.3,
+    drawRatio: 0.25,
+    formDisplay: clubPower !== 0 ? "Power Matrix Activ" : "Standard"
+  };
 }
+
 function getDatesList() {
-const list = [], now = new Date(), labels = {"-1":"Ieri","0":"Azi","1":"Mâine"};
-for (let i = -1; i <= 5; i++) {
-const d = new Date(now.getTime() + i * 86400000), iso = roDateStr(d), p = iso.split("-"), s = p[2] + "." + p[1];
-list.push({ iso, ymd: iso.replace(/-/g, ""), label: labels[String(i)] ? ⁠${labels[String(i)]} (${s})⁠ : s });
+  const list = [], now = new Date(), labels = {"-1":"Ieri","0":"Azi","1":"Mâine"};
+  for (let i = -1; i <= 5; i++) {
+    const d = new Date(now.getTime() + i * 86400000), iso = roDateStr(d), p = iso.split("-"), s = p[2] + "." + p[1];
+    list.push({ iso, ymd: iso.replace(/-/g, ""), label: labels[String(i)] ? `${labels[String(i)]} (${s})` : s });
+  }
+  return list;
 }
-return list;
-}
+
 function poissonPmf(k, lam) {
-let f = 1;
-for (let i = 2; i <= k; i++) f *= i;
-return Math.exp(-lam) * Math.pow(lam, k) / f;
+  let f = 1;
+  for (let i = 2; i <= k; i++) f *= i;
+  return Math.exp(-lam) * Math.pow(lam, k) / f;
 }
+
 function poissonOverProb(line, lam) {
-const minK = Math.floor(line) + 1;
-let cdf = 0;
-for (let k = 0; k < minK; k++) cdf += poissonPmf(k, lam);
-return Math.max(0.05, Math.min(0.95, 1 - cdf));
+  const minK = Math.floor(line) + 1;
+  let cdf = 0;
+  for (let k = 0; k < minK; k++) cdf += poissonPmf(k, lam);
+  return Math.max(0.05, Math.min(0.95, 1 - cdf));
 }
+
 function selectOptimalStatLine(expVal, overLines, underLines) {
-const options = [];
-for (let l of overLines) {
-const p = poissonOverProb(l, expVal);
-if (p >= 0.55 && p <= 0.80) {
-options.push({ label: ⁠Peste ${l}⁠, prob: Math.round(p * 100), score: p });
+  const options = [];
+  for (let l of overLines) {
+    const p = poissonOverProb(l, expVal);
+    if (p >= 0.55 && p <= 0.80) {
+      options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p });
+    }
+  }
+  for (let l of underLines) {
+    const p = 1 - poissonOverProb(l, expVal);
+    if (p >= 0.57 && p <= 0.80) {
+      options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * 0.98 });
+    }
+  }
+  if (!options.length) {
+    const midLine = overLines[1] || overLines[0];
+    const p = poissonOverProb(midLine, expVal);
+    return p >= 0.50 
+      ? { label: `Peste ${midLine}`, prob: Math.round(p * 100) }
+      : { label: `Sub ${midLine + 1}`, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
+  }
+  options.sort((a, b) => b.score - a.score);
+  return options[0];
 }
-}
-for (let l of underLines) {
-const p = 1 - poissonOverProb(l, expVal);
-if (p >= 0.57 && p <= 0.80) {
-options.push({ label: ⁠Sub ${l}⁠, prob: Math.round(p * 100), score: p * 0.98 });
-}
-}
-if (!options.length) {
-const midLine = overLines[1] || overLines[0];
-const p = poissonOverProb(midLine, expVal);
-return p >= 0.50
-? { label: ⁠Peste ${midLine}⁠, prob: Math.round(p * 100) }
-: { label: ⁠Sub ${midLine + 1}⁠, prob: Math.round((1 - poissonOverProb(midLine + 1, expVal)) * 100) };
-}
-options.sort((a, b) => b.score - a.score);
-return options[0];
-}
+
 function dixonColesTau(h, a, lamH, lamA, rho = -0.09) {
-if (h === 0 && a === 0) return Math.max(0.5, 1 - lamH * lamA * rho);
-if (h === 0 && a === 1) return Math.max(0.5, 1 + lamH * rho);
-if (h === 1 && a === 0) return Math.max(0.5, 1 + lamA * rho);
-if (h === 1 && a === 1) return Math.max(0.5, 1 - rho);
-return 1.0;
+  if (h === 0 && a === 0) return Math.max(0.5, 1 - lamH * lamA * rho);
+  if (h === 0 && a === 1) return Math.max(0.5, 1 + lamH * rho);
+  if (h === 1 && a === 0) return Math.max(0.5, 1 + lamA * rho);
+  if (h === 1 && a === 1) return Math.max(0.5, 1 - rho);
+  return 1.0;
 }
+
 function calculateSmartStake(bankroll, m) {
-let pct = 0.04;
-if (m.edgePct && m.edgePct > 2) {
-const p = m.prob / 100;
-const b = Math.max(0.25, m.odd - 1);
-const kelly = ((p * b - (1 - p)) / b) * 0.30;
-pct = Math.max(0.03, Math.min(0.08, kelly));
-} else {
-if (m.prob >= 66) pct = 0.07;
-else if (m.prob >= 60) pct = 0.06;
-else if (m.prob >= 55) pct = 0.05;
-else pct = 0.04;
+  let pct = 0.04;
+  if (m.edgePct && m.edgePct > 2) {
+    const p = m.prob / 100;
+    const b = Math.max(0.25, m.odd - 1);
+    const kelly = ((p * b - (1 - p)) / b) * 0.30;
+    pct = Math.max(0.03, Math.min(0.08, kelly));
+  } else {
+    if (m.prob >= 66) pct = 0.07;
+    else if (m.prob >= 60) pct = 0.06;
+    else if (m.prob >= 55) pct = 0.05;
+    else pct = 0.04;
+  }
+  const rawStake = bankroll * pct;
+  return {
+    stake: Math.max(10, Math.round(rawStake / 5) * 5),
+    pct: Math.round(pct * 100)
+  };
 }
-const rawStake = bankroll * pct;
-return {
-stake: Math.max(10, Math.round(rawStake / 5) * 5),
-pct: Math.round(pct * 100)
-};
-}
+
 function renderSubBars() {
-const sb = document.getElementById("subBars");
-const searchBox = document.getElementById("searchContainer");
-if (currentNav === "admin") {
-if(sb) sb.style.display = "none";
-if(searchBox) searchBox.style.display = "none";
-return;
+  const sb = document.getElementById("subBars");
+  const searchBox = document.getElementById("searchContainer");
+  
+  if (currentNav === "admin") { 
+    if(sb) sb.style.display = "none"; 
+    if(searchBox) searchBox.style.display = "none";
+    return; 
+  }
+  
+  if (currentNav === "meciuri" || currentNav === "europa") {
+    if(searchBox) searchBox.style.display = "block";
+  } else {
+    if(searchBox) searchBox.style.display = "none";
+  }
+
+  const dates = getDatesList();
+  if (!selectedDate) selectedDate = dates[1].iso;
+  const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
+  
+  if (currentNav === "europa") {
+    if(sb) sb.style.display = "block";
+    if(dBar) dBar.innerHTML = `<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>`;
+    if(lBar) lBar.innerHTML = ""; return;
+  }
+  
+  if(sb) sb.style.display = "block";
+  if(dBar) dBar.innerHTML = dates.map(d => `<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>`).join("");
+  if (currentNav === "proiect" || currentNav === "bilete") { if(lBar) lBar.innerHTML = ""; return; }
+  const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
+  if(lBar) lBar.innerHTML = `<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>` +
+    lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
 }
-if (currentNav === "meciuri" || currentNav === "europa") {
-if(searchBox) searchBox.style.display = "block";
-} else {
-if(searchBox) searchBox.style.display = "none";
-}
-const dates = getDatesList();
-if (!selectedDate) selectedDate = dates[1].iso;
-const dBar = document.getElementById("dateBar"), lBar = document.getElementById("leagueBar");
-if (currentNav === "europa") {
-if(sb) sb.style.display = "block";
-if(dBar) dBar.innerHTML = ⁠<span style="font-size:11px;color:var(--neon-gold);font-weight:800;font-family:'Orbitron',sans-serif;">🏆 SECTOR UEFA EUROPEAN</span>⁠;
-if(lBar) lBar.innerHTML = ""; return;
-}
-if(sb) sb.style.display = "block";
-if(dBar) dBar.innerHTML = dates.map(d => ⁠<button class="cyber-chip ${selectedDate===d.iso?'active':''}" onclick="selectDay('${d.iso}')">${d.label}</button>⁠).join("");
-if (currentNav === "proiect" || currentNav === "bilete") { if(lBar) lBar.innerHTML = ""; return; }
-const dayList = cacheByDate[selectedDate] || [], lgs = [...new Set(dayList.map(m => m.league))];
-if(lBar) lBar.innerHTML = ⁠<button class="cyber-chip cyber-chip-gold ${selectedLeague==='ALL'?'active':''}" onclick="selectLeague('ALL')">Toate (${dayList.length})</button>⁠ +
-lgs.map(lg => ⁠<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>⁠).join("");
-}
+
 // ================= ANALIZĂ MECI (SIGURANȚĂ MAXIMĂ) =================
 function analyzeMatch(ev, lg) {
-const comp = ev.competitions[0], cs = comp.competitors;
-const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
-const hName = home.team.displayName || home.team.name, aName = away.team.displayName || away.team.name;
-const dt = new Date(comp.date || ev.date), stState = (comp.status && comp.status.type && comp.status.type.state) || "pre";
-const hScore = home.score !== undefined ? parseInt(home.score, 10) : null, aScore = away.score !== undefined ? parseInt(away.score, 10) : null;
-const hHT = (home.linescores && home.linescores.length > 0 && home.linescores[0].value !== undefined) ? parseInt(home.linescores[0].value, 10) : null;
-const aHT = (away.linescores && away.linescores.length > 0 && away.linescores[0].value !== undefined) ? parseInt(away.linescores[0].value, 10) : null;
-const hInfo = extractTeamStrength(home, true, hName);
-const aInfo = extractTeamStrength(away, false, aName);
-const hPower = hInfo.score;
-const aPower = aInfo.score;
-const strengthDiff = hPower - aPower;
-const isDerby = Math.abs(strengthDiff) <= 0.12 && hPower >= 0.35;
-const lgGoals = lg.gBase || 2.62;
-let lamH = Math.max(0.40, Math.min(3.40, (lgGoals * 0.52) + strengthDiff * 1.35));
-let lamA = Math.max(0.40, Math.min(3.40, (lgGoals * 0.48) - strengthDiff * 1.35));
-const mkt = extractMarketOdds(comp);
-if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
-let targetTotal = lamH + lamA;
-if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
-targetTotal = targetTotal * 0.55 + mkt.ouLine * 0.45;
+  const comp = ev.competitions[0], cs = comp.competitors;
+  const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
+  const hName = home.team.displayName || home.team.name, aName = away.team.displayName || away.team.name;
+  const dt = new Date(comp.date || ev.date), stState = (comp.status && comp.status.type && comp.status.type.state) || "pre";
+  const hScore = home.score !== undefined ? parseInt(home.score, 10) : null, aScore = away.score !== undefined ? parseInt(away.score, 10) : null;
+
+  const hHT = (home.linescores && home.linescores.length > 0 && home.linescores[0].value !== undefined) ? parseInt(home.linescores[0].value, 10) : null;
+  const aHT = (away.linescores && away.linescores.length > 0 && away.linescores[0].value !== undefined) ? parseInt(away.linescores[0].value, 10) : null;
+
+  const hInfo = extractTeamStrength(home, true, hName);
+  const aInfo = extractTeamStrength(away, false, aName);
+
+  const hPower = hInfo.score;
+  const aPower = aInfo.score;
+  const strengthDiff = hPower - aPower;
+
+  const isDerby = Math.abs(strengthDiff) <= 0.12 && hPower >= 0.35;
+
+  const lgGoals = lg.gBase || 2.62;
+  let lamH = Math.max(0.40, Math.min(3.40, (lgGoals * 0.52) + strengthDiff * 1.35));
+  let lamA = Math.max(0.40, Math.min(3.40, (lgGoals * 0.48) - strengthDiff * 1.35));
+
+  const mkt = extractMarketOdds(comp);
+  if (mkt && mkt.mktPH && mkt.mktPA && (mkt.mktPH + mkt.mktPA) > 0.2) {
+    let targetTotal = lamH + lamA;
+    if (mkt.ouLine && mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) {
+      targetTotal = targetTotal * 0.55 + mkt.ouLine * 0.45;
+    }
+    const mktShareH = Math.max(0.12, Math.min(0.88, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
+    const modShareH = lamH / (lamH + lamA);
+    const finalShareH = modShareH * 0.35 + mktShareH * 0.65;
+    lamH = Math.max(0.35, Math.min(3.40, targetTotal * finalShareH));
+    lamA = Math.max(0.35, Math.min(3.40, targetTotal * (1 - finalShareH)));
+  }
+
+  const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
+
+  let pH = 0, pD = 0, pA = 0, p00 = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
+  let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0, p1X_U35 = 0, pX2_U35 = 0;
+  let totalProbMass = 0;
+
+  for (let h = 0; h <= 7; h++) {
+    for (let a = 0; a <= 7; a++) {
+      const rawP = poissonPmf(h, lamH) * poissonPmf(a, lamA) * dixonColesTau(h, a, lamH, lamA, rho);
+      totalProbMass += rawP;
+
+      if (h === 0 && a === 0) p00 += rawP;
+      if (h > a) pH += rawP;
+      else if (h === a) pD += rawP;
+      else pA += rawP;
+
+      const goals = h + a;
+      if (goals >= 2) pO15 += rawP;
+      if (goals >= 3) pO25 += rawP;
+      else pU25 += rawP;
+      if (h > 0 && a > 0) pGG += rawP;
+
+      if (h > a && goals >= 2) p1_O15 += rawP;
+      if (a > h && goals >= 2) p2_O15 += rawP;
+      if (h >= a && goals >= 2) p1X_O15 += rawP;
+      if (a >= h && goals >= 2) pX2_O15 += rawP;
+      if (h >= a && goals <= 3) p1X_U35 += rawP;
+      if (a >= h && goals <= 3) pX2_U35 += rawP;
+    }
+  }
+
+  pH /= totalProbMass; pD /= totalProbMass; pA /= totalProbMass; p00 /= totalProbMass;
+  pO15 /= totalProbMass; pO25 /= totalProbMass; pU25 /= totalProbMass; pGG /= totalProbMass;
+  p1_O15 /= totalProbMass; p2_O15 /= totalProbMass;
+  p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
+  p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
+
+  const p1X = pH + pD;
+  const pX2 = pA + pD;
+  const totalXG = lamH + lamA;
+  const xgDiff = lamH - lamA;
+  const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
+
+  const candidates = [];
+
+  const addCandidate = (name, mktType, prob, realOdd, safetyBonus = 1.0) => {
+    const fairOdd = 1 / Math.max(0.15, prob);
+    const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.95 * fairOdd).toFixed(2);
+    if (displayOdd < 1.25 || displayOdd > 2.25 || prob < 0.55) return;
+
+    const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
+    const valueScore = prob * safetyBonus;
+    candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
+  };
+
+  if (pO15 >= 0.62 && pO15 <= 0.85) {
+    addCandidate("Peste 1.5 Goluri", "O15", pO15, null, bothTeamsDangerous ? 1.05 : 1.01);
+  }
+  if (xgDiff >= 0.08 && p1X >= 0.62 && p1X <= 0.78) {
+    addCandidate("Șansă Dublă 1X", "DC", p1X, null, bothTeamsDangerous ? 0.95 : 1.00);
+  }
+  if (xgDiff <= -0.08 && pX2 >= 0.62 && pX2 <= 0.78) {
+    addCandidate("Șansă Dublă X2", "DC", pX2, null, bothTeamsDangerous ? 0.95 : 1.00);
+  }
+  if (xgDiff >= 0.15 && p1X_U35 >= 0.62 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.00);
+  if (xgDiff <= -0.15 && pX2_U35 >= 0.62 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.00);
+  if (xgDiff >= 0.25 && p1X_O15 >= 0.63 && lamA < 1.02) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.00);
+  if (xgDiff <= -0.25 && pX2_O15 >= 0.63 && lamH < 1.02) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.00);
+  if (pU25 >= 0.60 && totalXG <= 2.25) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.01);
+  if (pO25 >= 0.58 && totalXG >= 2.65) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.01);
+  if (pGG >= 0.58 && bothTeamsDangerous) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.01);
+  if (pH >= 0.56 && pH <= 0.76) addCandidate(`1 (${hName})`, "SOLO", pH, mkt?.decH, 1.01);
+  if (pA >= 0.56 && pA <= 0.76) addCandidate(`2 (${aName})`, "SOLO", pA, mkt?.decA, 1.01);
+
+  if (!candidates.length) {
+    const basicOpts = [
+      { name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15 },
+      { name: "Șansă Dublă 1X", mktType: "DC", prob: p1X },
+      { name: "Șansă Dublă X2", mktType: "DC", prob: pX2 }
+    ].sort((a, b) => b.prob - a.prob);
+    const topBasic = basicOpts[0];
+    candidates.push({
+      name: topBasic.name,
+      mktType: topBasic.mktType,
+      prob: topBasic.prob,
+      odd: Math.max(1.25, +(0.95 / Math.max(0.20, topBasic.prob)).toFixed(2)),
+      edgePct: 0,
+      valueScore: topBasic.prob
+    });
+  }
+
+  candidates.sort((a, b) => b.valueScore - a.valueScore);
+  const best = candidates[0];
+
+  const getStat = (compObj, names) => {
+    if (!compObj.statistics) return null;
+    for (let n of names) {
+      const f = compObj.statistics.find(s => s.name === n || s.abbreviation === n);
+      if (f && f.displayValue !== undefined) {
+        const val = parseFloat(f.displayValue);
+        if (!isNaN(val)) return val;
+      }
+    }
+    return null;
+  };
+
+  const realHCorners = getStat(home, ["wonCorners", "cornerKicks", "corners", "CK"]);
+  const realACorners = getStat(away, ["wonCorners", "cornerKicks", "corners", "CK"]);
+  const realHYellow = getStat(home, ["yellowCards", "YC"]);
+  const realAYellow = getStat(away, ["yellowCards", "YC"]);
+  const realHRed = getStat(home, ["redCards", "RC"]) || 0;
+  const realARed = getStat(away, ["redCards", "RC"]) || 0;
+
+  const expCornersNum = Math.max(7.2, Math.min(12.6, (lg.cBase || 9.5) + (totalXG - 2.6) * 1.3));
+  const expCorners = expCornersNum.toFixed(1);
+  const bestCornerOpt = selectOptimalStatLine(expCornersNum, [7.5, 8.5, 9.5], [9.5, 10.5]);
+  const cornerLine = `${bestCornerOpt.label} (${bestCornerOpt.prob}%)`;
+
+  const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
+  const expCards = expCardsNum.toFixed(1);
+  const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
+  const cardLine = `${bestCardOpt.label} (${bestCardOpt.prob}%)`;
+
+  const actualCorners = (realHCorners !== null && realACorners !== null) ? (realHCorners + realACorners) : null;
+  const actualCards = (realHYellow !== null && realAYellow !== null) ? (realHYellow + realAYellow + realHRed + realARed) : null;
+
+  return {
+    id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
+    status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
+    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
+    lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
+    isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
+    edgePct: best.edgePct || 0,
+    pick: best.name, mktType: best.mktType || "OTHER", prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
+    tipsterScore: best.valueScore,
+    expCorners, cornerLine, actualCorners,
+    expCards, cardLine, actualCards,
+    probs: { p1: Math.round(pH*100), pX: Math.round(pD*100), p2: Math.round(pA*100), o25: Math.round(pO25*100), gg: Math.round(pGG*100), o15: Math.round(pO15*100) }
+  };
 }
-const mktShareH = Math.max(0.12, Math.min(0.88, mkt.mktPH / (mkt.mktPH + mkt.mktPA)));
-const modShareH = lamH / (lamH + lamA);
-const finalShareH = modShareH * 0.35 + mktShareH * 0.65;
-lamH = Math.max(0.35, Math.min(3.40, targetTotal * finalShareH));
-lamA = Math.max(0.35, Math.min(3.40, targetTotal * (1 - finalShareH)));
-}
-const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0);
-let pH = 0, pD = 0, pA = 0, p00 = 0, pO15 = 0, pO25 = 0, pU25 = 0, pGG = 0;
-let p1_O15 = 0, p2_O15 = 0, p1X_O15 = 0, pX2_O15 = 0, p1X_U35 = 0, pX2_U35 = 0;
-let totalProbMass = 0;
-for (let h = 0; h <= 7; h++) {
-for (let a = 0; a <= 7; a++) {
-const rawP = poissonPmf(h, lamH) * poissonPmf(a, lamA) * dixonColesTau(h, a, lamH, lamA, rho);
-totalProbMass += rawP;
-if (h === 0 && a === 0) p00 += rawP;
-if (h > a) pH += rawP;
-else if (h === a) pD += rawP;
-else pA += rawP;
-const goals = h + a;
-if (goals >= 2) pO15 += rawP;
-if (goals >= 3) pO25 += rawP;
-else pU25 += rawP;
-if (h > 0 && a > 0) pGG += rawP;
-if (h > a && goals >= 2) p1_O15 += rawP;
-if (a > h && goals >= 2) p2_O15 += rawP;
-if (h >= a && goals >= 2) p1X_O15 += rawP;
-if (a >= h && goals >= 2) pX2_O15 += rawP;
-if (h >= a && goals <= 3) p1X_U35 += rawP;
-if (a >= h && goals <= 3) pX2_U35 += rawP;
-}
-}
-pH /= totalProbMass; pD /= totalProbMass; pA /= totalProbMass; p00 /= totalProbMass;
-pO15 /= totalProbMass; pO25 /= totalProbMass; pU25 /= totalProbMass; pGG /= totalProbMass;
-p1_O15 /= totalProbMass; p2_O15 /= totalProbMass;
-p1X_O15 /= totalProbMass; pX2_O15 /= totalProbMass;
-p1X_U35 /= totalProbMass; pX2_U35 /= totalProbMass;
-const p1X = pH + pD;
-const pX2 = pA + pD;
-const totalXG = lamH + lamA;
-const xgDiff = lamH - lamA;
-const bothTeamsDangerous = lamH >= 1.00 && lamA >= 1.00;
-const candidates = [];
-const addCandidate = (name, mktType, prob, realOdd, safetyBonus = 1.0) => {
-const fairOdd = 1 / Math.max(0.15, prob);
-const displayOdd = realOdd ? +realOdd.toFixed(2) : +(0.95 * fairOdd).toFixed(2);
-if (displayOdd < 1.25 || displayOdd > 2.35 || prob < 0.55) return;
-const edgePct = realOdd ? Math.round((prob * realOdd - 1) * 100) : 0;
-const valueScore = prob * safetyBonus;
-candidates.push({ name, mktType, prob, odd: displayOdd, edgePct, valueScore });
-};
-if (pO15 >= 0.62 && pO15 <= 0.85) {
-addCandidate("Peste 1.5 Goluri", "O15", pO15, null, bothTeamsDangerous ? 1.05 : 1.01);
-}
-if (xgDiff >= 0.08 && p1X >= 0.62 && p1X <= 0.78) {
-addCandidate("Șansă Dublă 1X", "DC", p1X, null, bothTeamsDangerous ? 0.95 : 1.00);
-}
-if (xgDiff <= -0.08 && pX2 >= 0.62 && pX2 <= 0.78) {
-addCandidate("Șansă Dublă X2", "DC", pX2, null, bothTeamsDangerous ? 0.95 : 1.00);
-}
-if (xgDiff >= 0.15 && p1X_U35 >= 0.62 && totalXG <= 2.50) addCandidate("1X & Sub 3.5 Goluri", "COMBO_U35", p1X_U35, null, 1.00);
-if (xgDiff <= -0.15 && pX2_U35 >= 0.62 && totalXG <= 2.50) addCandidate("X2 & Sub 3.5 Goluri", "COMBO_U35", pX2_U35, null, 1.00);
-if (xgDiff >= 0.25 && p1X_O15 >= 0.63 && lamA < 1.02) addCandidate("1X & Peste 1.5 Goluri", "COMBO_DC", p1X_O15, null, 1.00);
-if (xgDiff <= -0.25 && pX2_O15 >= 0.63 && lamH < 1.02) addCandidate("X2 & Peste 1.5 Goluri", "COMBO_DC", pX2_O15, null, 1.00);
-if (pU25 >= 0.60 && totalXG <= 2.25) addCandidate("Sub 2.5 Goluri", "U25", pU25, null, 1.01);
-if (pO25 >= 0.58 && totalXG >= 2.65) addCandidate("Peste 2.5 Goluri", "O25", pO25, null, 1.01);
-if (pGG >= 0.58 && bothTeamsDangerous) addCandidate("GG (Ambele marchează)", "GG", pGG, null, 1.01);
-if (pH >= 0.56 && pH <= 0.76) addCandidate(⁠1 (${hName})⁠, "SOLO", pH, mkt?.decH, 1.01);
-if (pA >= 0.56 && pA <= 0.76) addCandidate(⁠2 (${aName})⁠, "SOLO", pA, mkt?.decA, 1.01);
-if (!candidates.length) {
-const basicOpts = [
-{ name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15 },
-{ name: "Șansă Dublă 1X", mktType: "DC", prob: p1X },
-{ name: "Șansă Dublă X2", mktType: "DC", prob: pX2 }
-].sort((a, b) => b.prob - a.prob);
-const topBasic = basicOpts[0];
-candidates.push({
-name: topBasic.name,
-mktType: topBasic.mktType,
-prob: topBasic.prob,
-odd: Math.max(1.25, +(0.95 / Math.max(0.20, topBasic.prob)).toFixed(2)),
-edgePct: 0,
-valueScore: topBasic.prob
-});
-}
-candidates.sort((a, b) => b.valueScore - a.valueScore);
-const best = candidates[0];
-const getStat = (compObj, names) => {
-if (!compObj.statistics) return null;
-for (let n of names) {
-const f = compObj.statistics.find(s => s.name === n || s.abbreviation === n);
-if (f && f.displayValue !== undefined) {
-const val = parseFloat(f.displayValue);
-if (!isNaN(val)) return val;
-}
-}
-return null;
-};
-const realHCorners = getStat(home, ["wonCorners", "cornerKicks", "corners", "CK"]);
-const realACorners = getStat(away, ["wonCorners", "cornerKicks", "corners", "CK"]);
-const realHYellow = getStat(home, ["yellowCards", "YC"]);
-const realAYellow = getStat(away, ["yellowCards", "YC"]);
-const realHRed = getStat(home, ["redCards", "RC"]) || 0;
-const realARed = getStat(away, ["redCards", "RC"]) || 0;
-const expCornersNum = Math.max(7.2, Math.min(12.6, (lg.cBase || 9.5) + (totalXG - 2.6) * 1.3));
-const expCorners = expCornersNum.toFixed(1);
-const bestCornerOpt = selectOptimalStatLine(expCornersNum, [7.5, 8.5, 9.5], [9.5, 10.5]);
-const cornerLine = ⁠${bestCornerOpt.label} (${bestCornerOpt.prob}%)⁠;
-const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
-const expCards = expCardsNum.toFixed(1);
-const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
-const cardLine = ⁠${bestCardOpt.label} (${bestCardOpt.prob}%)⁠;
-const actualCorners = (realHCorners !== null && realACorners !== null) ? (realHCorners + realACorners) : null;
-const actualCards = (realHYellow !== null && realAYellow !== null) ? (realHYellow + realAYellow + realHRed + realARed) : null;
-return {
-id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
-status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
-home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: "Power Matrix", aForm: "Power Matrix",
-lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
-isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
-edgePct: best.edgePct || 0,
-pick: best.name, mktType: best.mktType || "OTHER", prob: Math.round(best.prob * 100), odd: +best.odd.toFixed(2),
-tipsterScore: best.valueScore,
-expCorners, cornerLine, actualCorners,
-expCards, cardLine, actualCards,
-probs: { p1: Math.round(pH100), pX: Math.round(pD100), p2: Math.round(pA100), o25: Math.round(pO25100), gg: Math.round(pGG100), o15: Math.round(pO15100) }
-};
-}
+
 // ================= GENERATOR BILETE (MAXIM 10 MECIURI & MOD COTA 500+) =================
 function buildOptimalTicket(pool, targetOdd) {
-if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
-const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
-const picks = [];
-const usedIds = new Set();
-let tot = 1.0;
-const maxMeciuri = 10; // Strict maxim 10 meciuri pe bilet
-const targetMultiplier = cota500Mode ? 500 : targetOdd;
-while (picks.length < maxMeciuri && tot < targetMultiplier * 0.94 && sorted.length > picks.length) {
-let bestCandidate = null;
-let bestScore = -999;
-for (let m of sorted) {
-if (usedIds.has(m.id)) continue;
-if (m.tipsterScore > bestScore) {
-bestScore = m.tipsterScore;
-bestCandidate = m;
+  if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
+  const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
+  const picks = [];
+  const usedIds = new Set();
+  let tot = 1.0;
+
+  const maxMeciuri = 10;
+  const targetMultiplier = cota500Mode ? 500 : targetOdd;
+
+  while (picks.length < maxMeciuri && tot < targetMultiplier * 0.94 && sorted.length > picks.length) {
+    let bestCandidate = null;
+    let bestScore = -999;
+    for (let m of sorted) {
+      if (usedIds.has(m.id)) continue;
+      if (m.tipsterScore > bestScore) {
+        bestScore = m.tipsterScore;
+        bestCandidate = m;
+      }
+    }
+    if (!bestCandidate) break;
+    picks.push(bestCandidate);
+    usedIds.add(bestCandidate.id);
+    tot *= bestCandidate.odd;
+  }
+  return { picks, totalOdd: tot };
 }
-}
-if (!bestCandidate) break;
-picks.push(bestCandidate);
-usedIds.add(bestCandidate.id);
-tot *= bestCandidate.odd;
-}
-return { picks, totalOdd: tot };
-}
+
 async function fetchWithTimeout(url, timeoutMs = 8000) {
-const controller = new AbortController();
-const timer = setTimeout(() => controller.abort(), timeoutMs);
-try {
-const res = await fetch(url, { signal: controller.signal });
-clearTimeout(timer);
-return await res.json();
-} catch (e) {
-clearTimeout(timer);
-throw e;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
-}
+
 async function loadMatchesForDate(iso) {
-renderSubBars();
-if (cacheByDate[iso]) { renderViewport(); return; }
-document.getElementById("viewport").innerHTML = ⁠<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează cotele și valoarea loturilor pentru <b>${iso}</b>...</div>⁠;
-const ymd = iso.replace(/-/g, "");
-const res = await Promise.all(LEAGUES.map(l =>
-fetchWithTimeout(⁠https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}⁠)
-.then(d => ({ l, evs: (d && d.events) || [] }))
-.catch(() => ({ l, evs: [] }))
-));
-const list = [];
-res.forEach(r => r.evs.forEach(ev => {
-try {
-const m = analyzeMatch(ev, r.l);
-if (m.date === iso) list.push(m);
-} catch (e) {}
-}));
-if (list.length > 0) {
-cacheByDate[iso] = list;
-try { localStorage.setItem("joe_cache_" + iso, JSON.stringify(list)); } catch (e) {}
-} else {
-try {
-const backup = localStorage.getItem("joe_cache_" + iso);
-if (backup) cacheByDate[iso] = JSON.parse(backup);
-else cacheByDate[iso] = [];
-} catch (e) { cacheByDate[iso] = []; }
+  renderSubBars();
+  if (cacheByDate[iso]) { renderViewport(); return; }
+  const vp = document.getElementById("viewport");
+  if(vp) vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe scanează cotele și valoarea loturilor pentru <b>${iso}</b>...</div>`;
+  const ymd = iso.replace(/-/g, "");
+  const res = await Promise.all(LEAGUES.map(l =>
+    fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`)
+      .then(d => ({ l, evs: (d && d.events) || [] }))
+      .catch(() => ({ l, evs: [] }))
+  ));
+  const list = [];
+  res.forEach(r => r.evs.forEach(ev => {
+    try {
+      const m = analyzeMatch(ev, r.l);
+      if (m.date === iso) list.push(m);
+    } catch (e) {}
+  }));
+
+  if (list.length > 0) {
+    cacheByDate[iso] = list;
+    try { localStorage.setItem("joe_cache_" + iso, JSON.stringify(list)); } catch (e) {}
+  } else {
+    try {
+      const backup = localStorage.getItem("joe_cache_" + iso);
+      if (backup) cacheByDate[iso] = JSON.parse(backup);
+      else cacheByDate[iso] = [];
+    } catch (e) { cacheByDate[iso] = []; }
+  }
+
+  autoSettleProjectBets(cacheByDate[iso]);
+  renderViewport();
 }
-autoSettleProjectBets(cacheByDate[iso]);
-renderViewport();
-}
+
 async function loadEuropaMatches() {
-renderSubBars();
-if (europaMatches.length) { renderViewport(); return; }
-document.getElementById("viewport").innerHTML = ⁠<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>⁠;
-const now = new Date(), s = roDateStr(new Date(now.getTime() - 286400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 1886400000)).replace(/-/g, "");
-const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
-fetchWithTimeout(⁠https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}⁠)
-.then(d => ({ l, evs: (d && d.events) || [] }))
-.catch(() => ({ l, evs: [] }))
-));
-const list = [];
-res.forEach(r => r.evs.forEach(ev => {
-try { list.push(analyzeMatch(ev, r.l)); } catch (err) {}
-}));
-list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-europaMatches = list;
-renderViewport();
+  renderSubBars();
+  if (europaMatches.length) { renderViewport(); return; }
+  const vp = document.getElementById("viewport");
+  if(vp) vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene...</div>`;
+  const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
+  const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
+    fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
+      .then(d => ({ l, evs: (d && d.events) || [] }))
+      .catch(() => ({ l, evs: [] }))
+  ));
+  const list = [];
+  res.forEach(r => r.evs.forEach(ev => {
+    try { list.push(analyzeMatch(ev, r.l)); } catch (err) {}
+  }));
+  list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  europaMatches = list;
+  renderViewport();
 }
+
 async function initProject() {
-if (isSupabaseConfigured()) {
-try {
-const r = await fetch(⁠${SUPABASE_URL}/rest/v1/jack_project?id=eq.1&select=data⁠, { headers: sbHeaders() });
-if (r.ok) {
-const rows = await r.json();
-if (rows && rows.length > 0 && rows[0].data) project = rows[0].data;
+  if (isSupabaseConfigured()) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/jack_project?id=eq.1&select=data`, { headers: sbHeaders() });
+      if (r.ok) {
+        const rows = await r.json();
+        if (rows && rows.length > 0 && rows[0].data) project = rows[0].data;
+      }
+    } catch (e) { console.error(e); }
+  }
+  recalcBankroll(false);
 }
-} catch (e) { console.error(e); }
-}
-recalcBankroll(false);
-}
+
 async function saveToDB() {
-if (!isSupabaseConfigured()) return;
-try {
-const r = await fetch(⁠${SUPABASE_URL}/rest/v1/jack_project?id=eq.1⁠, {
-method: "PATCH",
-headers: sbHeaders(),
-body: JSON.stringify({ data: project })
-});
-document.getElementById("liveClock").innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
-} catch (e) {
-document.getElementById("liveClock").innerText = "● Sync Error";
+  if (!isSupabaseConfigured()) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/jack_project?id=eq.1`, {
+      method: "PATCH",
+      headers: sbHeaders(),
+      body: JSON.stringify({ data: project })
+    });
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = r.ok ? "● Cloud Synced" : "● Sync Error";
+  } catch (e) {
+    const liveClock = document.getElementById("liveClock");
+    if(liveClock) liveClock.innerText = "● Sync Error";
+  }
 }
-}
+
 function recalcBankroll(shouldSave = true) {
-let b = project.initial_bankroll || 500.0;
-(project.bets || []).forEach(bet => {
-if (bet.status === "WIN") b += bet.stake * (bet.odd - 1);
-else if (bet.status === "LOSS") b -= bet.stake;
-});
-project.bankroll = +b.toFixed(2);
-document.getElementById("topBankroll").innerText = project.bankroll.toFixed(2);
-if (shouldSave) saveToDB();
+  let b = project.initial_bankroll || 500.0;
+  (project.bets || []).forEach(bet => {
+    if (bet.status === "WIN") b += bet.stake * (bet.odd - 1);
+    else if (bet.status === "LOSS") b -= bet.stake;
+  });
+  project.bankroll = +b.toFixed(2);
+  const topBankroll = document.getElementById("topBankroll");
+  if(topBankroll) topBankroll.innerText = project.bankroll.toFixed(2);
+  if (shouldSave) saveToDB();
 }
+
 function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
-const t = h + a;
-if (pick.startsWith("1 (")) return h > a;
-if (pick.startsWith("2 (")) return a > h;
-if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
-if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
-if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
-if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
-if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
-if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
-if (pick.includes("X2 & Sub 3.5")) return a >= h && t <= 3;
-if (pick.includes("Peste 2.5")) return t >= 3;
-if (pick.includes("Sub 2.5")) return t <= 2;
-if (pick.includes("Peste 1.5")) return t >= 2;
-if (pick.includes("GG")) return h > 0 && a > 0;
-if (pick.includes("1X")) return h >= a;
-if (pick.includes("X2")) return a >= h;
-return null;
+  const t = h + a;
+  if (pick.startsWith("1 (")) return h > a;
+  if (pick.startsWith("2 (")) return a > h;
+  if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
+  if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
+  if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
+  if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
+  if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
+  if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
+  if (pick.includes("X2 & Sub 3.5")) return a >= h && t <= 3;
+  if (pick.includes("Peste 2.5")) return t >= 3;
+  if (pick.includes("Sub 2.5")) return t <= 2;
+  if (pick.includes("Peste 1.5")) return t >= 2;
+  if (pick.includes("GG")) return h > 0 && a > 0;
+  if (pick.includes("1X")) return h >= a;
+  if (pick.includes("X2")) return a >= h;
+  return null;
 }
+
 function autoSettleProjectBets(list) {
-let ch = false;
-(project.bets || []).forEach(b => {
-if (b.status !== "PENDING") return;
-const f = list.find(m => String(m.id) === String(b.matchId) && m.status === "FT");
-if (f && f.hScore !== null) {
-const w = checkBetOutcome(b.pick, f.hScore, f.aScore, f.hHT, f.aHT);
-if (w !== null) { b.status = w ? "WIN" : "LOSS"; b.score = ⁠${f.hScore}-${f.aScore}⁠; ch = true; }
+  let ch = false;
+  (project.bets || []).forEach(b => {
+    if (b.status !== "PENDING") return;
+    const f = list.find(m => String(m.id) === String(b.matchId) && m.status === "FT");
+    if (f && f.hScore !== null) {
+      const w = checkBetOutcome(b.pick, f.hScore, f.aScore, f.hHT, f.aHT);
+      if (w !== null) { b.status = w ? "WIN" : "LOSS"; b.score = `${f.hScore}-${f.aScore}`; ch = true; }
+    }
+  });
+  if (ch) recalcBankroll(true);
 }
-});
-if (ch) recalcBankroll(true);
-}
+
 function addMatchToProject(matchId) {
-if (!hasJoeAccess()) return;
-const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
-const m = all.find(x => String(x.id) === String(matchId));
-if (!m) return;
-if (!project.bets.some(b => String(b.matchId) === String(m.id))) {
-const smart = calculateSmartStake(project.bankroll, m);
-project.bets.unshift({ id: Date.now(), matchId: m.id, date: m.date, match: ⁠${m.home} vs ${m.away}⁠, league: m.league, pick: m.pick, odd: m.odd, stake: smart.stake, status: "PENDING", score: "" });
-recalcBankroll(true);
+  if (!hasJoeAccess()) return;
+  const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
+  const m = all.find(x => String(x.id) === String(matchId));
+  if (!m) return;
+  if (!project.bets.some(b => String(b.matchId) === String(m.id))) {
+    const smart = calculateSmartStake(project.bankroll, m);
+    project.bets.unshift({ id: Date.now(), matchId: m.id, date: m.date, match: `${m.home} vs ${m.away}`, league: m.league, pick: m.pick, odd: m.odd, stake: smart.stake, status: "PENDING", score: "" });
+    recalcBankroll(true);
+  }
+  switchNav("proiect");
 }
-switchNav("proiect");
-}
+
 function copyMatchById(matchId) {
-const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
-const m = all.find(x => String(x.id) === String(matchId));
-if (!m) return;
-copyText(⁠${m.home} vs ${m.away} — ${m.pick} (@${m.odd.toFixed(2)})⁠);
+  const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
+  const m = all.find(x => String(x.id) === String(matchId));
+  if (!m) return;
+  copyText(`${m.home} vs ${m.away} — ${m.pick} (@${m.odd.toFixed(2)})`);
 }
+
 function editBetDetails(id) {
-const b = project.bets.find(x => x.id === id);
-if (!b) return;
-const o = parseFloat(prompt(⁠Cotă nouă pentru ${b.match}:⁠, b.odd));
-if (isNaN(o) || o <= 1.01) return;
-const s = parseFloat(prompt("Miză nouă (RON):", b.stake));
-if (isNaN(s) || s <= 0) return;
-b.odd = +o.toFixed(2); b.stake = +s.toFixed(2);
-recalcBankroll(true); renderViewport();
+  const b = project.bets.find(x => x.id === id);
+  if (!b) return;
+  const o = parseFloat(prompt(`Cotă nouă pentru ${b.match}:`, b.odd));
+  if (isNaN(o) || o <= 1.01) return;
+  const s = parseFloat(prompt("Miză nouă (RON):", b.stake));
+  if (isNaN(s) || s <= 0) return;
+  b.odd = +o.toFixed(2); b.stake = +s.toFixed(2);
+  recalcBankroll(true); renderViewport();
 }
+
 function updateBetStatus(id, st) {
-const b = project.bets.find(x => x.id === id);
-if (b) { b.status = st; recalcBankroll(true); renderViewport(); }
+  const b = project.bets.find(x => x.id === id);
+  if (b) { b.status = st; recalcBankroll(true); renderViewport(); }
 }
+
 function deleteBet(id) {
-if (!confirm("Ștergi acest pariu?")) return;
-project.bets = project.bets.filter(x => x.id !== id);
-recalcBankroll(true); renderViewport();
+  if (!confirm("Ștergi acest pariu?")) return;
+  project.bets = project.bets.filter(x => x.id !== id);
+  recalcBankroll(true); renderViewport();
 }
+
 function toggleDrawer(id) {
-const el = document.getElementById(id);
-if (el) el.style.display = el.style.display === "block" ? "none" : "block";
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === "block" ? "none" : "block";
 }
+
 function renderMatchCard(m) {
-const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
-let cardStatusClass = "";
-if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
-const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT);
-if (outcome === true) cardStatusClass = "match-win";
-else if (outcome === false) cardStatusClass = "match-loss";
+  const stClass = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
+  
+  let cardStatusClass = "";
+  if (m.status === "FT" && m.hScore !== null && m.aScore !== null) {
+    const outcome = checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT);
+    if (outcome === true) cardStatusClass = "match-win";
+    else if (outcome === false) cardStatusClass = "match-loss";
+  }
+
+  const stText = m.status === "FT" ? `FT (${m.hScore}-${m.aScore})` : (m.status === "LIVE" ? `LIVE ${m.hScore}-${m.aScore}` : `🕒 ${m.time}`);
+  const center = (m.status === "FT" || m.status === "LIVE") ? `${m.hScore} - ${m.aScore}` : "VS";
+  const joeBtnHtml = hasJoeAccess() ? `<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>` : "";
+
+  const derbyBadge = m.isDerby ? ` · <span style="color:var(--neon-gold);font-weight:800;">🔥 DERBY</span>` : "";
+  const lowDataBadge = m.lowData ? ` · <span style="color:var(--neon-red);">⚠️ Istoric limitat</span>` : "";
+  const edgeBadge = (m.edgePct && m.edgePct > 0) ? ` · <span style="color:var(--neon-cyan);">📡 +${m.edgePct}% EV</span>` : "";
+
+  const cornersDisplay = m.actualCorners !== null 
+    ? `<b style="color:var(--neon-cyan);">${m.actualCorners} în meci</b> (Linie: ${m.cornerLine} · Est: ${m.expCorners})` 
+    : `<b style="color:var(--neon-cyan);">${m.cornerLine}</b> (Medie est: ~${m.expCorners})`;
+  const cardsDisplay = m.actualCards !== null 
+    ? `<b style="color:var(--neon-gold);">${m.actualCards} în meci</b> (Linie: ${m.cardLine} · Est: ${m.expCards})` 
+    : `<b style="color:var(--neon-gold);">${m.cardLine}</b> (Medie est: ~${m.expCards})`;
+
+  return `<div class="cyber-card ${cardStatusClass}">
+    <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}${derbyBadge}${lowDataBadge}</span><span class="status-badge ${stClass}">${stText}</span></div>
+    <div class="teams-container"><div class="team-name">${m.home}</div><div class="score-display">${center}</div><div class="team-name away">${m.away}</div></div>
+    <div class="prediction-panel"><div><div class="pred-main">⭐ ${m.pick}</div><div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}${edgeBadge}</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div>
+    <div class="action-bar">
+      <button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză</button>
+      <button class="cyber-btn copy-btn" onclick="copyMatchById('${m.id}')">📋 Copiază</button>
+      ${joeBtnHtml}
+    </div>
+    <div class="analytics-drawer" id="dr-${m.id}">
+      <div class="matrix-grid">
+        <div class="matrix-cell">1<b>${m.probs.p1}%</b></div><div class="matrix-cell">X<b>${m.probs.pX}%</b></div><div class="matrix-cell">2<b>${m.probs.p2}%</b></div>
+        <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
+      </div>
+      <div style="line-height:1.7;">
+        📈 Clasament & Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b><br>
+        🚩 Cornere: ${cornersDisplay}<br>
+        🟨 Cartonașe: ${cardsDisplay}
+      </div>
+    </div>
+  </div>`;
 }
-const stText = m.status === "FT" ? ⁠FT (${m.hScore}-${m.aScore})⁠ : (m.status === "LIVE" ? ⁠LIVE ${m.hScore}-${m.aScore}⁠ : ⁠🕒 ${m.time}⁠);
-const center = (m.status === "FT" || m.status === "LIVE") ? ⁠${m.hScore} - ${m.aScore}⁠ : "VS";
-const joeBtnHtml = hasJoeAccess() ? ⁠<button class="cyber-btn accent" onclick="addMatchToProject('${m.id}')">➕ La Joe</button>⁠ : "";
-const derbyBadge = m.isDerby ? ⁠ · <span style="color:var(--neon-gold);font-weight:800;">🔥 DERBY</span>⁠ : "";
-const lowDataBadge = m.lowData ? ⁠ · <span style="color:var(--neon-red);">⚠️ Istoric limitat</span>⁠ : "";
-const edgeBadge = (m.edgePct && m.edgePct > 0) ? ⁠ · <span style="color:var(--neon-cyan);">📡 +${m.edgePct}% EV</span>⁠ : "";
-const cornersDisplay = m.actualCorners !== null
-? ⁠<b style="color:var(--neon-cyan);">${m.actualCorners} în meci</b> (Linie: ${m.cornerLine} · Est: ${m.expCorners})⁠
-: ⁠<b style="color:var(--neon-cyan);">${m.cornerLine}</b> (Medie est: ~${m.expCorners})⁠;
-const cardsDisplay = m.actualCards !== null
-? ⁠<b style="color:var(--neon-gold);">${m.actualCards} în meci</b> (Linie: ${m.cardLine} · Est: ${m.expCards})⁠
-: ⁠<b style="color:var(--neon-gold);">${m.cardLine}</b> (Medie est: ~${m.expCards})⁠;
-return ⁠<div class="cyber-card ${cardStatusClass}"> <div class="card-top"><span>${m.icon} ${m.league} · ${m.date}${derbyBadge}${lowDataBadge}</span><span class="status-badge ${stClass}">${stText}</span></div> <div class="teams-container"><div class="team-name">${m.home}</div><div class="score-display">${center}</div><div class="team-name away">${m.away}</div></div> <div class="prediction-panel"><div><div class="pred-main">⭐ ${m.pick}</div><div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}${edgeBadge}</div></div><div class="odd-chip">@${m.odd.toFixed(2)}</div></div> <div class="action-bar"> <button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză</button> <button class="cyber-btn copy-btn" onclick="copyMatchById('${m.id}')">📋 Copiază</button> ${joeBtnHtml} </div> <div class="analytics-drawer" id="dr-${m.id}"> <div class="matrix-grid"> <div class="matrix-cell">1<b>${m.probs.p1}%</b></div><div class="matrix-cell">X<b>${m.probs.pX}%</b></div><div class="matrix-cell">2<b>${m.probs.p2}%</b></div> <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div> </div> <div style="line-height:1.7;"> 📈 Clasament & Formă: <b>${m.hForm}</b> vs <b>${m.aForm}</b><br> 🚩 Cornere: ${cornersDisplay}<br> 🟨 Cartonașe: ${cardsDisplay} </div> </div> </div>⁠;
-}
+
 function renderAdminView() {
-const rows = usersList.map(u => {
-const badge = u.role === "admin" ? "👑 ADMIN" : (u.role === "vip" ? "⚡ VIP + JOE" : "👁️ DOAR PRONOSTICURI");
-const col = u.role === "admin" ? "var(--neon-gold)" : (u.role === "vip" ? "var(--neon-green)" : "var(--neon-cyan)");
-const expiryText = u.username === 'teodor' ? 'Acces Permanent (Admin)' : (u.expires_at ? ⁠Valabil până la: ${formatExpiryDate(u.expires_at)}⁠ : 'Fără termen setat');
-return ⁠<div class="bet-ticket" style="display:flex;justify-content:space-between;align-items:center;"> <div> <div style="font-size:14px;font-weight:800;color:#fff;">👤 ${u.username} <span style="font-size:10px;color:var(--neon-green);">(🔐 Parolă criptată RLS)</span></div> <div style="font-size:10px;font-family:'Orbitron',sans-serif;color:${col};margin-top:4px;font-weight:800;">${badge}</div> <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">⏳ ${expiryText}</div> </div> ${u.username !== 'teodor' ? ⁠<button class="t-btn t-loss" style="flex:0;padding:8px 12px;" onclick="removeUser('${u.username}')">🗑️</button>⁠ : ''} </div>⁠;
-}).join("");
-return `<div class="cyber-card" style="border-color:var(--neon-gold);">
-<div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:12px;">👑 CREARE CONT UTILIZATOR</div>
-<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Nume utilizator (ex: alex)</label>
-<input type="text" id="newUsername" class="cyber-input" placeholder="ex: alex">
-<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă temporară</label>
-<input type="text" id="newPassword" class="cyber-input" placeholder="ex: parola123">
-<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Tip Pachet</label>
-<select id="newRole" class="cyber-input" style="background:#070d19;">
-<option value="standard">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
-<option value="vip" selected>⚡ VIP + JOE (Acces Total)</option>
-</select>
-<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Durată / Valabilitate</label>
-<select id="newDuration" class="cyber-input" style="background:#070d19;">
-<option value="trial">Test 2 Zile</option>
-<option value="1_month" selected>1 Lună</option>
-<option value="3_months">3 Luni</option>
-<option value="6_months">6 Luni</option>
-<option value="1_year">1 An</option>
-</select>
-<label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă Master Admin</label>
-<input type="password" id="adminSecretInput" class="cyber-input" placeholder="Parola ta secretă de admin">
-<button class="login-btn" onclick="createNewUser()">+ SALVEAZĂ UTILIZATORUL</button>
-<div id="formResultMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: bold; word-break: break-all;"></div>
-</div>
-<div class="cyber-sec-head"><span>👥 UTILIZATORI ACTIVI (${usersList.length})</span><span>RLS PROTECTED</span></div>
-${rows}`;
+  const rows = usersList.map(u => {
+    const badge = u.role === "admin" ? "👑 ADMIN" : (u.role === "vip" ? "⚡ VIP + JOE" : "👁️ DOAR PRONOSTICURI");
+    const col = u.role === "admin" ? "var(--neon-gold)" : (u.role === "vip" ? "var(--neon-green)" : "var(--neon-cyan)");
+    const expiryText = u.username === 'teodor' ? 'Acces Permanent (Admin)' : (u.expires_at ? `Valabil până la: ${formatExpiryDate(u.expires_at)}` : 'Fără termen setat');
+    
+    return `<div class="bet-ticket" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:#fff;">👤 ${u.username} <span style="font-size:10px;color:var(--neon-green);">(🔐 Parolă criptată RLS)</span></div>
+        <div style="font-size:10px;font-family:'Orbitron',sans-serif;color:${col};margin-top:4px;font-weight:800;">${badge}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">⏳ ${expiryText}</div>
+      </div>
+      ${u.username !== 'teodor' ? `<button class="t-btn t-loss" style="flex:0;padding:8px 12px;" onclick="removeUser('${u.username}')">🗑️</button>` : ''}
+    </div>`;
+  }).join("");
+
+  return `<div class="cyber-card" style="border-color:var(--neon-gold);">
+    <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);margin-bottom:12px;">👑 CREARE CONT UTILIZATOR</div>
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Nume utilizator (ex: alex)</label>
+    <input type="text" id="newUsername" class="cyber-input" placeholder="ex: alex">
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă temporară</label>
+    <input type="text" id="newPassword" class="cyber-input" placeholder="ex: parola123">
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Tip Pachet</label>
+    <select id="newRole" class="cyber-input" style="background:#070d19;">
+      <option value="standard">👁️ Standard (Vede DOAR Pronosticuri - Fără Joe)</option>
+      <option value="vip" selected>⚡ VIP + JOE (Acces Total)</option>
+    </select>
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Durată / Valabilitate</label>
+    <select id="newDuration" class="cyber-input" style="background:#070d19;">
+      <option value="trial">Test 2 Zile</option>
+      <option value="1_month" selected>1 Lună</option>
+      <option value="3_months">3 Luni</option>
+      <option value="6_months">6 Luni</option>
+      <option value="1_year">1 An</option>
+    </select>
+    <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Parolă Master Admin</label>
+    <input type="password" id="adminSecretInput" class="cyber-input" placeholder="Parola ta secretă de admin">
+    <button class="login-btn" onclick="createNewUser()">+ SALVEAZĂ UTILIZATORUL</button>
+    <div id="formResultMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: bold; word-break: break-all;"></div>
+  </div>
+  <div class="cyber-sec-head"><span>👥 UTILIZATORI ACTIVI (${usersList.length})</span><span>RLS PROTECTED</span></div>
+  ${rows}`;
 }
+
 function renderProjectView() {
-const net = +(project.bankroll - project.initial_bankroll).toFixed(2);
-const roi = +((net / project.initial_bankroll) * 100).toFixed(1);
-const settled = project.bets.filter(b => b.status === "WIN" || b.status === "LOSS");
-const wins = project.bets.filter(b => b.status === "WIN").length;
-const wr = settled.length ? Math.round((wins / settled.length) * 100) : 0;
-const prog = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
-const dayAll = cacheByDate[selectedDate] || [];
-let candidates = dayAll.filter(m => m.status === "NS");
-if (!candidates.length) candidates = [...dayAll];
-candidates.sort((a, b) => b.tipsterScore - a.tipsterScore);
-const bestOfDay = candidates[0];
-const quotes = net >= 0
-? ⁠"Suntem pe verde, șefu'! Modelul matematic se bazează strict pe clasamentele reale și distribuția Dixon-Coles."⁠
-: ⁠"Capul sus! Gestionarea riguroasă a mizei ne protejează banca și ne ține în joc pe termen lung."⁠;
-let joeAutoPickHtml = "";
-if (bestOfDay) {
-const smart = calculateSmartStake(project.bankroll, bestOfDay);
-const potWin = +(smart.stake * bestOfDay.odd).toFixed(2);
-const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
-joeAutoPickHtml = ⁠<div class="joe-pick-card"> <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"> <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">🎯 ANALIZA SPECIALĂ A LUI JOE (${bestOfDay.date})</span> <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span> </div> <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div> <div class="prediction-panel"> <div> <div class="pred-main" style="color:var(--neon-cyan);">👉 ${bestOfDay.pick} <span style="color:var(--neon-gold);">@${bestOfDay.odd.toFixed(2)}</span></div> <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză recomandată (${smart.pct}%): <b style="color:#fff;">${smart.stake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div> </div> </div> <div class="action-bar" style="margin-top:10px;"> <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pontul</button> <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Adaugă la Joe Vault'}</button> </div> </div>⁠;
+  const net = +(project.bankroll - project.initial_bankroll).toFixed(2);
+  const roi = +((net / project.initial_bankroll) * 100).toFixed(1);
+  const settled = project.bets.filter(b => b.status === "WIN" || b.status === "LOSS");
+  const wins = project.bets.filter(b => b.status === "WIN").length;
+  const wr = settled.length ? Math.round((wins / settled.length) * 100) : 0;
+  const prog = Math.max(5, Math.min(100, Math.round(((project.bankroll - 500) / (project.target_bankroll - 500)) * 100)));
+
+  const dayAll = cacheByDate[selectedDate] || [];
+  let candidates = dayAll.filter(m => m.status === "NS");
+  if (!candidates.length) candidates = [...dayAll];
+  candidates.sort((a, b) => b.tipsterScore - a.tipsterScore);
+  const bestOfDay = candidates[0];
+
+  const quotes = net >= 0 
+    ? `"Suntem pe verde, șefu'! Modelul matematic se bazează strict pe clasamentele reale și distribuția Dixon-Coles."`
+    : `"Capul sus! Gestionarea riguroasă a mizei ne protejează banca și ne ține în joc pe termen lung."`;
+
+  let joeAutoPickHtml = "";
+  if (bestOfDay) {
+    const smart = calculateSmartStake(project.bankroll, bestOfDay);
+    const potWin = +(smart.stake * bestOfDay.odd).toFixed(2);
+    const alreadyIn = project.bets.some(b => String(b.matchId) === String(bestOfDay.id));
+    joeAutoPickHtml = `<div class="joe-pick-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:10px;font-weight:900;color:var(--neon-green);font-family:'Orbitron',sans-serif;">🎯 ANALIZA SPECIALĂ A LUI JOE (${bestOfDay.date})</span>
+        <span style="font-size:10px;color:var(--text-muted);">${bestOfDay.icon} ${bestOfDay.league} · ${bestOfDay.time}</span>
+      </div>
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#fff;">${bestOfDay.home} vs ${bestOfDay.away}</div>
+      <div class="prediction-panel">
+        <div>
+          <div class="pred-main" style="color:var(--neon-cyan);">👉 ${bestOfDay.pick} <span style="color:var(--neon-gold);">@${bestOfDay.odd.toFixed(2)}</span></div>
+          <div class="pred-sub">Siguranță: <b style="color:var(--neon-green);">${bestOfDay.prob}%</b> · xG: ${bestOfDay.lamH}-${bestOfDay.lamA}<br>Miză recomandată (${smart.pct}%): <b style="color:#fff;">${smart.stake} RON</b> ➔ Câștig: <b style="color:var(--neon-green);">${potWin} RON</b></div>
+        </div>
+      </div>
+      <div class="action-bar" style="margin-top:10px;">
+        <button class="cyber-btn copy-btn" onclick="copyMatchById('${bestOfDay.id}')">📋 Copiază Pontul</button>
+        <button class="cyber-btn accent" style="font-weight:800;" onclick="addMatchToProject('${bestOfDay.id}')">${alreadyIn ? '✔ În Portofoliu' : '⚡ Adaugă la Joe Vault'}</button>
+      </div>
+    </div>`;
+  }
+
+  const betsHtml = project.bets.map(b => {
+    const pot = +(b.stake * b.odd).toFixed(2);
+    const col = b.status === "WIN" ? "var(--neon-green)" : (b.status === "LOSS" ? "var(--neon-red)" : "var(--neon-gold)");
+    const lbl = b.status === "WIN" ? `✔ WIN (+${(pot-b.stake).toFixed(2)})` : (b.status === "LOSS" ? `✖ LOSS (-${b.stake})` : `⏳ PENDING (${pot})`);
+    return `<div class="bet-ticket">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;"><span>${b.date} · ${b.league}</span><span style="font-weight:800;color:${col};">${lbl}</span></div>
+      <div style="font-size:14px;font-weight:800;margin:6px 0;">${b.match} ${b.score ? `(${b.score})` : ''}</div>
+      <div style="font-size:12px;color:var(--neon-cyan);">Pronostic: <b>${b.pick}</b> | Cotă: <b style="color:var(--neon-gold);">@${b.odd.toFixed(2)}</b> | Miză: <b>${b.stake} RON</b></div>
+      <div class="bet-ticket-actions">
+        <button class="t-btn t-edit" onclick="editBetDetails(${b.id})">✏️ Cotă</button>
+        <button class="t-btn t-win" onclick="updateBetStatus(${b.id},'WIN')">✔ Win</button>
+        <button class="t-btn t-loss" onclick="updateBetStatus(${b.id},'LOSS')">✖ Loss</button>
+        <button class="t-btn" onclick="deleteBet(${b.id})">🗑️ Șterge</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="vault-hero">
+    <div class="vault-profile">
+      <div class="joe-avatar-box">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+        <div class="joe-status-dot"></div>
+      </div>
+      <div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Joe's Safe Vault</div>
+        <div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">STATISTICAL STAKING & BANKROLL</div>
+      </div>
+    </div>
+    <div class="vault-quote">${quotes}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
+      <div><div class="v-lbl">Capital Activ</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">${project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
+      <div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">${project.target_bankroll} RON</div></div>
+    </div>
+    <div class="cyber-progress"><div class="cyber-progress-fill" style="width:${prog}%;"></div></div>
+    <div class="vault-kpi-grid">
+      <div class="vault-kpi"><div class="v-lbl">Profit Net</div><div class="v-val" style="color:${net>=0?'var(--neon-green)':'var(--neon-red)'};">${net>=0?'+':''}${net}</div></div>
+      <div class="vault-kpi"><div class="v-lbl">ROI</div><div class="v-val" style="color:var(--neon-cyan);">${roi>=0?'+':''}${roi}%</div></div>
+      <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">${wr}%</div></div>
+    </div>
+  </div>
+
+  <div class="joe-chat-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (VISION AI)</span>
+      <span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
+    </div>
+    <div class="chat-messages" id="chatMessagesBox"></div>
+    <form class="chat-form" onsubmit="handleVipChatSubmit(event)">
+      <label class="chat-file-btn ${lastUploadedImage ? 'has-img' : ''}" id="chatCamBtn" title="Încarcă poză cu biletul sau statisticile">
+        📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+      </label>
+      <input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe sau încarcă pe 📷...">
+      <button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
+    </form>
+  </div>
+
+  ${joeAutoPickHtml}
+  <div class="cyber-sec-head" style="margin-top:16px;"><span>📋 PORTOFOLIU JOE (${project.bets.length})</span><span>LIVE DB</span></div>
+  ${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă ponturi de la Joe de mai sus!</div>'}`;
+
+  setTimeout(updateChatUI, 50);
 }
-const betsHtml = project.bets.map(b => {
-const pot = +(b.stake * b.odd).toFixed(2);
-const col = b.status === "WIN" ? "var(--neon-green)" : (b.status === "LOSS" ? "var(--neon-red)" : "var(--neon-gold)");
-const lbl = b.status === "WIN" ? ⁠✔ WIN (+${(pot-b.stake).toFixed(2)})⁠ : (b.status === "LOSS" ? ⁠✖ LOSS (-${b.stake})⁠ : ⁠⏳ PENDING (${pot})⁠);
-return ⁠<div class="bet-ticket"> <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;"><span>${b.date} · ${b.league}</span><span style="font-weight:800;color:${col};">${lbl}</span></div> <div style="font-size:14px;font-weight:800;margin:6px 0;">${b.match} ${b.score ? ⁠(${b.score})⁠ : ''}</div> <div style="font-size:12px;color:var(--neon-cyan);">Pronostic: <b>${b.pick}</b> | Cotă: <b style="color:var(--neon-gold);">@${b.odd.toFixed(2)}</b> | Miză: <b>${b.stake} RON</b></div> <div class="bet-ticket-actions"> <button class="t-btn t-edit" onclick="editBetDetails(${b.id})">✏️ Cotă</button> <button class="t-btn t-win" onclick="updateBetStatus(${b.id},'WIN')">✔ Win</button> <button class="t-btn t-loss" onclick="updateBetStatus(${b.id},'LOSS')">✖ Loss</button> <button class="t-btn" onclick="deleteBet(${b.id})">🗑️ Șterge</button> </div> </div>⁠;
-}).join("");
-return `<div class="vault-hero">
-<div class="vault-profile">
-<div class="joe-avatar-box">
-<img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
-<div class="joe-status-dot"></div>
-</div>
-<div>
-<div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Joe's Safe Vault</div>
-<div style="font-size:9px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;">STATISTICAL STAKING & BANKROLL</div>
-</div>
-</div>
-<div class="vault-quote">{quotes}</div>
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--card-border);">
-<div><div class="v-lbl">Capital Activ</div><div style="font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;">{project.bankroll.toFixed(2)} <span style="font-size:13px;color:var(--neon-green);">RON</span></div></div>
-<div style="text-align:right;"><div class="v-lbl">Țintă</div><div style="font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;color:var(--neon-gold);">{project.target_bankroll} RON</div></div>
-</div>
-<div class="cyber-progress"><div class="cyber-progress-fill" style="width:${prog}%;"></div></div>
-<div class="vault-kpi-grid">
-<div class="vault-kpi"><div class="v-lbl">Profit Net</div><div class="v-val" style="color:${net>=0?'var(--neon-green)':'var(--neon-red)'};">{net>=0?'+':''}{net}</div></div>
-<div class="vault-kpi"><div class="v-lbl">ROI</div><div class="v-val" style="color:var(--neon-cyan);">{roi>=0?'+':''}{roi}%</div></div>
-<div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-gold);">{wr}%</div></div>
-</div>
-</div>
-<div class="joe-chat-box">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-<span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);">💬 CHAT TACTIC VIP CU JOE (VISION AI)</span>
-<span style="font-size:9px;color:var(--neon-green);font-family:'Orbitron',sans-serif;">● ONLINE</span>
-</div>
-<div class="chat-messages" id="chatMessagesBox"></div>
-<form class="chat-form" onsubmit="handleVipChatSubmit(event)">
-<label class="chat-file-btn ${lastUploadedImage ? 'has-img' : ''}" id="chatCamBtn" title="Încarcă poză cu biletul sau statisticile">
-📷 <input type="file" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-</label>
-<input type="text" id="vipChatInput" class="cyber-input" style="margin:0;" placeholder="Întreabă-l pe Joe sau încarcă pe 📷...">
-<button type="submit" class="cyber-btn accent" style="flex:0;padding:10px 14px;cursor:pointer;">Trimite</button>
-</form>
-</div>
-{joeAutoPickHtml}
-<div class="cyber-sec-head" style="margin-top:16px;"><span>📋 PORTOFOLIU JOE ({project.bets.length})</span><span>LIVE DB</span></div>
-${betsHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:24px;">Portofoliu gol. Adaugă ponturi de la Joe de mai sus!</div>'}`;
-setTimeout(updateChatUI, 50);
-}
+
 function computeRealPerformanceStats(dayPool) {
-const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
-const wonBets = settledBets.filter(b => b.status === "WIN").length;
-const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
-let ftHits = 0;
-ftMatches.forEach(m => {
-if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
-});
-let winRateText = "În calcul";
-if (settledBets.length > 0) {
-winRateText = ⁠${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})⁠;
-} else if (ftMatches.length > 0) {
-winRateText = ⁠${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)⁠;
+  const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
+  const wonBets = settledBets.filter(b => b.status === "WIN").length;
+
+  const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
+  let ftHits = 0;
+  ftMatches.forEach(m => {
+    if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
+  });
+
+  let winRateText = "În calcul";
+  if (settledBets.length > 0) {
+    winRateText = `${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})`;
+  } else if (ftMatches.length > 0) {
+    winRateText = `${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)`;
+  }
+
+  let avgOddText = "—";
+  if ((project.bets || []).length > 0) {
+    const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
+    avgOddText = (sumOdds / project.bets.length).toFixed(2);
+  } else if (dayPool && dayPool.length > 0) {
+    const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
+    avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
+  }
+
+  return { winRateText, avgOddText };
 }
-let avgOddText = "—";
-if ((project.bets || []).length > 0) {
-const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
-avgOddText = (sumOdds / project.bets.length).toFixed(2);
-} else if (dayPool && dayPool.length > 0) {
-const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
-avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
-}
-return { winRateText, avgOddText };
-}
+
 function renderTicketsView() {
-const dayPool = cacheByDate[selectedDate] || [];
-let pool = dayPool.filter(m => m.status === "NS");
-if (!pool.length) pool = [...dayPool];
-const built = buildOptimalTicket(pool, targetTicketOdds);
-const picks = built.picks;
-const tot = built.totalOdd;
-currentTicketPicks = picks;
-currentTicketTotalOdd = tot;
-const realStats = computeRealPerformanceStats(dayPool);
-const potentialWin = +(customBudget * tot).toFixed(2);
-const btns = [2, 5, 10, 20, 50].map(o => ⁠<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>⁠).join("");
-const rows = picks.map((m, i) => ⁠<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;"> <div> <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div> <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div> </div> <div class="odd-chip">@${m.odd.toFixed(2)}</div> </div>⁠).join("");
-const contentBody = ⁠<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;"> <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span> <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span> </div> ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}⁠;
-return `<div class="cyber-card" id="biletCardContainer">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-<span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
-<button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
-</div>
-<div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-<span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
-<input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
-</div>
-<div class="toggle-container" id="toggleBoxCota500">
-<span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--neon-gold);font-weight:800;">🔥 Activează Modul Cotă 500+ (Bet Builder)</span>
-<label class="switch">
-<input type="checkbox" id="toggleCota500" ${cota500Mode ? 'checked' : ''} onchange="toggleCota500Action(this)">
-<span class="slider"></span>
-</label>
-</div>
-<div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
-${contentBody}
-</div>
-<div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
-<div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
-<div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-<div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">{realStats.winRateText}</div></div>
-<div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">{realStats.avgOddText}</div></div>
-<div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
-</div>
-</div>`;
+  const dayPool = cacheByDate[selectedDate] || [];
+  let pool = dayPool.filter(m => m.status === "NS");
+  if (!pool.length) pool = [...dayPool];
+
+  const built = buildOptimalTicket(pool, targetTicketOdds);
+  const picks = built.picks;
+  const tot = built.totalOdd;
+
+  currentTicketPicks = picks;
+  currentTicketTotalOdd = tot;
+
+  const realStats = computeRealPerformanceStats(dayPool);
+  const potentialWin = +(customBudget * tot).toFixed(2);
+  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
+  
+  let contentBody = "";
+  const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
+    <div>
+      <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
+      <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
+    </div>
+    <div class="odd-chip">@${m.odd.toFixed(2)}</div>
+  </div>`).join("");
+
+  contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
+    <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+    <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
+  </div>
+  ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
+
+  return `<div class="cyber-card" id="biletCardContainer">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
+      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
+    </div>
+    
+    <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
+      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
+    </div>
+
+    <!-- TOGGLE COTA 500+ CU EFECT BOOM ȘI EXECUȚIE INSTANTANEE -->
+    <div class="toggle-container" id="toggleBoxCota500">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--neon-gold);font-weight:800;">🔥 Activează Modul Cotă 500+ (Bet Builder Combo)</span>
+      <label class="switch">
+        <input type="checkbox" id="toggleCota500" ${cota500Mode ? 'checked' : ''} onchange="toggleCota500Action(this)">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
+    ${contentBody}
+  </div>
+
+  <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
+    <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
+    </div>
+  </div>`;
 }
+
 function selectTicketOdd(odd) {
-targetTicketOdds = odd;
-renderViewport();
+  targetTicketOdds = odd;
+  renderViewport();
 }
+
 function toggleCota500Action(checkbox) {
-cota500Mode = checkbox.checked;
-targetTicketOdds = cota500Mode ? 500 : 5;
-const card = document.getElementById("biletCardContainer");
-if (card) {
-card.classList.remove("boom-active");
-void card.offsetWidth;
-card.classList.add("boom-active");
+  cota500Mode = checkbox.checked;
+  targetTicketOdds = cota500Mode ? 500 : 5;
+
+  const card = document.getElementById("biletCardContainer");
+  if (card) {
+    card.classList.remove("boom-active");
+    void card.offsetWidth; 
+    card.classList.add("boom-active");
+  }
+
+  renderViewport();
 }
-renderViewport();
-}
+
 function renderViewport() {
-renderSubBars();
-const vp = document.getElementById("viewport");
-if(!vp) return;
-if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
-if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
-if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
-const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
-let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
-if (searchTerm) {
-list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
+  renderSubBars();
+  const vp = document.getElementById("viewport");
+  if(!vp) return;
+  if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
+  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
+  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
+  
+  const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
+
+  let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
+  
+  if (searchTerm) {
+    list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
+  }
+
+  if (!list.length) { 
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
+    return; 
+  }
+
+  const groups = {};
+  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
+  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
 }
-if (!list.length) {
-vp.innerHTML = ⁠<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>⁠;
-return;
+
+function selectDay(iso) { 
+  selectedDate = iso; 
+  selectedLeague = "ALL"; 
+  const searchInput = document.getElementById("matchSearchInput");
+  if(searchInput) searchInput.value = "";
+  loadMatchesForDate(iso); 
 }
-const groups = {};
-list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
-vp.innerHTML = Object.keys(groups).map(lg => ⁠<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}⁠).join("");
+
+function selectLeague(lg) { 
+  selectedLeague = lg; 
+  renderViewport(); 
 }
-function selectDay(iso) {
-selectedDate = iso;
-selectedLeague = "ALL";
-const searchInput = document.getElementById("matchSearchInput");
-if(searchInput) searchInput.value = "";
-loadMatchesForDate(iso);
-}
-function selectLeague(lg) {
-selectedLeague = lg;
-renderViewport();
-}
+
 async function switchNav(tab) {
-if (tab === "proiect" && !hasJoeAccess()) return;
-if (tab === "admin" && !isAdmin()) return;
-currentNav = tab;
-document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
-const btn = document.getElementById("nav-" + tab);
-if (btn) btn.classList.add("active");
-if (tab === "admin") await fetchAdminUsersList();
-if (tab === "europa") loadEuropaMatches(); else renderViewport();
+  if (tab === "proiect" && !hasJoeAccess()) return;
+  if (tab === "admin" && !isAdmin()) return;
+  currentNav = tab;
+  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById("nav-" + tab);
+  if (btn) btn.classList.add("active");
+  if (tab === "admin") await fetchAdminUsersList();
+  if (tab === "europa") loadEuropaMatches(); else renderViewport();
 }
+
 (async function startApp() {
-selectedDate = getDatesList()[1].iso;
-const savedUser = localStorage.getItem("xmts_logged_user");
-const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
-if (savedUser) {
-try {
-const parsed = JSON.parse(savedUser);
-const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
-if (!isExpired && parsed.username) {
-currentUser = parsed;
-if (parsed.role === "admin" && savedAdmToken) {
-adminSessionPass = savedAdmToken;
-await fetchAdminUsersList();
-}
-document.getElementById("loginScreen").style.display = "none";
-applyRolePermissions();
-} else {
-localStorage.removeItem("xmts_logged_user");
-}
-} catch (e) {}
-}
-loadMatchesForDate(selectedDate);
-await initProject();
+  selectedDate = getDatesList()[1].iso;
+  const savedUser = localStorage.getItem("xmts_logged_user");
+  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
+  if (savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
+      if (!isExpired && parsed.username) {
+        currentUser = parsed;
+        if (parsed.role === "admin" && savedAdmToken) {
+          adminSessionPass = savedAdmToken;
+          await fetchAdminUsersList();
+        }
+        document.getElementById("loginScreen").style.display = "none";
+        applyRolePermissions();
+      } else {
+        localStorage.removeItem("xmts_logged_user");
+      }
+    } catch (e) {}
+  }
+  loadMatchesForDate(selectedDate);
+  await initProject();
 })();
 </script>
 </body>
