@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>JOE PREZICE · Neural HUD</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 <link rel="apple-touch-icon" href="favicon.jpg">
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
 
@@ -15,7 +14,6 @@
   html, body { height:100%; width:100%; background:var(--bg); color:var(--text-main); overflow:hidden; }
   .app-shell { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto; position:relative; }
   
-  /* LOGIN OVERLAY */
   .login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
   .login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
   .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
@@ -23,7 +21,6 @@
   .cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
   .login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
   
-  /* TOP HUD */
   .top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
   .hud-brand { display:flex; align-items:center; gap:10px; }
   .hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
@@ -40,7 +37,6 @@
   .cyber-chip.active { background:var(--neon-cyan); color:#020408; border-color:var(--neon-cyan); font-weight:800; }
   .cyber-chip-gold.active { background:var(--neon-gold); color:#020408; border-color:var(--neon-gold); box-shadow:0 0 12px rgba(255,183,3,0.4); }
   
-  /* SEARCH BAR STYLES */
   .search-container { padding:8px 14px 2px; background:rgba(5,9,18,0.6); }
   .search-input { width:100%; background:rgba(15,23,42,0.85); border:1px solid var(--card-border); color:#fff; padding:9px 12px; border-radius:10px; font-size:12px; outline:none; }
   .search-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 10px rgba(0,243,255,0.25); }
@@ -73,7 +69,7 @@
   .matrix-cell { background:rgba(15,23,42,0.8); padding:8px; border-radius:10px; text-align:center; border:1px solid var(--card-border); }
   .matrix-cell b { display:block; color:var(--neon-gold); font-family:'Orbitron',sans-serif; font-size:12px; margin-top:3px; }
   
-  /* CHAT VIP CU JOE STYLES */
+  /* CHAT VIP STYLES */
   .joe-chat-box { background:rgba(2,4,8,0.9); border:1px solid var(--neon-cyan); border-radius:16px; padding:12px; margin-top:14px; }
   .chat-messages { height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; margin-bottom:10px; scrollbar-width:thin; }
   .chat-msg { max-width:86%; padding:9px 12px; border-radius:12px; font-size:11.5px; line-height:1.45; word-break:break-word; }
@@ -84,7 +80,6 @@
   .chat-file-btn.has-img { background:rgba(6,214,160,0.22); border-color:var(--neon-green); color:var(--neon-green); box-shadow:0 0 10px rgba(6,214,160,0.35); }
   .preview-thumb { width:100%; max-height:140px; object-fit:contain; border-radius:8px; margin-top:6px; border:1px solid var(--neon-cyan); background:#020408; }
 
-  /* TICKET GENERATION ANIMATIONS */
   @keyframes pulseGlow {
     0%, 100% { opacity: 1; text-shadow: 0 0 14px var(--neon-cyan); }
     50% { opacity: 0.45; text-shadow: none; }
@@ -123,7 +118,6 @@
     border-radius: 99px; animation: scanBarProgress 1.1s ease-out forwards;
   }
 
-  /* JOE CHARACTER STYLES */
   .vault-hero { background:linear-gradient(135deg,#0d1b2a,#020408); border:1.5px solid var(--neon-cyan); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 0 30px rgba(0,243,255,0.15); }
   .vault-profile { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
   .joe-avatar-box { width:64px; height:64px; border-radius:18px; border:2px solid var(--neon-gold); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 20px rgba(255,183,3,0.3); position:relative; }
@@ -148,6 +142,15 @@
   .hud-nav-item .ico { font-size:20px; }
   .hud-nav-item.active { color:var(--neon-cyan); text-shadow:0 0 12px rgba(0,243,255,0.6); }
   .toast-msg { position:fixed; top:76px; left:50%; transform:translateX(-50%); background:rgba(6,214,160,0.95); color:#020408; padding:8px 18px; border-radius:12px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:900; z-index:300; display:none; box-shadow:0 0 20px rgba(6,214,160,0.6); }
+
+  /* TOGGLE SWITCH STYLE PENTRU MODUL COTA 500+ */
+  .toggle-container { display: flex; align-items: center; justify-content: space-between; background: rgba(2,4,8,0.7); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--card-border); margin-bottom: 12px; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; transition: .3s; border-radius: 24px; border: 1px solid var(--card-border); }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: #fff; transition: .3s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--neon-gold); }
+  input:checked + .slider:before { transform: translateX(20px); background-color: #020408; }
 </style>
 </head>
 <body>
@@ -156,60 +159,60 @@
 
 <!-- ECRAN DE LOGARE SECURIZAT SERVER-SIDE -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
-    </div>
-    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
-    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
-    <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
-    <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
-    <button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
-    <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
-  </div>
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+    </div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#fff;margin-bottom:4px;">JOE PREZICE</div>
+    <div style="font-size:11px;color:var(--neon-cyan);margin-bottom:20px;font-family:'Orbitron',sans-serif;">SECURE NEURAL HUD</div>
+    <input type="text" id="loginUser" class="cyber-input" placeholder="Utilizator" autocomplete="username">
+    <input type="password" id="loginPass" class="cyber-input" placeholder="Parolă" autocomplete="current-password" onkeydown="if(event.key==='Enter')attemptLogin()">
+    <button class="login-btn" id="loginSubmitBtn" onclick="attemptLogin()">🔐 AUTENTIFICARE</button>
+    <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
+  </div>
 </div>
 
 <!-- APLICATIA PRINCIPALA -->
 <div class="app-shell">
-  <div class="top-hud">
-    <div class="hud-brand">
-      <div class="hud-logo">
-        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
-      </div>
-      <div>
-        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
-        <span class="hud-status" id="liveClock">● Live 24/7</span>
-      </div>
-    </div>
-    <div class="hud-right">
-      <div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
-      <button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
-    </div>
-  </div>
-  
-  <div class="sub-bars" id="subBars">
-    <div class="h-scroll" id="dateBar"></div>
-    <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
-  </div>
+  <div class="top-hud">
+    <div class="hud-brand">
+      <div class="hud-logo">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div>
+        <span class="hud-title" id="hudAppTitle">JOE PREZICE</span>
+        <span class="hud-status" id="liveClock">● Live 24/7</span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-bank" id="topBankBtn" onclick="switchNav('proiect')">💰 <span id="topBankroll">500.00</span> RON</div>
+      <button class="logout-btn" onclick="logoutUser()" title="Deconectare">🚪</button>
+    </div>
+  </div>
+  
+  <div class="sub-bars" id="subBars">
+    <div class="h-scroll" id="dateBar"></div>
+    <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
+  </div>
 
-  <!-- Căsuță de căutare echipe -->
-  <div class="search-container" id="searchContainer">
-    <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
-  </div>
+  <!-- Căsuță de căutare echipe -->
+  <div class="search-container" id="searchContainer">
+    <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
+  </div>
 
-  <div class="viewport" id="viewport"></div>
+  <div class="viewport" id="viewport"></div>
 
-  <nav class="bottom-hud-nav">
-    <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
-    <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
-    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
-    <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
-    <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
-  </nav>
+  <nav class="bottom-hud-nav">
+    <button class="hud-nav-item active" id="nav-meciuri" onclick="switchNav('meciuri')"><span class="ico">⚽</span><span>Meciuri</span></button>
+    <button class="hud-nav-item" id="nav-europa" onclick="switchNav('europa')"><span class="ico">🏆</span><span>Europa</span></button>
+    <button class="hud-nav-item" id="nav-proiect" onclick="switchNav('proiect')"><span class="ico">⚡</span><span>Joe Vault</span></button>
+    <button class="hud-nav-item" id="nav-bilete" onclick="switchNav('bilete')"><span class="ico">🎟️</span><span>Bilete</span></button>
+    <button class="hud-nav-item" id="nav-admin" onclick="switchNav('admin')" style="display:none;"><span class="ico">👑</span><span>Conturi</span></button>
+  </nav>
 </div>
 
 <script>
-// ================= CONFIGURARE SUPABASE (FĂRĂ PAROLE ÎN CLIENT!) =================
+// ================= CONFIGURARE SUPABASE =================
 const SUPABASE_URL = "https://edlfqiruegrmxcuubmil.supabase.co";
 const SUPABASE_KEY = "sb_publishable_b8npaox4JSEHkQzGC-SAjg_UHm_bOBE";
 const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1/create-user-admin";
@@ -217,12 +220,12 @@ const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1
 const isSupabaseConfigured = () => SUPABASE_URL.startsWith("https://") && SUPABASE_KEY.length > 20;
 
 function sbHeaders() {
-  return {
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY,
-    "Content-Type": "application/json",
-    "Prefer": "return=representation"
-  };
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
 }
 
 let usersList = [];
@@ -230,58 +233,54 @@ let currentUser = null;
 let adminSessionPass = null;
 
 const LEAGUES = [
-  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
-  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
-  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
-  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
-  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
-  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
-  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
-  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
-  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
-  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
-  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
-  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
-  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
+  {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
+  {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
+  {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
+  {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
+  {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
+  {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
+  {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
+  {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
+  {slug:"uefa.champions",name:"UEFA Champions League",icon:"🏆",cat:"eu",cBase:9.9,kBase:4.0,gBase:2.86,rho:-0.07},
+  {slug:"uefa.europa",name:"UEFA Europa League",icon:"🟠",cat:"eu",cBase:9.6,kBase:4.3,gBase:2.72,rho:-0.08},
+  {slug:"uefa.europa.conf",name:"UEFA Conference League",icon:"🟢",cat:"eu",cBase:9.3,kBase:4.4,gBase:2.64,rho:-0.09}
 ];
 
-// Matrice solidă de putere cluburi (Power Rating pe loturi) corectată pentru a elimina anomaliile de tip Monza vs Napoli
 const CLUB_POWER_CALIBRATED = [
-  // Elite & Forțe Europene
-  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
-  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
-  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
-  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
-  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
-  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
-  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
-  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
-  // Echipe Bune / Sub-Top
-  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
-  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
-  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
-  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
-  // SuperLiga României
-  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
-  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
-  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
-  // Echipe Mici / Subsol (Calibrate realist fără a exagera meciurile echilibrate)
-  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
-  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
-  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
-  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
-  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
-  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
+  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
+  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
+  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
+  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
+  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
+  {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
+  {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
+  {k:"southampton",p:-0.28},{k:"ipswich",p:-0.26},{k:"leicester",p:-0.20},{k:"wolves",p:-0.12},{k:"everton",p:-0.08},
+  {k:"kiel",p:-0.26},{k:"bochum",p:-0.26},{k:"st. pauli",p:-0.20},{k:"heidenheim",p:-0.14},{k:"augsburg",p:-0.10},
+  {k:"le havre",p:-0.24},{k:"angers",p:-0.24},{k:"montpellier",p:-0.22},{k:"saint-etienne",p:-0.20},{k:"nantes",p:-0.14},{k:"auxerre",p:-0.12}
 ];
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
 let customBudget = 100;
 let isGeneratingTicket = false;
 let currentTicketPicks = [], currentTicketTotalOdd = 1.0;
+let cota500Mode = false; // Stare pentru mod cotă 500+
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
 let vipChatMessages = [
-  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
+  { sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }
 ];
 let lastUploadedImage = null;
 
@@ -289,229 +288,212 @@ const roDateStr = d => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Buchare
 const roTimeStr = d => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
 
 function hasJoeAccess() {
-  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
+  return currentUser && (currentUser.role === "vip" || currentUser.role === "admin");
 }
 
 function isAdmin() {
-  return currentUser && currentUser.role === "admin";
+  return currentUser && currentUser.role === "admin";
 }
 
 function applyRolePermissions() {
-  const joeBtn = document.getElementById("nav-proiect");
-  const bankBtn = document.getElementById("topBankBtn");
-  const adminBtn = document.getElementById("nav-admin");
-  const titleEl = document.getElementById("hudAppTitle");
+  const joeBtn = document.getElementById("nav-proiect");
+  const bankBtn = document.getElementById("topBankBtn");
+  const adminBtn = document.getElementById("nav-admin");
+  const titleEl = document.getElementById("hudAppTitle");
 
-  if (hasJoeAccess()) {
-    joeBtn.style.display = "flex";
-    bankBtn.style.display = "block";
-    titleEl.innerText = "JOE PREZICE";
-  } else {
-    joeBtn.style.display = "none";
-    bankBtn.style.display = "none";
-    titleEl.innerText = "JOE PREZICE";
-    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
-  }
+  if (hasJoeAccess()) {
+    if(joeBtn) joeBtn.style.display = "flex";
+    if(bankBtn) bankBtn.style.display = "block";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
+  } else {
+    if(joeBtn) joeBtn.style.display = "none";
+    if(bankBtn) bankBtn.style.display = "none";
+    if(titleEl) titleEl.innerText = "JOE PREZICE";
+    if (currentNav === "proiect" || currentNav === "admin") currentNav = "meciuri";
+  }
 
-  adminBtn.style.display = isAdmin() ? "flex" : "none";
+  if(adminBtn) adminBtn.style.display = isAdmin() ? "flex" : "none";
 }
 
-// ================= AUTENTIFICARE 100% SERVER-SIDE (RPC SUPABASE) =================
 async function attemptLogin() {
-  const u = document.getElementById("loginUser").value.trim().toLowerCase();
-  const p = document.getElementById("loginPass").value.trim();
-  const errEl = document.getElementById("loginErr");
-  const btnEl = document.getElementById("loginSubmitBtn");
-  errEl.style.display = "none";
+  const u = document.getElementById("loginUser").value.trim().toLowerCase();
+  const p = document.getElementById("loginPass").value.trim();
+  const errEl = document.getElementById("loginErr");
+  const btnEl = document.getElementById("loginSubmitBtn");
+  if(errEl) errEl.style.display = "none";
 
-  if (!u || !p) {
-    errEl.innerText = "Introdu utilizatorul și parola!";
-    errEl.style.display = "block";
-    return;
-  }
+  if (!u || !p) {
+    if(errEl) { errEl.innerText = "Introdu utilizatorul și parola!"; errEl.style.display = "block"; }
+    return;
+  }
 
-  btnEl.innerText = "⏳ SE VERIFICĂ...";
+  if(btnEl) btnEl.innerText = "⏳ SE VERIFICĂ...";
 
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
-      method: "POST",
-      headers: sbHeaders(),
-      body: JSON.stringify({ p_username: u, p_password: p })
-    });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_login`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_username: u, p_password: p })
+    });
 
-    const data = await r.json();
-    btnEl.innerText = "🔐 AUTENTIFICARE";
+    const data = await r.json();
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
 
-    if (!r.ok || !data || !data.ok) {
-      errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!";
-      errEl.style.display = "block";
-      return;
-    }
+    if (!r.ok || !data || !data.ok) {
+      if(errEl) { errEl.innerText = (data && data.error) ? data.error : "Date de logare incorecte!"; errEl.style.display = "block"; }
+      return;
+    }
 
-    currentUser = {
-      username: data.username,
-      role: data.role,
-      expires_at: data.expires_at
-    };
+    currentUser = { username: data.username, role: data.role, expires_at: data.expires_at };
 
-    if (currentUser.role === "admin") {
-      adminSessionPass = p;
-      sessionStorage.setItem("xmts_adm_token", p);
-      await fetchAdminUsersList();
-    }
+    if (currentUser.role === "admin") {
+      adminSessionPass = p;
+      sessionStorage.setItem("xmts_adm_token", p);
+      await fetchAdminUsersList();
+    }
 
-    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
-    document.getElementById("loginScreen").style.display = "none";
-    applyRolePermissions();
-    renderViewport();
-  } catch (e) {
-    btnEl.innerText = "🔐 AUTENTIFICARE";
-    errEl.innerText = "Eroare de conexiune cu serverul!";
-    errEl.style.display = "block";
-  }
+    localStorage.setItem("xmts_logged_user", JSON.stringify(currentUser));
+    const lScreen = document.getElementById("loginScreen");
+    if(lScreen) lScreen.style.display = "none";
+    applyRolePermissions();
+    renderViewport();
+  } catch (e) {
+    if(btnEl) btnEl.innerText = "🔐 AUTENTIFICARE";
+    if(errEl) { errEl.innerText = "Eroare de conexiune cu serverul!"; errEl.style.display = "block"; }
+  }
 }
 
 async function fetchAdminUsersList() {
-  if (!isAdmin() || !adminSessionPass) return;
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
-      method: "POST",
-      headers: sbHeaders(),
-      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
-    });
-    if (r.ok) {
-      const list = await r.json();
-      if (Array.isArray(list)) usersList = list;
-    }
-  } catch (e) { console.error(e); }
+  if (!isAdmin() || !adminSessionPass) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_users`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify({ p_admin_user: currentUser.username, p_admin_pass: adminSessionPass })
+    });
+    if (r.ok) {
+      const list = await r.json();
+      if (Array.isArray(list)) usersList = list;
+    }
+  } catch (e) { console.error(e); }
 }
 
 function logoutUser() {
-  currentUser = null;
-  adminSessionPass = null;
-  usersList = [];
-  localStorage.removeItem("xmts_logged_user");
-  sessionStorage.removeItem("xmts_adm_token");
-  document.getElementById("loginUser").value = "";
-  document.getElementById("loginPass").value = "";
-  document.getElementById("loginScreen").style.display = "flex";
+  currentUser = null;
+  adminSessionPass = null;
+  usersList = [];
+  localStorage.removeItem("xmts_logged_user");
+  sessionStorage.removeItem("xmts_adm_token");
+  const uInput = document.getElementById("loginUser");
+  const pInput = document.getElementById("loginPass");
+  const lScreen = document.getElementById("loginScreen");
+  if(uInput) uInput.value = "";
+  if(pInput) pInput.value = "";
+  if(lScreen) lScreen.style.display = "flex";
 }
 
 function calculateExpiresAt(duration) {
-  const now = new Date();
-  if (duration === 'trial') now.setDate(now.getDate() + 2);
-  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
-  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
-  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
-  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
-  else now.setMonth(now.getMonth() + 1);
-  return now.toISOString();
+  const now = new Date();
+  if (duration === 'trial') now.setDate(now.getDate() + 2);
+  else if (duration === '1_month') now.setMonth(now.getMonth() + 1);
+  else if (duration === '3_months') now.setMonth(now.getMonth() + 3);
+  else if (duration === '6_months') now.setMonth(now.getMonth() + 6);
+  else if (duration === '1_year') now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
 }
 
 function formatExpiryDate(isoStr) {
-  if (!isoStr) return "Permanent / Nelimitat";
-  const d = new Date(isoStr);
-  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (!isoStr) return "Permanent / Nelimitat";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("ro-RO", { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 async function createNewUser() {
-  const rawUsername = document.getElementById("newUsername").value.trim().toLowerCase();
-  const password = document.getElementById("newPassword").value.trim();
-  const tier = document.getElementById("newRole").value;
-  const duration = document.getElementById("newDuration").value;
-  const adminSecret = document.getElementById("adminSecretInput").value.trim();
-  const resultMsg = document.getElementById("formResultMsg");
+  const rawUsername = document.getElementById("newUsername")?.value.trim().toLowerCase();
+  const password = document.getElementById("newPassword")?.value.trim();
+  const tier = document.getElementById("newRole")?.value;
+  const duration = document.getElementById("newDuration")?.value;
+  const adminSecret = document.getElementById("adminSecretInput")?.value.trim();
+  const resultMsg = document.getElementById("formResultMsg");
 
-  if (!rawUsername || !password || !adminSecret) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!";
-    }
-    return;
-  }
+  if (!rawUsername || !password || !adminSecret) {
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Completează toate câmpurile obligatorii și parola secretă de admin!"; }
+    return;
+  }
 
-  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
-  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
-  const expiresAt = calculateExpiresAt(duration);
+  const email = rawUsername.includes('@') ? rawUsername : `${rawUsername}@joeprezice.online`;
+  let mappedRole = tier === 'standard' ? 'basic' : (tier === 'vip' ? 'vip' : 'admin');
+  const expiresAt = calculateExpiresAt(duration);
 
-  if(resultMsg) {
-    resultMsg.style.color = "var(--neon-gold)";
-    resultMsg.innerText = "Se creează contul securizat și se setează abonamentul...";
-  }
+  if(resultMsg) { resultMsg.style.color = "var(--neon-gold)"; resultMsg.innerText = "Se creează contul securizat și se setează abonamentul..."; }
 
-  try {
-    const response = await fetch(SUPABASE_EDGE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, tier, duration, adminSecret })
-    });
+  try {
+    const response = await fetch(SUPABASE_EDGE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, tier, duration, adminSecret })
+    });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Eroare necunoscută");
 
-    if (isSupabaseConfigured() && adminSessionPass) {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
-        method: "POST",
-        headers: sbHeaders(),
-        body: JSON.stringify({
-          p_admin_user: currentUser.username,
-          p_admin_pass: adminSessionPass,
-          p_action: "upsert",
-          p_target_user: rawUsername,
-          p_target_pass: password,
-          p_target_role: mappedRole,
-          p_target_expires: expiresAt
-        })
-      });
-      await fetchAdminUsersList();
-    }
+    if (isSupabaseConfigured() && adminSessionPass) {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "upsert",
+          p_target_user: rawUsername,
+          p_target_pass: password,
+          p_target_role: mappedRole,
+          p_target_expires: expiresAt
+        })
+      });
+      await fetchAdminUsersList();
+    }
 
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-green)";
-      resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`;
-    }
-    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
-    setTimeout(() => { renderViewport(); }, 1000);
+    if(resultMsg) { resultMsg.style.color = "var(--neon-green)"; resultMsg.innerText = `✅ Contul "${rawUsername}" a fost creat cu succes!`; }
+    copyText(`Cont creat!\nUtilizator: ${rawUsername}\nParolă: ${password}`);
+    setTimeout(() => { renderViewport(); }, 1000);
 
-  } catch (err) {
-    if(resultMsg) {
-      resultMsg.style.color = "var(--neon-red)";
-      resultMsg.innerText = "Eroare: " + err.message;
-    }
-  }
+  } catch (err) {
+    if(resultMsg) { resultMsg.style.color = "var(--neon-red)"; resultMsg.innerText = "Eroare: " + err.message; }
+  }
 }
 
 async function removeUser(uname) {
-  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
-  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
+  if (uname === "teodor") { alert("Contul principal de Admin nu poate fi șters!"); return; }
+  if (!confirm(`Ștergi utilizatorul ${uname}?`)) return;
 
-  if (isSupabaseConfigured() && adminSessionPass) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
-        method: "POST",
-        headers: sbHeaders(),
-        body: JSON.stringify({
-          p_admin_user: currentUser.username,
-          p_admin_pass: adminSessionPass,
-          p_action: "delete",
-          p_target_user: uname
-        })
-      });
-      await fetchAdminUsersList();
-    } catch (e) { console.error(e); }
-  }
-  renderViewport();
+  if (isSupabaseConfigured() && adminSessionPass) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_manage_user`, {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify({
+          p_admin_user: currentUser.username,
+          p_admin_pass: adminSessionPass,
+          p_action: "delete",
+          p_target_user: uname
+        })
+      });
+      await fetchAdminUsersList();
+    } catch (e) { console.error(e); }
+  }
+  renderViewport();
 }
 
 function copyText(txt) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
-  } else {
-    fallbackCopy(txt);
-  }
-  const t = document.getElementById("toastMsg");
-  t.style.display = "block";
-  setTimeout(() => { t.style.display = "none"; }, 1800);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
+  } else {
+    fallbackCopy(txt);
+  }
+  const t = document.getElementById("toastMsg");
+  if(t) { t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, 1800); }
 }
 
 function fallbackCopy(txt) {
@@ -686,7 +668,7 @@ function renderSubBars() {
     lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
 }
 
-// ================= ANALIZĂ MECI (SIGURANȚĂ MAXIMĂ) =================
+// ================= ANALIZĂ MECI CU SIGURANȚĂ MAXIMĂ =================
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -852,7 +834,7 @@ function analyzeMatch(ev, lg) {
   return {
     id: ev.id, league: lg.name, icon: lg.icon, cat: lg.cat, date: roDateStr(dt), time: roTimeStr(dt),
     status: stState === "post" ? "FT" : (stState === "in" ? "LIVE" : "NS"),
-    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: hInfo.formDisplay, aForm: aInfo.formDisplay,
+    home: hName, away: aName, hScore, aScore, hHT, aHT, hForm: "Power Matrix", aForm: "Power Matrix",
     lamH: lamH.toFixed(2), lamA: lamA.toFixed(2),
     isDerby, lowData: false, hasMktOdds: !!(mkt && mkt.mktPH),
     edgePct: best.edgePct || 0,
@@ -864,7 +846,7 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// ================= GENERATOR BILETE (MAXIM 10 MECIURI) =================
+// ================= GENERATOR BILETE (MAXIM 10 MECIURI & MOD COTA 500+) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
@@ -872,8 +854,11 @@ function buildOptimalTicket(pool, targetOdd) {
   const usedIds = new Set();
   let tot = 1.0;
 
-  // Limită strictă maxim 10 meciuri pe bilet
-  while (picks.length < 10 && tot < targetOdd * 0.94 && sorted.length > picks.length) {
+  // Dacă e activat modul cotă 500+, lăsăm algoritmul să adune evenimente până la 10 meciuri pentru a atinge cota mare
+  const maxMeciuri = cota500Mode ? 10 : 6;
+  const targetMultiplier = cota500Mode ? 500 : targetOdd;
+
+  while (picks.length < maxMeciuri && tot < targetMultiplier * 0.94 && sorted.length > picks.length) {
     let bestCandidate = null;
     let bestScore = -999;
     for (let m of sorted) {
@@ -1073,163 +1058,6 @@ function deleteBet(id) {
 function toggleDrawer(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = el.style.display === "block" ? "none" : "block";
-}
-
-function getMatchesContextString() {
-  const dayList = cacheByDate[selectedDate] || [];
-  if (!dayList.length) return "";
-  return dayList.slice(0, 18).map(m => 
-    `${m.home} vs ${m.away} (${m.league}): Pont=${m.pick} @${m.odd} (${m.prob}%), xG=${m.lamH}-${m.lamA}, Cornere=${m.cornerLine} (~${m.expCorners}), Cartonase=${m.cardLine} (~${m.expCards})`
-  ).join("\n");
-}
-
-function compressImageFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX_DIM = 1100;
-        let w = img.width, h = img.height;
-        if (w > MAX_DIM || h > MAX_DIM) {
-          if (w > h) { h = Math.round(h * (MAX_DIM / w)); w = MAX_DIM; }
-          else { w = Math.round(w * (MAX_DIM / h)); h = MAX_DIM; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-        resolve({ base64: dataUrl, mimeType: "image/jpeg" });
-      };
-      img.onerror = () => resolve({ base64: e.target.result, mimeType: file.type || "image/jpeg" });
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function sendToJoeBackend(promptText, imageObj = null) {
-  const loadingId = Date.now() + Math.random();
-  vipChatMessages.push({ 
-    sender: 'joe', 
-    text: imageObj ? "🔎 Joe scanează imaginea..." : "⚡ Joe analizează...", 
-    id: loadingId 
-  });
-  updateChatUI();
-
-  try {
-    const payload = {
-      prompt: promptText,
-      matchesContext: getMatchesContextString()
-    };
-
-    if (imageObj && imageObj.base64) {
-      payload.imageBase64 = imageObj.base64;
-      payload.mimeType = imageObj.mimeType || "image/jpeg";
-    }
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/joe-chat`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    const aiReply = data.reply || "Băiatu', serverul neural n-a returnat niciun răspuns. Mai încearcă o dată!";
-
-    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
-    vipChatMessages.push({ sender: 'joe', text: aiReply });
-  } catch (err) {
-    vipChatMessages = vipChatMessages.filter(m => m.id !== loadingId);
-    vipChatMessages.push({ sender: 'joe', text: "Eroare de conexiune cu Supabase, șefu'!" });
-  }
-
-  updateChatUI();
-}
-
-async function handleVipChatSubmit(event) {
-  event.preventDefault();
-  const input = document.getElementById("vipChatInput");
-  const txt = (input?.value || "").trim();
-  if (!txt) return;
-
-  vipChatMessages.push({ sender: 'user', text: txt });
-  input.value = "";
-  updateChatUI();
-
-  await sendToJoeBackend(txt, lastUploadedImage);
-}
-
-async function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const input = document.getElementById("vipChatInput");
-  const customQuestion = (input?.value || "").trim();
-  if (input) input.value = "";
-
-  try {
-    const compressed = await compressImageFile(file);
-    lastUploadedImage = compressed;
-
-    const camBtn = document.getElementById("chatCamBtn");
-    if (camBtn) camBtn.classList.add("has-img");
-
-    vipChatMessages.push({ 
-      sender: 'user', 
-      text: customQuestion || '📷 Analizează această imagine scurt și la obiect:', 
-      img: compressed.base64 
-    });
-    updateChatUI();
-
-    await sendToJoeBackend(
-      customQuestion || "Analizează această imagine (bilet sau statistici) scurt și la obiect și dă-mi verdictul tău!",
-      compressed
-    );
-  } catch (e) {
-    vipChatMessages.push({ sender: 'joe', text: "Nu am putut citi fișierul imagine, șefu'. Încearcă altă captură!" });
-    updateChatUI();
-  } finally {
-    event.target.value = "";
-  }
-}
-
-function updateChatUI() {
-  const box = document.getElementById("chatMessagesBox");
-  if(!box) return;
-  box.innerHTML = vipChatMessages.map(m => {
-    let imgHtml = m.img ? `<br><img src="${m.img}" class="preview-thumb">` : '';
-    return `<div class="chat-msg ${m.sender}">${m.sender === 'joe' ? '🤖 <b>Joe:</b> ' : '👤 <b>Tu:</b> '}${m.text}${imgHtml}</div>`;
-  }).join("");
-  box.scrollTop = box.scrollHeight;
-}
-
-function selectTicketOdd(odd) {
-  if (isGeneratingTicket) return;
-  targetTicketOdds = odd;
-  isGeneratingTicket = true;
-  renderViewport();
-
-  setTimeout(() => {
-    const stEl = document.getElementById("neuralStepText");
-    if (stEl) stEl.innerText = "🧠 Rulare model Poisson + Dixon-Coles...";
-  }, 360);
-
-  setTimeout(() => {
-    const stEl = document.getElementById("neuralStepText");
-    if (stEl) stEl.innerText = "🎯 Optimizare combinatorială cotă ~" + odd + "...";
-  }, 720);
-
-  setTimeout(() => {
-    isGeneratingTicket = false;
-    renderViewport();
-  }, 1100);
 }
 
 function renderMatchCard(m) {
@@ -1437,170 +1265,179 @@ function renderProjectView() {
 
 // ================= STATISTICI DE PERFORMANȚĂ 100% REALE =================
 function computeRealPerformanceStats(dayPool) {
-  const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
-  const wonBets = settledBets.filter(b => b.status === "WIN").length;
+  const settledBets = (project.bets || []).filter(b => b.status === "WIN" || b.status === "LOSS");
+  const wonBets = settledBets.filter(b => b.status === "WIN").length;
 
-  const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
-  let ftHits = 0;
-  ftMatches.forEach(m => {
-    if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
-  });
+  const ftMatches = (dayPool || []).filter(m => m.status === "FT" && m.hScore !== null && m.aScore !== null);
+  let ftHits = 0;
+  ftMatches.forEach(m => {
+    if (checkBetOutcome(m.pick, m.hScore, m.aScore, m.hHT, m.aHT) === true) ftHits++;
+  });
 
-  let winRateText = "În calcul";
-  if (settledBets.length > 0) {
-    winRateText = `${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})`;
-  } else if (ftMatches.length > 0) {
-    winRateText = `${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)`;
-  }
+  let winRateText = "În calcul";
+  if (settledBets.length > 0) {
+    winRateText = `${Math.round((wonBets / settledBets.length) * 100)}% (${wonBets}/${settledBets.length})`;
+  } else if (ftMatches.length > 0) {
+    winRateText = `${Math.round((ftHits / ftMatches.length) * 100)}% (${ftHits}/${ftMatches.length} azi)`;
+  }
 
-  let avgOddText = "—";
-  if ((project.bets || []).length > 0) {
-    const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
-    avgOddText = (sumOdds / project.bets.length).toFixed(2);
-  } else if (dayPool && dayPool.length > 0) {
-    const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
-    avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
-  }
+  let avgOddText = "—";
+  if ((project.bets || []).length > 0) {
+    const sumOdds = project.bets.reduce((acc, b) => acc + (parseFloat(b.odd) || 1.5), 0);
+    avgOddText = (sumOdds / project.bets.length).toFixed(2);
+  } else if (dayPool && dayPool.length > 0) {
+    const sumDayOdds = dayPool.reduce((acc, m) => acc + m.odd, 0);
+    avgOddText = (sumDayOdds / dayPool.length).toFixed(2);
+  }
 
-  return { winRateText, avgOddText };
+  return { winRateText, avgOddText };
 }
 
 function renderTicketsView() {
-  const dayPool = cacheByDate[selectedDate] || [];
-  let pool = dayPool.filter(m => m.status === "NS");
-  if (!pool.length) pool = [...dayPool];
+  const dayPool = cacheByDate[selectedDate] || [];
+  let pool = dayPool.filter(m => m.status === "NS");
+  if (!pool.length) pool = [...dayPool];
 
-  const built = buildOptimalTicket(pool, targetTicketOdds);
-  const picks = built.picks;
-  const tot = built.totalOdd;
+  const built = buildOptimalTicket(pool, targetTicketOdds);
+  const picks = built.picks;
+  const tot = built.totalOdd;
 
-  currentTicketPicks = picks;
-  currentTicketTotalOdd = tot;
+  currentTicketPicks = picks;
+  currentTicketTotalOdd = tot;
 
-  const realStats = computeRealPerformanceStats(dayPool);
-  const potentialWin = +(customBudget * tot).toFixed(2);
-  const btns = [2, 5, 10, 20, 50, 100, 250, 500].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
-  
-  let contentBody = "";
-  if (isGeneratingTicket) {
-    contentBody = `<div class="neural-loader-box">
-      <div class="neural-loader-title" id="neuralStepText">⚡ Extragere date clasament & xG...</div>
-      <div class="neural-scan-bar"><div class="neural-scan-fill"></div></div>
-      <div style="font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">NEURAL ENGINE · COTA ȚINTĂ ~${targetTicketOdds}</div>
-    </div>`;
-  } else {
-    const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
-      <div>
-        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
-        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
-      </div>
-      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
-    </div>`).join("");
+  const realStats = computeRealPerformanceStats(dayPool);
+  const potentialWin = +(customBudget * tot).toFixed(2);
+  const btns = [2, 5, 10, 20, 50].map(o => `<button class="cyber-chip cyber-chip-gold ${targetTicketOdds===o?'active':''}" onclick="selectTicketOdd(${o})">Cotă ${o}</button>`).join("");
+  
+  let contentBody = "";
+  if (isGeneratingTicket) {
+    contentBody = `<div class="neural-loader-box">
+      <div class="neural-loader-title" id="neuralStepText">⚡ Extragere date clasament & xG...</div>
+      <div class="neural-scan-bar"><div class="neural-scan-fill"></div></div>
+      <div style="font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;">NEURAL ENGINE · COTA ȚINTĂ ~${targetTicketOdds}</div>
+    </div>`;
+  } else {
+    const rows = picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
+      <div>
+        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
+        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
+      </div>
+      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
+    </div>`).join("");
 
-    contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-      <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
-      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
-    </div>
-    ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
-  }
+    contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
+      <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+      <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
+    </div>
+    ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
+  }
 
-  return `<div class="cyber-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
-      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
-    </div>
-    
-    <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
-      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
-    </div>
+  return `<div class="cyber-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-gold);">🎟️ Generator Bilet Smart (${selectedDate})</span>
+      <button class="cyber-btn copy-btn" style="flex:0.4;padding:6px 10px;" onclick="copyCurrentTicket()">📋 Copiază</button>
+    </div>
+    
+    <div style="background:rgba(2,4,8,0.7);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">BUGETUL TĂU (RON):</span>
+      <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
+    </div>
 
-    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
-    ${contentBody}
-  </div>
+    <!-- CĂSUȚĂ / TOGGLE PENTRU MODUL COTA 500+ -->
+    <div class="toggle-container">
+      <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--neon-gold);font-weight:800;">🔥 Activează Modul Cotă 500+ (Bet Builder)</span>
+      <label class="switch">
+        <input type="checkbox" id="toggleCota500" ${cota500Mode ? 'checked' : ''} onchange="cota500Mode=this.checked; selectTicketOdd(cota500Mode ? 500 : 5);">
+        <span class="slider"></span>
+      </label>
+    </div>
 
-  <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
-    <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
-    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
-      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
-    </div>
-  </div>`;
+    <div class="h-scroll" style="margin-bottom:12px;">${btns}</div>
+    ${contentBody}
+  </div>
+
+  <div class="cyber-card" style="border-color:var(--neon-cyan);margin-top:14px;">
+    <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;color:var(--neon-cyan);margin-bottom:8px;">📊 PERFORMANȚĂ REALĂ PORTOFOLIU & MODEL</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">Statistici calculate live din istoricul pariurilor salvate în Joe Vault și rezultatele înregistrate.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Win Rate Real</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);font-size:11px;margin-top:2px;">${realStats.winRateText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Medie Cotă</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);font-size:12px;margin-top:2px;">${realStats.avgOddText}</div></div>
+      <div style="background:rgba(2,4,8,0.5);padding:8px;border-radius:10px;border:1px solid var(--card-border);"><span class="v-lbl">Motor Statistic</span><div style="font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-cyan);font-size:10px;margin-top:2px;">SIGURANȚĂ MAXIMĂ</div></div>
+    </div>
+  </div>`;
 }
 
 function renderViewport() {
-  renderSubBars();
-  const vp = document.getElementById("viewport");
-  if(!vp) return;
-  if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
-  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
-  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
-  
-  const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
+  renderSubBars();
+  const vp = document.getElementById("viewport");
+  if(!vp) return;
+  if (currentNav === "admin" && isAdmin()) { vp.innerHTML = renderAdminView(); return; }
+  if (currentNav === "proiect" && hasJoeAccess()) { vp.innerHTML = renderProjectView(); return; }
+  if (currentNav === "bilete") { vp.innerHTML = renderTicketsView(); return; }
+  
+  const searchTerm = (document.getElementById("matchSearchInput")?.value || "").toLowerCase().trim();
 
-  let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
-  
-  if (searchTerm) {
-    list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
-  }
+  let list = currentNav === "europa" ? europaMatches : (cacheByDate[selectedDate] || []).filter(m => selectedLeague === "ALL" || m.league === selectedLeague);
+  
+  if (searchTerm) {
+    list = list.filter(m => m.home.toLowerCase().includes(searchTerm) || m.away.toLowerCase().includes(searchTerm) || m.league.toLowerCase().includes(searchTerm));
+  }
 
-  if (!list.length) { 
-    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
-    return; 
-  }
+  if (!list.length) { 
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:26px;color:var(--text-muted);">Niciun meci găsit conform căutării sau programat în această zi.</div>`; 
+    return; 
+  }
 
-  const groups = {};
-  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
-  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
+  const groups = {};
+  list.forEach(m => { if (!groups[m.league]) groups[m.league] = { icon: m.icon, items: [] }; groups[m.league].items.push(m); });
+  vp.innerHTML = Object.keys(groups).map(lg => `<div class="cyber-sec-head"><span>${groups[lg].icon} ${lg}</span><span>${groups[lg].items.length} meciuri</span></div>${groups[lg].items.map(renderMatchCard).join("")}`).join("");
 }
 
-function selectDay(iso) { 
-  selectedDate = iso; 
-  selectedLeague = "ALL"; 
-  const searchInput = document.getElementById("matchSearchInput");
-  if(searchInput) searchInput.value = "";
-  loadMatchesForDate(iso); 
+function selectDay(iso) { 
+  selectedDate = iso; 
+  selectedLeague = "ALL"; 
+  const searchInput = document.getElementById("matchSearchInput");
+  if(searchInput) searchInput.value = "";
+  loadMatchesForDate(iso); 
 }
 
-function selectLeague(lg) { 
-  selectedLeague = lg; 
-  renderViewport(); 
+function selectLeague(lg) { 
+  selectedLeague = lg; 
+  renderViewport(); 
 }
 
 async function switchNav(tab) {
-  if (tab === "proiect" && !hasJoeAccess()) return;
-  if (tab === "admin" && !isAdmin()) return;
-  currentNav = tab;
-  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
-  const btn = document.getElementById("nav-" + tab);
-  if (btn) btn.classList.add("active");
-  if (tab === "admin") await fetchAdminUsersList();
-  if (tab === "europa") loadEuropaMatches(); else renderViewport();
+  if (tab === "proiect" && !hasJoeAccess()) return;
+  if (tab === "admin" && !isAdmin()) return;
+  currentNav = tab;
+  document.querySelectorAll(".hud-nav-item").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById("nav-" + tab);
+  if (btn) btn.classList.add("active");
+  if (tab === "admin") await fetchAdminUsersList();
+  if (tab === "europa") loadEuropaMatches(); else renderViewport();
 }
 
 (async function startApp() {
-  selectedDate = getDatesList()[1].iso;
-  const savedUser = localStorage.getItem("xmts_logged_user");
-  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
-  if (savedUser) {
-    try {
-      const parsed = JSON.parse(savedUser);
-      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
-      if (!isExpired && parsed.username) {
-        currentUser = parsed;
-        if (parsed.role === "admin" && savedAdmToken) {
-          adminSessionPass = savedAdmToken;
-          await fetchAdminUsersList();
-        }
-        document.getElementById("loginScreen").style.display = "none";
-        applyRolePermissions();
-      } else {
-        localStorage.removeItem("xmts_logged_user");
-      }
-    } catch (e) {}
-  }
+  selectedDate = getDatesList()[1].iso;
+  const savedUser = localStorage.getItem("xmts_logged_user");
+  const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
+  if (savedUser) {
+    try {
+      const parsed = JSON.parse(savedUser);
+      const isExpired = parsed.role !== "admin" && parsed.expires_at && new Date(parsed.expires_at) < new Date();
+      if (!isExpired && parsed.username) {
+        currentUser = parsed;
+        if (parsed.role === "admin" && savedAdmToken) {
+          adminSessionPass = savedAdmToken;
+          await fetchAdminUsersList();
+        }
+        document.getElementById("loginScreen").style.display = "none";
+        applyRolePermissions();
+      } else {
+        localStorage.removeItem("xmts_logged_user");
+      }
+    } catch (e) {}
+  }
   loadMatchesForDate(selectedDate);
   await initProject();
 })();
