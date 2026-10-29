@@ -14,7 +14,6 @@
   html, body { height:100%; width:100%; background:var(--bg); color:var(--text-main); overflow:hidden; }
   .app-shell { display:flex; flex-direction:column; height:100dvh; max-width:520px; margin:0 auto; position:relative; }
   
-  /* LOGIN OVERLAY */
   .login-screen { position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #091930 0%, #020408 75%); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
   .login-box { width:100%; max-width:380px; background:rgba(10,15,28,0.9); border:1.5px solid var(--neon-cyan); border-radius:24px; padding:28px 22px; box-shadow:0 0 40px rgba(0,243,255,0.2); text-align:center; }
   .login-logo { width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg,var(--neon-cyan),var(--neon-gold)); display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#020408; font-size:24px; margin:0 auto 14px; box-shadow:0 0 20px rgba(0,243,255,0.5); overflow:hidden; }
@@ -22,7 +21,6 @@
   .cyber-input:focus { border-color:var(--neon-cyan); box-shadow:0 0 12px rgba(0,243,255,0.3); }
   .login-btn { width:100%; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green)); color:#020408; border:none; padding:13px; border-radius:12px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; cursor:pointer; margin-top:4px; box-shadow:0 0 18px rgba(0,243,255,0.35); }
   
-  /* TOP HUD */
   .top-hud { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(2,4,8,0.92); backdrop-filter:blur(20px); border-bottom:1px solid var(--card-border); z-index:20; }
   .hud-brand { display:flex; align-items:center; gap:10px; }
   .hud-logo { width:38px; height:38px; border-radius:11px; border:1px solid var(--neon-gold); display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 15px rgba(0,243,255,0.4); flex-shrink:0; }
@@ -830,7 +828,7 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// ================= GENERATOR BILETE (MAXIM 10 MECIURI & MOD COTA 500+) =================
+// ================= GENERATOR BILETE (MOD COTA 500+ EXTINS) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
@@ -838,10 +836,11 @@ function buildOptimalTicket(pool, targetOdd) {
   const usedIds = new Set();
   let tot = 1.0;
 
-  const maxMeciuri = 10;
+  // Dacă e activat modul cotă 500+, lăsăm algoritmul să adune meciuri până când atinge sau depășește ținta de 500 (fără limită fixă de 10)
+  const maxMeciuri = cota500Mode ? 30 : 10;
   const targetMultiplier = cota500Mode ? 500 : targetOdd;
 
-  while (picks.length < maxMeciuri && tot < targetMultiplier * 0.94 && sorted.length > picks.length) {
+  while (picks.length < maxMeciuri && tot < targetMultiplier && sorted.length > picks.length) {
     let bestCandidate = null;
     let bestScore = -999;
     for (let m of sorted) {
@@ -1300,7 +1299,7 @@ function renderTicketsView() {
   </div>`).join("");
 
   contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
-    <span>Cotă Totală (Max 10 meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
+    <span>Cotă Totală (${picks.length} meciuri): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
     <span>Câștig Est.: <b style="color:var(--neon-gold);"><span id="potWinLabel">${potentialWin}</span> RON</b></span>
   </div>
   ${rows || '<div style="text-align:center;color:var(--text-muted);padding:16px;">Nu sunt suficiente meciuri în această zi.</div>'}`;
@@ -1316,7 +1315,7 @@ function renderTicketsView() {
       <input type="number" id="budgetInput" class="cyber-input" style="width:110px;margin:0;padding:6px 10px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-green);" value="${customBudget}" oninput="customBudget=parseFloat(this.value)||0;const el=document.getElementById('potWinLabel');if(el)el.innerText=+(customBudget*currentTicketTotalOdd).toFixed(2);">
     </div>
 
-    <!-- TOGGLE COTA 500+ CU EFECT BOOM ȘI EXECUȚIE INSTANTANEE -->
+    <!-- TOGGLE COTA 500+ CU EFECT BOOM -->
     <div class="toggle-container" id="toggleBoxCota500">
       <span style="font-size:11px;font-family:'Orbitron',sans-serif;color:var(--neon-gold);font-weight:800;">🔥 Activează Modul Cotă 500+ (Bet Builder Combo)</span>
       <label class="switch">
