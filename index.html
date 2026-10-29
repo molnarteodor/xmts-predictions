@@ -156,7 +156,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </head>
 <body>
 <div class="toast-msg" id="toastMsg">✅ COPIAT ÎN CLIPBOARD!</div>
-<!-- ECRAN DE LOGARE SECURIZAT SERVER-SIDE -->
 <div class="login-screen" id="loginScreen">
 <div class="login-box">
 <div class="login-logo">
@@ -170,7 +169,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <div id="loginErr" style="color:var(--neon-red);font-size:11px;font-weight:700;margin-top:12px;display:none;">Date de logare incorecte!</div>
 </div>
 </div>
-<!-- APLICATIA PRINCIPALA -->
 <div class="app-shell">
 <div class="top-hud">
 <div class="hud-brand">
@@ -191,7 +189,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <div class="h-scroll" id="dateBar"></div>
 <div class="h-scroll" id="leagueBar" style="margin-top:6px;"></div>
 </div>
-<!-- Căsuță de căutare echipe -->
 <div class="search-container" id="searchContainer">
 <input type="text" id="matchSearchInput" class="search-input" placeholder="🔍 Caută echipă (ex: Real, FCSB, Arsenal)..." oninput="renderViewport()">
 </div>
@@ -205,7 +202,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </nav>
 </div>
 <script>
-// ================= CONFIGURARE SUPABASE =================
 const SUPABASE_URL = "https://edlfqiruegrmxcuubmil.supabase.co";
 const SUPABASE_KEY = "sb_publishable_b8npaox4JSEHkQzGC-SAjg_UHm_bOBE";
 const SUPABASE_EDGE_URL = "https://edlfqiruegrmxcuubmil.supabase.co/functions/v1/create-user-admin";
