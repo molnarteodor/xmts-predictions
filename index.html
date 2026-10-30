@@ -647,7 +647,7 @@ function renderSubBars() {
     lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
 }
 
-// ================= ANALIZĂ MECI CU BET BUILDER INTEGRAT =================
+// ================= ANALIZĂ MECI CU BET BUILDER MULTIPLU =================
 function analyzeMatch(ev, lg) {
   const comp = ev.competitions[0], cs = comp.competitors;
   const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
@@ -686,7 +686,7 @@ function analyzeMatch(ev, lg) {
   const expCardsNum = Math.max(2.6, Math.min(6.4, (lg.kBase || 4.3) + (Math.abs(pH - pA) < 0.15 ? 0.6 : 0)));
   const bestCardOpt = selectOptimalStatLine(expCardsNum, [3.5, 4.5], [4.5, 5.5]);
 
-  // Sub-selecții Bet Builder pe meci
+  // Sub-selecții multiple Bet Builder pe aceeași partidă
   const subSelections = [];
   if (pO15 >= 0.60) subSelections.push({ name: "Peste 1.5 Goluri", mktType: "O15", prob: pO15, odd: +(0.95 / Math.max(0.2, pO15)).toFixed(2) });
   if (bestCornerOpt.prob >= 60) subSelections.push({ name: `${bestCornerOpt.label} (Cornere)`, mktType: "CORNER", prob: bestCornerOpt.prob / 100, odd: 1.70 });
@@ -714,7 +714,7 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// ================= GENERATOR BILETE (BET BUILDER CU COTA 500+ EXTINSĂ) =================
+// ================= GENERATOR BILETE (BET BUILDER MULTIPLU PENTRU COTA 500+) =================
 function buildOptimalTicket(pool, targetOdd) {
   if (!pool || !pool.length) return { picks: [], totalOdd: 1.0 };
   const sorted = [...pool].sort((a, b) => b.tipsterScore - a.tipsterScore);
@@ -722,26 +722,28 @@ function buildOptimalTicket(pool, targetOdd) {
   let tot = 1.0;
 
   const targetMultiplier = cota500Mode ? 500 : targetOdd;
-  const maxSelections = cota500Mode ? 25 : 10;
 
-  // Parcurgem meciurile și extragem atât pontul principal, cât și cornerele/cartonașele (Bet Builder adevărat)
   for (let m of sorted) {
-    if (tot >= targetMultiplier || picks.length >= maxSelections) break;
+    if (tot >= targetMultiplier) break;
 
-    // Adăugăm pronosticul principal
-    picks.push({ home: m.home, away: m.away, pick: m.pick, odd: m.odd, prob: m.prob });
-    tot *= m.odd;
+    // Adăugăm pronosticul principal al meciului
+    if (!picks.some(p => p.home === m.home && p.pick === m.pick)) {
+      picks.push({ home: m.home, away: m.away, pick: m.pick, odd: m.odd, prob: m.prob });
+      tot *= m.odd;
+    }
 
-    // Dacă e activat modul Cotă 500+, adăugăm sub-selecțiile de pe același meci (cornere, cartonașe, GG)
+    // Adăugăm toate sub-selecțiile multiple (cornere, cartonașe, GG) de pe aceeași partidă
     if (cota500Mode && m.subSelections && m.subSelections.length > 0) {
       for (let sub of m.subSelections) {
-        if (tot >= targetMultiplier || picks.length >= maxSelections) break;
+        if (tot >= targetMultiplier) break;
         if (!picks.some(p => p.home === m.home && p.pick === sub.name)) {
           picks.push({ home: m.home, away: m.away, pick: sub.name, odd: sub.odd, prob: Math.round(sub.prob * 100) });
           tot *= sub.odd;
         }
       }
     }
+
+    if (tot >= targetMultiplier) break;
   }
 
   return { picks, totalOdd: tot };
