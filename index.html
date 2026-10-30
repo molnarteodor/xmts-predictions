@@ -254,7 +254,6 @@ const CLUB_POWER_CALIBRATED = [
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
 let customBudget = 100, isGeneratingTicket = false, currentTicketPicks = [], currentTicketTotalOdd = 1.0, cota500Mode = false;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
-
 let vipChatMessages = [{ sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }];
 let lastUploadedImage = null;
 
@@ -1092,6 +1091,165 @@ function analyzeMatch(ev,lg){
     actualCards:(hy!==null&&ay!==null)?hy+ay+hr+ar:null,
     probs:{p1:Math.round(g.H*100),pX:Math.round(g.D*100),p2:Math.round(g.A*100),o25:Math.round(g.o25*100),gg:Math.round(g.gg*100),o15:Math.round(g.o15*100)}
   };
+}
+
+// ===== LOGICA CHALLENGE (16 ZILE, COTĂ ~1.50, 2 MECIURI, ISTORIC & RESET AUTOMAT) =====
+const CHALLENGE_KEY = "joe_challenge_state_v2";
+function getStoredChallengeState() {
+  try {
+    const raw = localStorage.getItem(CHALLENGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    activeId: 1,
+    currentDay: 1,
+    currentStake: 10.0,
+    history: []
+  };
+}
+function saveStoredChallengeState(st) {
+  try { localStorage.setItem(CHALLENGE_KEY, JSON.stringify(st)); } catch(e) {}
+}
+
+function getTodayChallengePicks() {
+  const dayPool = cacheByDate[selectedDate] || [];
+  const valid = dayPool.filter(m => m.status === "NS").sort((a,b)=>b.tipsterScore - a.tipsterScore);
+  const picks = valid.slice(0, 2);
+  let totOdd = picks.reduce((acc, m) => acc * m.odd, 1);
+  if (totOdd < 1.3 && valid.length > 2) {
+    picks.push(valid[2]);
+    totOdd = picks.reduce((acc, m) => acc * m.odd, 1);
+  }
+  return { picks, totOdd: +Math.max(1.35, Math.min(1.75, totOdd)).toFixed(2) };
+}
+
+function renderChallengeView() {
+  const st = getStoredChallengeState();
+  let currentActive = st.history.find(h => h.id === st.activeId);
+  if (!currentActive) {
+    currentActive = { id: st.activeId, status: 'RUNNING', currentDay: st.currentDay, startStake: 10.0, finalReturn: 0.0, steps: [] };
+    st.history.push(currentActive);
+    saveStoredChallengeState(st);
+  }
+
+  const { picks, totOdd } = getTodayChallengePicks();
+  const potWin = +(st.currentStake * totOdd).toFixed(2);
+
+  const finished = st.history.filter(h => h.status !== 'RUNNING');
+  const wins = finished.filter(h => h.status === 'WIN').length;
+  const winRate = finished.length ? Math.round((wins / finished.length) * 100) : 0;
+
+  let stepsTableHtml = "";
+  for (let d = 1; d <= 16; d++) {
+    const isCurrent = (d === st.currentDay && currentActive.status === 'RUNNING');
+    const stepData = currentActive.steps.find(s => s.day === d);
+    let badge = `<span style="color:var(--text-muted);">În așteptare</span>`;
+    if (stepData) {
+      if (stepData.status === 'WIN') badge = `<span style="color:var(--neon-green);font-weight:800;">✔ Câștigat</span>`;
+      else if (stepData.status === 'LOSS') badge = `<span style="color:var(--neon-red);font-weight:800;">✖ Pierdut</span>`;
+    } else if (isCurrent) {
+      badge = `<span style="color:var(--neon-gold);font-weight:800;">⚡ Pasul Curent (Azi)</span>`;
+    }
+    const estStakeAtDay = +(10 * Math.pow(1.5, d - 1)).toFixed(2);
+    stepsTableHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:${isCurrent?'rgba(255,183,3,0.12)':'rgba(15,23,42,0.6)'};border-radius:8px;margin-bottom:5px;border:1px solid ${isCurrent?'var(--neon-gold)':'var(--card-border)'};font-size:11.5px;">
+      <div><b>Ziua ${d}</b> <span style="font-size:10px;color:var(--text-muted);">(Miză: ~${estStakeAtDay} RON)</span></div>
+      <div>${badge}</div>
+    </div>`;
+  }
+
+  const historyListHtml = st.history.slice().reverse().map(h => {
+    const col = h.status === 'WIN' ? 'var(--neon-green)' : (h.status === 'LOSS' ? 'var(--neon-red)' : 'var(--neon-cyan)');
+    const lbl = h.status === 'WIN' ? '🏆 COMPLETAT (Ziua 16)' : (h.status === 'LOSS' ? '✖ EȘUAT' : '⚡ ÎN DERULARE');
+    return `<div class="bet-ticket" style="border-color:${col};">
+      <div style="display:flex;justify-content:space-between;font-size:10px;font-family:'Orbitron',sans-serif;color:var(--text-muted);">
+        <span>Challenge #${h.id}</span>
+        <span style="color:${col};font-weight:900;">${lbl} (Ziua ${h.currentDay}/16)</span>
+      </div>
+      <div style="font-size:12px;margin-top:6px;color:#fff;">Miză de pornire: <b>${h.startStake} RON</b> · Pași reușiți: <b>${h.steps.filter(s=>s.status==='WIN').length}</b></div>
+    </div>`;
+  }).join("");
+
+  return `<div class="vault-hero" style="border-color:var(--neon-gold);">
+    <div class="vault-profile">
+      <div class="joe-avatar-box">
+        <img src="IMG_3705.jpeg" alt="Joe" style="width:100%; height:100%; object-fit:cover;">
+        <div class="joe-status-dot"></div>
+      </div>
+      <div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#fff;">Challenge 16 Zile (Cota 1.50)</div>
+        <div style="font-size:9px;color:var(--neon-gold);font-family:'Orbitron',sans-serif;">BULGĂRELE DE ZĂPADĂ · 10 LEI START</div>
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;text-align:center;">
+      <div class="vault-kpi"><div class="v-lbl">Challenge Activ</div><div class="v-val" style="color:var(--neon-gold);">#${st.activeId}</div></div>
+      <div class="vault-kpi"><div class="v-lbl">Ziua Curentă</div><div class="v-val" style="color:var(--neon-cyan);">${st.currentDay} / 16</div></div>
+      <div class="vault-kpi"><div class="v-lbl">Win Rate</div><div class="v-val" style="color:var(--neon-green);">${winRate}%</div></div>
+    </div>
+  </div>
+
+  <div class="cyber-card" style="border-color:var(--neon-cyan);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;color:var(--neon-cyan);">🎯 BILETUL ZILEI (CHALLENGE #${st.activeId} - ZIUA ${st.currentDay})</span>
+    </div>
+    <div style="background:rgba(2,4,8,0.6);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;font-size:12px;line-height:1.5;">
+      Miză curentă reinvestită: <b style="color:var(--neon-green);">${st.currentStake.toFixed(2)} RON</b><br>
+      Cotă totală bilet (2 meciuri sigure): <b style="color:var(--neon-gold);">@${totOdd}</b><br>
+      Câștig estimat pas curent: <b style="color:var(--neon-green);">${potWin} RON</b>
+    </div>
+
+    ${picks.map((m, i) => `<div class="ticket-row-item">
+      <div>
+        <div style="font-size:13px;font-weight:800;">${i+1}. ${m.home} vs ${m.away}</div>
+        <div style="font-size:11px;color:var(--neon-cyan);">👉 ${m.pick} (${m.prob}%)</div>
+      </div>
+      <div class="odd-chip">@${m.odd.toFixed(2)}</div>
+    </div>`).join("") || '<div style="text-align:center;color:var(--text-muted);padding:14px;">Nu sunt meciuri suficiente pentru azi.</div>'}
+
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="cyber-btn accent" onclick="settleChallengeDay('WIN', ${totOdd}, ${potWin})">✔ Câștigat (Treci la Ziua ${st.currentDay+1})</button>
+      <button class="cyber-btn" style="border-color:var(--neon-red);color:var(--neon-red);" onclick="settleChallengeDay('LOSS', ${totOdd}, ${potWin})">✖ Pierdut (Reset la 10 RON)</button>
+    </div>
+  </div>
+
+  <div class="cyber-sec-head"><span>📈 SCARA CELOR 16 PAȘI</span><span>CHALLENGE #${st.activeId}</span></div>
+  <div style="max-height:260px;overflow-y:auto;padding-right:2px;margin-bottom:14px;">${stepsTableHtml}</div>
+
+  <div class="cyber-sec-head"><span>📜 ISTORIC CHALLENGE-URI</span><span>TOTAL: ${st.history.length}</span></div>
+  ${historyListHtml || '<div class="cyber-card" style="text-align:center;color:var(--text-muted);padding:16px;">Niciun istoric anterior.</div>'}`;
+}
+
+function settleChallengeDay(outcome, odd, returnAmount) {
+  let st = getStoredChallengeState();
+  let currentActive = st.history.find(h => h.id === st.activeId);
+  if (!currentActive) return;
+
+  currentActive.steps.push({ day: st.currentDay, odd, status: outcome });
+
+  if (outcome === 'WIN') {
+    if (st.currentDay >= 16) {
+      currentActive.status = 'WIN';
+      currentActive.finalReturn = returnAmount;
+      alert(`🏆 FELICITĂRI! Ai completat cu succes Challenge #${st.activeId} ajungând la Ziua 16 cu ${returnAmount} RON! Un nou challenge va porni de la zero.`);
+      st.activeId += 1;
+      st.currentDay = 1;
+      st.currentStake = 10.0;
+      st.history.push({ id: st.activeId, status: 'RUNNING', currentDay: 1, startStake: 10.0, finalReturn: 0.0, steps: [] });
+    } else {
+      st.currentDay += 1;
+      st.currentStake = returnAmount;
+    }
+  } else {
+    currentActive.status = 'LOSS';
+    alert(`✖ Biletul a fost pierdut la Ziua ${st.currentDay}. Întregul proiect a fost resetat. Pornim Challenge #${st.activeId + 1} de la 10 RON.`);
+    st.activeId += 1;
+    st.currentDay = 1;
+    st.currentStake = 10.0;
+    st.history.push({ id: st.activeId, status: 'RUNNING', currentDay: 1, startStake: 10.0, finalReturn: 0.0, steps: [] });
+  }
+
+  saveStoredChallengeState(st);
+  renderViewport();
 }
 
 const _load=loadMatchesForDate;
