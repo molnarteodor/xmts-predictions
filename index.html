@@ -690,28 +690,6 @@ function buildOptimalTicket(pool, targetOdd) {
   return { picks, totalOdd: tot };
 }
 
-function checkBetOutcome(pick, h, a, hHT = null, aHT = null) {
-  const t = h + a;
-  if (pick.startsWith("1 (")) return h > a;
-  if (pick.startsWith("2 (")) return a > h;
-  if (pick === "Sub 3.5 Goluri") return t <= 3;
-  if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
-  if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
-  if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
-  if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
-  if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
-  if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
-  if (pick.includes("X2 & Sub 3.5")) return a >= h && t <= 3;
-  if (pick.includes("Peste 2.5")) return t >= 3;
-  if (pick.includes("Sub 2.5")) return t <= 2;
-  if (pick.includes("Peste 1.5")) return t >= 2;
-  if (pick.includes("GG")) return h > 0 && a > 0;
-  if (pick.includes("1X")) return h >= a;
-  if (pick.includes("X2")) return a >= h;
-  return null;
-}
-
 function renderMatchCard(m) {
   const stc = m.status === "FT" ? "st-ft" : (m.status === "LIVE" ? "st-live" : "st-ns");
   let cls = "";
