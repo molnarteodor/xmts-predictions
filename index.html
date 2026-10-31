@@ -218,10 +218,10 @@ const LEAGUES = [
   {slug:"eng.1",name:"Premier League",icon:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",cat:"nat",cBase:10.3,kBase:3.8,gBase:2.82,rho:-0.07},
   {slug:"esp.1",name:"La Liga",icon:"🇪🇸",cat:"nat",cBase:9.3,kBase:4.7,gBase:2.52,rho:-0.11},
   {slug:"ita.1",name:"Serie A",icon:"🇮🇹",cat:"nat",cBase:9.5,kBase:4.3,gBase:2.56,rho:-0.12},
-  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.02,rho:-0.05},
+  {slug:"ger.1",name:"Bundesliga",icon:"🇩🇪",cat:"nat",cBase:9.8,kBase:3.7,gBase:3.08,rho:-0.05},
   {slug:"fra.1",name:"Ligue 1",icon:"🇫🇷",cat:"nat",cBase:9.2,kBase:3.9,gBase:2.64,rho:-0.09},
   {slug:"rou.1",name:"SuperLiga României",icon:"🇷🇴",cat:"nat",cBase:8.7,kBase:4.5,gBase:2.38,rho:-0.13},
-  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.06,rho:-0.04},
+  {slug:"ned.1",name:"Eredivisie",icon:"🇳🇱",cat:"nat",cBase:10.4,kBase:3.1,gBase:3.12,rho:-0.04},
   {slug:"por.1",name:"Primeira Liga",icon:"🇵🇹",cat:"nat",cBase:9.7,kBase:4.6,gBase:2.55,rho:-0.10},
   {slug:"tur.1",name:"Süper Lig",icon:"🇹🇷",cat:"nat",cBase:9.5,kBase:4.8,gBase:2.74,rho:-0.08},
   {slug:"gre.1",name:"Super League Grecia",icon:"🇬🇷",cat:"nat",cBase:8.8,kBase:4.7,gBase:2.42,rho:-0.12},
@@ -231,21 +231,25 @@ const LEAGUES = [
 ];
 
 const CLUB_POWER_CALIBRATED = [
-  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.50},{k:"barcelona",p:0.48},
-  {k:"liverpool",p:0.46},{k:"inter",p:0.45},{k:"arsenal",p:0.45},{k:"paris saint-germain",p:0.46},{k:"psg",p:0.46},
-  {k:"napoli",p:0.42},{k:"leverkusen",p:0.40},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.38},
-  {k:"juventus",p:0.36},{k:"dortmund",p:0.35},{k:"milan",p:0.34},{k:"chelsea",p:0.34},{k:"tottenham",p:0.28},
-  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.30},{k:"manchester united",p:0.22},
-  {k:"sporting",p:0.42},{k:"benfica",p:0.40},{k:"porto",p:0.38},{k:"psv",p:0.42},{k:"feyenoord",p:0.32},{k:"ajax",p:0.30},
-  {k:"galatasaray",p:0.40},{k:"fenerbahce",p:0.38},{k:"fenerbahçe",p:0.38},{k:"besiktas",p:0.25},
-  {k:"olympiacos",p:0.32},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},
+  {k:"manchester city",p:0.52},{k:"real madrid",p:0.52},{k:"bayern",p:0.52},{k:"barcelona",p:0.50},
+  {k:"liverpool",p:0.48},{k:"inter",p:0.46},{k:"arsenal",p:0.46},{k:"paris saint-germain",p:0.48},{k:"psg",p:0.48},
+  {k:"psv",p:0.48},{k:"sporting",p:0.44},{k:"benfica",p:0.42},{k:"porto",p:0.40},
+  {k:"napoli",p:0.42},{k:"leverkusen",p:0.42},{k:"atletico",p:0.38},{k:"atlético",p:0.38},{k:"atalanta",p:0.40},
+  {k:"juventus",p:0.36},{k:"dortmund",p:0.36},{k:"milan",p:0.34},{k:"chelsea",p:0.35},{k:"tottenham",p:0.28},
+  {k:"aston villa",p:0.28},{k:"newcastle",p:0.27},{k:"leipzig",p:0.32},{k:"manchester united",p:0.22},
+  {k:"feyenoord",p:0.35},{k:"ajax",p:0.33},{k:"twente",p:0.24},{k:"az alkmaar",p:0.24},{k:"utrecht",p:0.18},
+  {k:"galatasaray",p:0.42},{k:"fenerbahce",p:0.40},{k:"fenerbahçe",p:0.40},{k:"besiktas",p:0.25},{k:"trabzonspor",p:0.16},
+  {k:"olympiacos",p:0.34},{k:"paok",p:0.28},{k:"panathinaikos",p:0.26},{k:"aek",p:0.26},{k:"aris",p:0.10},
   {k:"lazio",p:0.28},{k:"roma",p:0.26},{k:"fiorentina",p:0.25},{k:"bologna",p:0.16},{k:"torino",p:0.08},{k:"udinese",p:0.04},
-  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},
-  {k:"frankfurt",p:0.25},{k:"stuttgart",p:0.25},{k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},
-  {k:"brighton",p:0.20},{k:"fulham",p:0.12},{k:"bournemouth",p:0.10},{k:"west ham",p:0.10},{k:"braga",p:0.22},
+  {k:"athletic",p:0.26},{k:"villarreal",p:0.25},{k:"real sociedad",p:0.20},{k:"betis",p:0.18},{k:"girona",p:0.14},{k:"osasuna",p:0.08},{k:"celta",p:0.06},{k:"mallorca",p:0.06},{k:"sevilla",p:0.06},
+  {k:"frankfurt",p:0.28},{k:"stuttgart",p:0.28},{k:"freiburg",p:0.18},{k:"mainz",p:0.10},{k:"werder",p:0.08},{k:"wolfsburg",p:0.08},{k:"gladbach",p:0.06},{k:"hoffenheim",p:0.04},{k:"union berlin",p:0.02},
+  {k:"monaco",p:0.30},{k:"marseille",p:0.28},{k:"lille",p:0.25},{k:"lyon",p:0.22},{k:"nice",p:0.18},{k:"lens",p:0.16},{k:"brest",p:0.12},{k:"rennes",p:0.10},
+  {k:"brighton",p:0.20},{k:"fulham",p:0.14},{k:"bournemouth",p:0.12},{k:"brentford",p:0.12},{k:"west ham",p:0.10},{k:"nottingham",p:0.14},{k:"braga",p:0.24},{k:"vitoria",p:0.14},
   {k:"fcsb",p:0.28},{k:"cfr cluj",p:0.25},{k:"universitatea craiova",p:0.24},{k:"craiova",p:0.24},
-  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},
-  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},
+  {k:"universitatea cluj",p:0.20},{k:"u cluj",p:0.20},{k:"rapid",p:0.18},{k:"dinamo",p:0.14},{k:"sepsi",p:0.08},{k:"farul",p:0.06},{k:"petrolul",p:0.04},{k:"otelul",p:0.02},{k:"uta arad",p:-0.04},
+  {k:"slobozia",p:-0.22},{k:"botoșani",p:-0.18},{k:"botosani",p:-0.18},{k:"buzău",p:-0.24},{k:"buzau",p:-0.24},{k:"poli iași",p:-0.16},{k:"hermannstadt",p:-0.08},{k:"csikszereda",p:-0.20},{k:"metaloglobus",p:-0.26},
+  {k:"willem ii",p:-0.22},{k:"almere",p:-0.28},{k:"rkc",p:-0.26},{k:"heracles",p:-0.18},{k:"zwolle",p:-0.16},{k:"nac breda",p:-0.16},{k:"groningen",p:-0.14},{k:"sparta rotterdam",p:-0.08},{k:"heerenveen",p:-0.06},{k:"nec",p:-0.04},{k:"go ahead",p:0.04},
+  {k:"estoril",p:-0.16},{k:"arouca",p:-0.16},{k:"boavista",p:-0.24},{k:"farense",p:-0.24},{k:"avs",p:-0.22},{k:"nacional",p:-0.22},{k:"estrela",p:-0.20},{k:"gil vicente",p:-0.14},{k:"rio ave",p:-0.12},
   {k:"parma",p:-0.06},{k:"como",p:-0.08},{k:"genoa",p:-0.10},{k:"cagliari",p:-0.12},{k:"empoli",p:-0.12},{k:"verona",p:-0.15},
   {k:"monza",p:-0.28},{k:"lecce",p:-0.26},{k:"venezia",p:-0.30},
   {k:"valladolid",p:-0.26},{k:"las palmas",p:-0.22},{k:"leganes",p:-0.18},{k:"espanyol",p:-0.18},{k:"getafe",p:-0.08},{k:"alaves",p:-0.12},
@@ -256,6 +260,7 @@ const CLUB_POWER_CALIBRATED = [
 
 let currentNav = "meciuri", selectedDate = "", selectedLeague = "ALL", cacheByDate = {}, europaMatches = [], targetTicketOdds = 5;
 let customBudget = 100, currentTicketPicks = [], currentTicketTotalOdd = 1.0, cota500Mode = false;
+let customChallengeOdd = null;
 let project = { initial_bankroll: 500.0, target_bankroll: 800.0, bankroll: 500.0, bets: [] };
 
 let vipChatMessages = [{ sender: 'joe', text: 'Salut, șefu! Urcă o poză pe 📷 (bilet sau statistici) și îți dau verdictul scurt pe loc, sau întreabă-mă de orice meci!' }];
@@ -446,11 +451,11 @@ function selectOptimalStatLine(expVal, overLines, underLines) {
   const options = [];
   for (let l of overLines) {
     const p = poissonOverProb(l, expVal);
-    if (p >= 0.55 && p <= 0.78) options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p * (1 - Math.abs(p - 0.66) * 1.4) });
+    if (p >= 0.55 && p <= 0.76) options.push({ label: `Peste ${l}`, prob: Math.round(p * 100), score: p * (1 - Math.abs(p - 0.66) * 1.4) });
   }
   for (let l of underLines) {
     const p = 1 - poissonOverProb(l, expVal);
-    if (p >= 0.57 && p <= 0.77) options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * (1 - Math.abs(p - 0.66) * 1.4) * 0.98 });
+    if (p >= 0.57 && p <= 0.76) options.push({ label: `Sub ${l}`, prob: Math.round(p * 100), score: p * (1 - Math.abs(p - 0.66) * 1.4) * 0.98 });
   }
   if (!options.length) {
     const midLine = overLines[1] || overLines[0], p = poissonOverProb(midLine, expVal);
@@ -468,7 +473,21 @@ function dixonColesTau(h, a, lamH, lamA, rho = -0.09) {
   return 1.0;
 }
 
-// Conversie sigură Moneyline / Cotă Zecimală + estimare dinamică egal
+// Calibrare realistă a cotelor după structura de marjă Superbet / Betano (fără plafon fals de @1.18)
+function calcRealisticOdd(p, realOdd = null) {
+  if (realOdd && realOdd >= 1.02) return +realOdd.toFixed(2);
+  const prob = Math.max(0.08, Math.min(0.96, p));
+  const fairProfit = (1 / prob) - 1;
+  let retention = 0.84;
+  if (prob >= 0.86) retention = 0.45;      // ex: 88% -> @1.06 (exclus automat ca fiind prea mic)
+  else if (prob >= 0.82) retention = 0.52; // ex: 84% -> @1.09 (exclus automat)
+  else if (prob >= 0.78) retention = 0.62; // ex: 79% -> @1.16
+  else if (prob >= 0.73) retention = 0.71; // ex: 75% -> @1.24 (ideal pt Challenge)
+  else if (prob >= 0.68) retention = 0.77; // ex: 70% -> @1.33
+  else if (prob >= 0.60) retention = 0.82; // ex: 65% -> @1.44
+  return Math.max(1.02, +(1 + fairProfit * retention).toFixed(2));
+}
+
 function extractMarketOdds(comp) {
   if (!comp.odds || !Array.isArray(comp.odds) || comp.odds.length === 0) return null;
   const oddObj = comp.odds.find(o => o && (o.homeTeamOdds || o.overUnder)) || comp.odds[0];
@@ -476,8 +495,8 @@ function extractMarketOdds(comp) {
   const mlToDec = (ml) => {
     const n = parseFloat(ml);
     if (isNaN(n) || n === 0) return null;
-    if (n > 1.02 && n < 25.0) return n; // deja cotă zecimală
-    if (Math.abs(n) < 100) return null; // valoare invalidă
+    if (n > 1.02 && n < 25.0) return n;
+    if (Math.abs(n) < 100) return null;
     const dec = n > 0 ? 1 + (n / 100) : 1 + (100 / Math.abs(n));
     return (dec >= 1.03 && dec <= 35.0) ? dec : null;
   };
@@ -565,7 +584,8 @@ function extractRealTeamProfile(compObj, isHome, teamName, slug) {
 function probsGrid(lH, lA, rho) {
   const ph = [], pa = []; let f = 1;
   for (let k = 0; k < 10; k++) { if (k > 1) f *= k; ph[k] = Math.exp(-lH) * Math.pow(lH, k) / f; pa[k] = Math.exp(-lA) * Math.pow(lA, k) / f; }
-  let s = 0, H = 0, D = 0, A = 0, o15 = 0, o25 = 0, o35 = 0, gg = 0, dc1X_o15 = 0, dcX2_o15 = 0, dc1X_u35 = 0, dcX2_u35 = 0;
+  let s = 0, H = 0, D = 0, A = 0, o15 = 0, o25 = 0, o35 = 0, gg = 0;
+  let dc1X_o15 = 0, dcX2_o15 = 0, dc1X_u35 = 0, dcX2_u35 = 0, h_o15 = 0, a_o15 = 0, h_o25 = 0, a_o25 = 0;
   for (let h = 0; h < 10; h++) for (let a = 0; a < 10; a++) {
     const p = ph[h] * pa[a] * dixonColesTau(h, a, lH, lA, rho), t = h + a; s += p;
     if (h > a) H += p; else if (h === a) D += p; else A += p;
@@ -574,16 +594,21 @@ function probsGrid(lH, lA, rho) {
     if (a >= h && t >= 2) dcX2_o15 += p;
     if (h >= a && t <= 3) dc1X_u35 += p;
     if (a >= h && t <= 3) dcX2_u35 += p;
+    if (h > a && t >= 2) h_o15 += p;
+    if (a > h && t >= 2) a_o15 += p;
+    if (h > a && t >= 3) h_o25 += p;
+    if (a > h && t >= 3) a_o25 += p;
   }
   return {
-    H: H/s, D: D/s, A: A/s, o15: o15/s, o25: o25/s, u35: 1 - o35/s, gg: gg/s,
-    dc1X_o15: dc1X_o15/s, dcX2_o15: dcX2_o15/s, dc1X_u35: dc1X_u35/s, dcX2_u35: dcX2_u35/s
+    H: H/s, D: D/s, A: A/s, o15: o15/s, o25: o25/s, o35: o35/s, u35: 1 - o35/s, gg: gg/s,
+    dc1X_o15: dc1X_o15/s, dcX2_o15: dcX2_o15/s, dc1X_u35: dc1X_u35/s, dcX2_u35: dcX2_u35/s,
+    h_o15: h_o15/s, a_o15: a_o15/s, h_o25: h_o25/s, a_o25: a_o25/s
   };
 }
 
 function fitToMarket(mH, mD, mA, tPrior, w, rho) {
   let best = null;
-  for (let T = 1.75; T <= 4.15; T += 0.05) for (let sh = 0.14; sh <= 0.86; sh += 0.01) {
+  for (let T = 1.75; T <= 4.30; T += 0.05) for (let sh = 0.12; sh <= 0.88; sh += 0.01) {
     const g = probsGrid(T * sh, T * (1 - sh), rho);
     const e = (g.H - mH) ** 2 + (mD == null ? 0 : (g.D - mD) ** 2 * 0.65) + (g.A - mA) ** 2 + w * (T - tPrior) ** 2;
     if (!best || e < best.e) best = { e, lH: T * sh, lA: T * (1 - sh), g };
@@ -607,16 +632,18 @@ function analyzeMatch(ev, lg) {
 
   const rho = (lg.rho || -0.09) + (isDerby ? -0.02 : 0), gBase = lg.gBase || 2.62;
   const avgDraw = (hProf.drawRatio + aProf.drawRatio) / 2;
-  const paceMod = (0.25 - avgDraw) * 0.65 + (hProf.power + aProf.power) * 0.22 + Math.abs(diff) * 0.28;
-  const teamExpectedT = Math.max(2.05, Math.min(3.45, gBase + paceMod));
-  const modelShare = Math.min(0.80, Math.max(0.20, 1 / (1 + Math.exp(-(0.15 + diff * 1.85)))));
+  const bothAttacking = (hProf.power >= 0.18 && aProf.power >= 0.18) ? 0.28 : 0;
+  const mismatchBoost = Math.abs(diff) >= 0.35 ? Math.abs(diff) * 0.55 : Math.abs(diff) * 0.30;
+  const paceMod = (0.25 - avgDraw) * 0.65 + (hProf.power + aProf.power) * 0.28 + mismatchBoost + bothAttacking;
+  const teamExpectedT = Math.max(2.05, Math.min(3.85, gBase + paceMod));
+  const modelShare = Math.min(0.82, Math.max(0.18, 1 / (1 + Math.exp(-(0.16 + diff * 1.95)))));
 
   const mkt = extractMarketOdds(comp);
   const hasMkt = !!(mkt && mkt.mktPH && mkt.mktPA);
   let src = "model", lH, lA, g;
 
   if (hasMkt) {
-    const tp = (mkt.ouLine >= 1.5 && mkt.ouLine <= 4.0) ? (mkt.ouLine * 0.65 + teamExpectedT * 0.35) : teamExpectedT;
+    const tp = (mkt.ouLine >= 1.5 && mkt.ouLine <= 4.5) ? (mkt.ouLine * 0.65 + teamExpectedT * 0.35) : teamExpectedT;
     const f = fitToMarket(mkt.mktPH, mkt.decD ? mkt.mktPD : null, mkt.mktPA, tp, mkt.ouLine ? 0.06 : 0.045, rho);
     lH = f.lH * 0.85 + (teamExpectedT * modelShare) * 0.15;
     lA = f.lA * 0.85 + (teamExpectedT * (1 - modelShare)) * 0.15;
@@ -629,7 +656,7 @@ function analyzeMatch(ev, lg) {
   }
 
   const T = lH + lA;
-  const winDiff = g.H - g.A; // Diferența reală de probabilitate după calibrare
+  const winDiff = g.H - g.A;
 
   const stat = (x, ns) => { for (const n of ns) { const f = (x.statistics || []).find(s => s.name === n || s.abbreviation === n); if (f) { const v = parseFloat(f.displayValue); if (!isNaN(v)) return v; } } return null; };
   const hc = stat(home, ["wonCorners","cornerKicks","corners","CK"]), ac = stat(away, ["wonCorners","cornerKicks","corners","CK"]);
@@ -645,49 +672,49 @@ function analyzeMatch(ev, lg) {
 
   const c = [];
   const add = (name, mk, p, realOdd, typeBonus = 1.0) => {
-    const bookieOdd = realOdd ? +realOdd.toFixed(2) : Math.max(1.18, +(0.94 / Math.max(0.12, p)).toFixed(2));
+    const bookieOdd = calcRealisticOdd(p, realOdd);
     const fairOdd = +(1 / Math.max(0.12, p)).toFixed(2);
     const edge = realOdd ? Math.round((p * realOdd - 1) * 100) : 0;
-    const distFromSweet = Math.abs(p - 0.67);
-    const sweetFactor = Math.max(0.72, 1 - distFromSweet * 1.35);
+    const distFromSweet = Math.abs(bookieOdd - 1.44);
+    const sweetFactor = Math.max(0.68, 1 - distFromSweet * 0.65);
     const utility = p * sweetFactor * typeBonus * (edge > 0 ? 1.05 : 1.0);
     c.push({ name, mk, p, odd: bookieOdd, fairOdd, real: !!realOdd, edge, utility });
   };
 
-  // Filtre logice stricte pe fiecare tip de pronostic
   if (winDiff >= 0.14) add(`1 (${hName})`, "SOLO", g.H, hasMkt ? mkt.decH : null, 1.04);
   if (winDiff <= -0.14) add(`2 (${aName})`, "SOLO", g.A, hasMkt ? mkt.decA : null, 1.04);
   if (winDiff >= -0.02) add("Șansă Dublă 1X", "DC", g.H + g.D, null, 0.98);
   if (winDiff <= 0.02) add("Șansă Dublă X2", "DC", g.A + g.D, null, 0.98);
   if (T >= 2.42) add("Peste 1.5 Goluri", "O15", g.o15, null, 0.97);
-  if (T >= 2.70) add("Peste 2.5 Goluri", "O25", g.o25, null, 1.04);
+  if (T >= 2.68) add("Peste 2.5 Goluri", "O25", g.o25, null, 1.05);
   if (T <= 2.38) add("Sub 2.5 Goluri", "U25", 1 - g.o25, null, 1.02);
-  if (T <= 2.60) add("Sub 3.5 Goluri", "U35", g.u35, null, 0.95);
+  if (T <= 2.62) add("Sub 3.5 Goluri", "U35", g.u35, null, 0.96);
   if (lH >= 0.95 && lA >= 0.95 && T >= 2.55) add("GG (Ambele marchează)", "GG", g.gg, null, 1.04);
   if (winDiff >= 0.12 && T >= 2.38) add("1X & Peste 1.5 Goluri", "COMBO_DC", g.dc1X_o15, null, 1.05);
   if (winDiff <= -0.12 && T >= 2.38) add("X2 & Peste 1.5 Goluri", "COMBO_DC", g.dcX2_o15, null, 1.05);
+  if (winDiff >= 0.25 && T >= 2.55) add("1 & Peste 1.5 Goluri", "COMBO_SOLO", g.h_o15, null, 1.05);
+  if (winDiff <= -0.25 && T >= 2.55) add("2 & Peste 1.5 Goluri", "COMBO_SOLO", g.a_o15, null, 1.05);
+  if (winDiff >= 0.38 && T >= 2.95) add("1 & Peste 2.5 Goluri", "COMBO_SOLO", g.h_o25, null, 1.04);
   if (winDiff >= 0.08 && T <= 2.62) add("1X & Sub 3.5 Goluri", "COMBO_U35", g.dc1X_u35, null, 1.02);
   if (winDiff <= -0.08 && T <= 2.62) add("X2 & Sub 3.5 Goluri", "COMBO_U35", g.dcX2_u35, null, 1.02);
 
-  let pool = c.filter(x => x.p >= 0.57 && x.p <= 0.80 && x.odd >= 1.25 && x.odd <= 2.25);
-  if (!pool.length) pool = c.filter(x => x.p >= 0.55 && x.p <= 0.85);
-  if (!pool.length) {
-    add(winDiff >= 0 ? "Șansă Dublă 1X" : "Șansă Dublă X2", "DC", Math.max(g.H + g.D, g.A + g.D), null, 1.0);
-    pool = c;
-  }
+  // Filtrul principal cere acum cotă realistă >= 1.25 (deci opțiunile de @1.04-@1.16 sunt respinse automat)
+  let pool = c.filter(x => x.p >= 0.56 && x.p <= 0.79 && x.odd >= 1.25 && x.odd <= 2.20);
+  if (!pool.length) pool = c.filter(x => x.odd >= 1.22 && x.odd <= 2.35);
+  if (!pool.length) pool = c;
   pool.sort((a, b) => b.utility - a.utility);
   const best = pool[0];
 
-  // Linii dedicate de siguranță ridicată (72%–84%, cotă ~1.18–1.32) pentru Challenge 16 Zile (Goluri, 1X2/DC, Cornere, Cartonașe)
-  const chalCornerSafe = selectOptimalStatLine(expC, [6.5, 7.5, 8.5], [10.5, 11.5, 12.5]);
-  const chalCardSafe = selectOptimalStatLine(expK, [2.5, 3.5], [5.5, 6.5]);
+  // Pool dedicat pentru Challenge 16 Zile: caută opțiuni cu cotă REALĂ între @1.20 și @1.34 (pentru ca 2 meciuri să dea ~@1.50 pe Superbet)
+  const chalCornerOpt = selectOptimalStatLine(expC, [7.5, 8.5], [10.5, 11.5]);
+  const chalCardOpt = selectOptimalStatLine(expK, [3.5], [5.5]);
   const chalPool = [
     ...c.map(x => ({ name: x.name, mk: x.mk, p: x.p, odd: x.odd })),
-    { name: `Cornere ${chalCornerSafe.label}`, mk: "CORNERS", p: chalCornerSafe.prob / 100, odd: Math.max(1.18, +(0.93 / (chalCornerSafe.prob / 100)).toFixed(2)) },
-    { name: `Cartonașe ${chalCardSafe.label}`, mk: "CARDS", p: chalCardSafe.prob / 100, odd: Math.max(1.18, +(0.93 / (chalCardSafe.prob / 100)).toFixed(2)) }
-  ].filter(x => x.p >= 0.70 && x.p <= 0.85 && x.odd >= 1.18 && x.odd <= 1.35);
+    { name: `Cornere ${chalCornerOpt.label}`, mk: "CORNERS", p: chalCornerOpt.prob / 100, odd: calcRealisticOdd(chalCornerOpt.prob / 100) },
+    { name: `Cartonașe ${chalCardOpt.label}`, mk: "CARDS", p: chalCardOpt.prob / 100, odd: calcRealisticOdd(chalCardOpt.prob / 100) }
+  ].filter(x => x.odd >= 1.20 && x.odd <= 1.35 && x.p >= 0.66 && x.p <= 0.79);
 
-  chalPool.sort((a, b) => (b.p - Math.abs(b.odd - 1.23) * 0.45) - (a.p - Math.abs(a.odd - 1.23) * 0.45));
+  chalPool.sort((a, b) => (b.p - Math.abs(b.odd - 1.24) * 0.55) - (a.p - Math.abs(a.odd - 1.24) * 0.55));
   const chalBest = chalPool[0] || { name: best.name, mk: best.mk, p: best.p, odd: best.odd };
 
   return {
@@ -707,7 +734,6 @@ function analyzeMatch(ev, lg) {
   };
 }
 
-// Verificare completă a pronosticurilor (inclusiv Cornere și Cartonașe când sunt disponibile)
 function checkBetOutcome(pick, h, a, hHT = null, aHT = null, actualCorners = null, actualCards = null) {
   if (!pick || h == null || a == null) return null;
   const t = h + a;
@@ -730,8 +756,10 @@ function checkBetOutcome(pick, h, a, hHT = null, aHT = null, actualCorners = nul
   if (pick === "Sub 3.5 Goluri") return t <= 3;
   if (pick === "1 & Peste 1.5 Goluri") return h > a && t >= 2;
   if (pick === "2 & Peste 1.5 Goluri") return a > h && t >= 2;
+  if (pick === "1 & Peste 2.5 Goluri") return h > a && t >= 3;
+  if (pick === "2 & Peste 2.5 Goluri") return a > h && t >= 3;
   if (pick.startsWith("PSF 1")) return h > a || (hHT !== null && aHT !== null && hHT > aHT);
-  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && aHT !== null && aHT > hHT);
+  if (pick.startsWith("PSF 2")) return a > h || (hHT !== null && hHT !== null && aHT > hHT);
   if (pick.includes("1X & Peste 1.5")) return h >= a && t >= 2;
   if (pick.includes("X2 & Peste 1.5")) return a >= h && t >= 2;
   if (pick.includes("1X & Sub 3.5")) return h >= a && t <= 3;
@@ -859,9 +887,9 @@ async function loadMatchesForDate(iso) {
   res.forEach(r => r.evs.forEach(ev => { try { const m = analyzeMatch(ev, r.l); if (m && m.date === iso) list.push(m); } catch (e) {} }));
   if (list.length > 0) {
     cacheByDate[iso] = list;
-    try { localStorage.setItem("joe_cache_v4_" + iso, JSON.stringify(list)); } catch (e) {}
+    try { localStorage.setItem("joe_cache_v5_" + iso, JSON.stringify(list)); } catch (e) {}
   } else {
-    try { const backup = localStorage.getItem("joe_cache_v4_" + iso); cacheByDate[iso] = backup ? JSON.parse(backup) : []; } catch (e) { cacheByDate[iso] = []; }
+    try { const backup = localStorage.getItem("joe_cache_v5_" + iso); cacheByDate[iso] = backup ? JSON.parse(backup) : []; } catch (e) { cacheByDate[iso] = []; }
   }
   logAndSettle(cacheByDate[iso]);
   autoSettleProjectBets(cacheByDate[iso]);
@@ -993,7 +1021,7 @@ function renderMatchCard(m) {
         <div class="pred-main">⭐ ${esc(m.pick)}</div>
         <div class="pred-sub">Probabilitate model: <b style="color:var(--neon-green);">${m.prob}%</b> · xG: ${m.lamH}-${m.lamA}<br>${srcB}</div>
       </div>
-      <div class="odd-chip">@${m.odd.toFixed(2)}<div style="font-size:8px;font-weight:600;opacity:.8;text-align:center;">${m.oddReal ? "cotă piață" : "est. c/marjă"}</div></div>
+      <div class="odd-chip">@${m.odd.toFixed(2)}<div style="font-size:8px;font-weight:600;opacity:.8;text-align:center;">${m.oddReal ? "cotă piață" : "est. agenție"}</div></div>
     </div>
     <div class="action-bar"><button class="cyber-btn" onclick="toggleDrawer('dr-${m.id}')">📊 Analiză</button><button class="cyber-btn copy-btn" onclick="copyMatchById('${m.id}')">📋 Copiază</button>${joeBtn}</div>
     <div class="analytics-drawer" id="dr-${m.id}">
@@ -1002,7 +1030,7 @@ function renderMatchCard(m) {
         <div class="matrix-cell">Peste 1.5<b>${m.probs.o15}%</b></div><div class="matrix-cell">Peste 2.5<b>${m.probs.o25}%</b></div><div class="matrix-cell">GG<b>${m.probs.gg}%</b></div>
       </div>
       <div style="line-height:1.7;">📈 Clasament & Formă: <b>${esc(m.hForm)}</b> vs <b>${esc(m.aForm)}</b><br>🚩 Cornere: ${cn}<br>🟨 Cartonașe: ${kd}
-      <div style="color:var(--text-muted);margin-top:6px;">Cotă estimată cu marjă bookmaker (~6%): @${m.odd.toFixed(2)} (cotă matematică fără marjă: @${(m.fairOdd||+(100/m.prob).toFixed(2))}).</div></div>
+      <div style="color:var(--text-muted);margin-top:6px;">Cotă estimată cu marja agenției inclusă: @${m.odd.toFixed(2)} (cotă matematică fără marjă: @${(m.fairOdd||+(100/m.prob).toFixed(2))}).</div></div>
     </div>
   </div>`;
 }
@@ -1098,14 +1126,13 @@ function saveStoredChallengeState(st) {
   } catch(e) {}
 }
 
-// Caută perechea optimă de 2 meciuri a căror cotă înmulțită real este în jur de ~1.50 cu siguranță maximă
 function getTodayChallengePicks() {
   const dayPool = cacheByDate[selectedDate] || [];
   let valid = dayPool.filter(m => m.status === "NS");
   if (valid.length < 2) valid = [...dayPool];
   valid.sort((a, b) => ((b.chalProb || b.prob) * (b.src === "market" ? 1.05 : 0.92)) - ((a.chalProb || a.prob) * (a.src === "market" ? 1.05 : 0.92)));
 
-  const topPool = valid.slice(0, 10).map(m => ({
+  const topPool = valid.slice(0, 12).map(m => ({
     id: m.id,
     home: m.home,
     away: m.away,
@@ -1129,7 +1156,7 @@ function getTodayChallengePicks() {
       const prodOdd = +(m1.odd * m2.odd).toFixed(2);
       const jointProb = (m1.prob / 100) * (m2.prob / 100);
       const distFrom150 = Math.abs(prodOdd - 1.52);
-      const score = jointProb - distFrom150 * 0.35;
+      const score = jointProb - distFrom150 * 0.45;
       if (score > bestScore) {
         bestScore = score;
         bestPair = [m1, m2];
@@ -1144,10 +1171,26 @@ function copyChallengeTicket() {
   const st = getStoredChallengeState();
   const { picks, totOdd } = getTodayChallengePicks();
   if (!picks.length) return;
-  const potWin = +(st.currentStake * totOdd).toFixed(2);
-  const header = `🎯 JOE CHALLENGE #${st.activeId} · ZIUA ${st.currentDay}/16 (${selectedDate})\nMiză: ${st.currentStake.toFixed(2)} RON | Cotă: @${totOdd.toFixed(2)} | Câștig: ${potWin} RON`;
+  const effOdd = customChallengeOdd && customChallengeOdd > 1.05 ? customChallengeOdd : totOdd;
+  const potWin = +(st.currentStake * effOdd).toFixed(2);
+  const header = `🎯 JOE CHALLENGE #${st.activeId} · ZIUA ${st.currentDay}/16 (${selectedDate})\nMiză: ${st.currentStake.toFixed(2)} RON | Cotă: @${effOdd.toFixed(2)} | Câștig: ${potWin} RON`;
   const lines = picks.map((m, i) => `${i + 1}. ${m.home} vs ${m.away} -> ${m.pick} (@${m.odd.toFixed(2)})`);
   copyText([header, ...lines].join("\n"));
+}
+
+function updateChallengeCustomOdd(val) {
+  const num = parseFloat(val);
+  const st = getStoredChallengeState();
+  if (!isNaN(num) && num >= 1.05) {
+    customChallengeOdd = +num.toFixed(2);
+  } else {
+    customChallengeOdd = null;
+  }
+  const { totOdd } = getTodayChallengePicks();
+  const effOdd = customChallengeOdd || totOdd;
+  const potWin = +(st.currentStake * effOdd).toFixed(2);
+  const winEl = document.getElementById("chalPotWinLabel");
+  if (winEl) winEl.innerText = potWin.toFixed(2) + " RON";
 }
 
 function renderChallengeView() {
@@ -1160,7 +1203,8 @@ function renderChallengeView() {
   }
 
   const { picks, totOdd } = getTodayChallengePicks();
-  const potWin = +(st.currentStake * totOdd).toFixed(2);
+  const effOdd = customChallengeOdd && customChallengeOdd > 1.05 ? customChallengeOdd : totOdd;
+  const potWin = +(st.currentStake * effOdd).toFixed(2);
 
   let totalStepsWon = 0, totalStepsLost = 0, completedChallenges = 0, failedChallenges = 0;
   st.history.forEach(h => {
@@ -1246,8 +1290,11 @@ function renderChallengeView() {
       <button class="cyber-btn copy-btn" style="flex:0.35;padding:6px 10px;" onclick="copyChallengeTicket()">📋 Copiază</button>
     </div>
     <div style="background:rgba(2,4,8,0.6);padding:10px;border-radius:12px;border:1px solid var(--card-border);margin-bottom:12px;font-size:12px;line-height:1.6;">
-      Miză Ziua ${st.currentDay}: <b style="color:var(--neon-green);">${st.currentStake.toFixed(2)} RON</b> · Cotă combinată (2 meciuri): <b style="color:var(--neon-gold);">@${totOdd.toFixed(2)}</b><br>
-      Câștig de reinvestit în Ziua ${Math.min(16, st.currentDay + 1)}: <b style="color:var(--neon-green);">${potWin.toFixed(2)} RON</b>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span>Miză Ziua ${st.currentDay}: <b style="color:var(--neon-green);">${st.currentStake.toFixed(2)} RON</b></span>
+        <span style="display:flex;align-items:center;gap:6px;">Cotă Bilet (Superbet): <input type="number" step="0.01" class="cyber-input" style="width:78px;margin:0;padding:4px 8px;text-align:right;font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon-gold);" value="${effOdd.toFixed(2)}" oninput="updateChallengeCustomOdd(this.value)"></span>
+      </div>
+      <div>Câștig de reinvestit în Ziua ${Math.min(16, st.currentDay + 1)}: <b style="color:var(--neon-green);" id="chalPotWinLabel">${potWin.toFixed(2)} RON</b></div>
     </div>
 
     ${picks.map((m, i) => `<div class="ticket-row-item" style="animation-delay:${i * 0.08}s;">
@@ -1280,8 +1327,9 @@ function settleChallengeDay(outcome) {
   }
 
   const { picks, totOdd } = getTodayChallengePicks();
+  const effOdd = customChallengeOdd && customChallengeOdd > 1.05 ? customChallengeOdd : totOdd;
   const usedStake = +st.currentStake.toFixed(2);
-  const returnAmount = +(usedStake * totOdd).toFixed(2);
+  const returnAmount = +(usedStake * effOdd).toFixed(2);
   const summaryText = picks.map(p => `${p.home} vs ${p.away}: ${p.pick} (@${p.odd.toFixed(2)})`).join(" + ");
 
   currentActive.currentDay = st.currentDay;
@@ -1289,11 +1337,13 @@ function settleChallengeDay(outcome) {
     day: st.currentDay,
     date: selectedDate,
     stake: usedStake,
-    odd: totOdd,
+    odd: effOdd,
     returnAmount: outcome === 'WIN' ? returnAmount : 0,
     summary: summaryText,
     status: outcome
   });
+
+  customChallengeOdd = null;
 
   if (outcome === 'WIN') {
     currentActive.maxReached = Math.max(currentActive.maxReached || 10, returnAmount);
@@ -1509,7 +1559,7 @@ function renderTicketsView() {
 
   const n = picks.length;
   const joint = n ? picks.reduce((s, p) => s * (p.prob / 100), 1) : 0;
-  const note = n ? `<div style="font-size:11px;line-height:1.5;color:var(--neon-gold);background:rgba(255,183,3,0.08);border:1px solid rgba(255,183,3,0.3);border-radius:10px;padding:8px 10px;margin-bottom:12px;">Șansa estimată ca toate cele ${n} selecții să iasă: <b>${(joint*100).toFixed(joint<0.01?2:1)}%</b> (aprox. 1 din ${Math.max(1, Math.round(1/joint)).toLocaleString("ro-RO")}). ${cota500Mode && tot < 500 ? `Cota 500 nu poate fi atinsă onest cu meciurile de azi: total real @${tot.toFixed(2)}. ` : ""}Cotele includ o marjă estimată de 6%; verifică-le la agenție înainte de a paria.</div>` : "";
+  const note = n ? `<div style="font-size:11px;line-height:1.5;color:var(--neon-gold);background:rgba(255,183,3,0.08);border:1px solid rgba(255,183,3,0.3);border-radius:10px;padding:8px 10px;margin-bottom:12px;">Șansa estimată ca toate cele ${n} selecții să iasă: <b>${(joint*100).toFixed(joint<0.01?2:1)}%</b> (aprox. 1 din ${Math.max(1, Math.round(1/joint)).toLocaleString("ro-RO")}). ${cota500Mode && tot < 500 ? `Cota 500 nu poate fi atinsă onest cu meciurile de azi: total real @${tot.toFixed(2)}. ` : ""}Cotele sunt calibrate pe marja agențiilor; verifică-le pe bilet înainte de a paria.</div>` : "";
 
   const contentBody = `<div style="display:flex;justify-content:space-between;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid var(--card-border);font-family:'Orbitron',sans-serif;font-size:12px;">
     <span>Cotă Totală (${picks.length} selecții): <b style="color:var(--neon-green);">@${tot.toFixed(2)}</b></span>
@@ -1584,6 +1634,7 @@ function renderViewport() {
 
 function selectDay(iso) {
   selectedDate = iso; selectedLeague = "ALL";
+  customChallengeOdd = null;
   const searchInput = document.getElementById("matchSearchInput");
   if(searchInput) searchInput.value = "";
   loadMatchesForDate(iso);
@@ -1603,6 +1654,8 @@ async function switchNav(tab) {
 }
 
 (async function startApp() {
+  // Ștergem cache-ul vechi de meciuri ca să forțăm recalcularea cotelor reale
+  Object.keys(localStorage).forEach(k => { if (k.startsWith("joe_cache_") && !k.startsWith("joe_cache_v5_")) localStorage.removeItem(k); });
   selectedDate = getDatesList()[1].iso;
   const savedUser = localStorage.getItem("xmts_logged_user");
   const savedAdmToken = sessionStorage.getItem("xmts_adm_token");
