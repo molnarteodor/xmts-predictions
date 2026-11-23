@@ -1248,34 +1248,65 @@ function renderSubBars() {
     lgs.map(lg => `<button class="cyber-chip cyber-chip-gold ${selectedLeague===lg?'active':''}" onclick="selectLeague('${lg}')">${lg} (${dayList.filter(m=>m.league===lg).length})</button>`).join("");
 }
 
-async function fetchWithTimeout(url, timeoutMs = 8000) {
+async function fetchWithTimeout(url, timeoutMs = 10000) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs);
-  try { const res = await fetch(url, { signal: controller.signal }); clearTimeout(timer); return await res.json(); }
-  catch (e) { clearTimeout(timer); throw e; }
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
 }
 
 // Interogare pe 2 zile (ieri-azi) pentru a prinde și meciurile de noapte (00:00–06:59 EET) + deduplicare pe ev.id
 async function loadMatchesForDate(iso, forceRefresh = false) {
   renderSubBars();
-  if (!forceRefresh && cacheByDate[iso] && cacheByDate[iso].length && cacheByDate[iso][0].ver === MODEL_VERSION) { renderViewport(); return; }
+  if (!forceRefresh && cacheByDate[iso] && cacheByDate[iso].length && cacheByDate[iso][0].ver === MODEL_VERSION) {
+    renderViewport();
+    return;
+  }
   const vp = document.getElementById("viewport");
-  if(vp && (currentNav === "meciuri" || forceRefresh)) vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe actualizează cotele, scorurile și predicțiile pentru <b>${iso}</b>...</div>`;
-  const prevIso = new Date(new Date(iso + "T12:00:00Z").getTime() - 86400000).toISOString().slice(0, 10);
-  const rangeStr = `${prevIso.replace(/-/g, "")}-${iso.replace(/-/g, "")}`;
-  const res = await Promise.all(LEAGUES.map(l =>
-    fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${rangeStr}`)
-      .then(d => ({ l, evs: (d && d.events) || [] }))
-      .catch(() => ({ l, evs: [] }))
-  ));
+  if (vp && (currentNav === "meciuri" || forceRefresh)) {
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-cyan);">⚡ Joe actualizează cotele, scorurile și predicțiile pentru <b>${iso}</b>...</div>`;
+  }
+
+  const ymd = iso.replace(/-/g, "");
+  const prevYmd = new Date(new Date(iso + "T12:00:00Z").getTime() - 86400000).toISOString().slice(0, 10).replace(/-/g, "");
+
+  const fetchSingleDay = async (slug, qDate) => {
+    const d = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${qDate}`);
+    return (d && Array.isArray(d.events)) ? d.events : [];
+  };
+
+  const res = await Promise.all(LEAGUES.map(async l => {
+    try {
+      let evs = await fetchSingleDay(l.slug, ymd);
+      // Cerere separată (fără cratimă) pe ziua anterioară doar pentru meciurile de noapte (CONMEBOL / amicale)
+      if (l.slug === "fifa.worldq.conmebol" || l.slug === "fifa.friendly") {
+        try { evs = evs.concat(await fetchSingleDay(l.slug, prevYmd)); } catch (_) {}
+      }
+      return { l, evs };
+    } catch (e) {
+      return { l, evs: [] };
+    }
+  }));
+
   const list = [], seenIds = new Set();
   res.forEach(r => r.evs.forEach(ev => {
     try {
       const eid = String(ev.id);
       if (seenIds.has(eid)) return;
+      const comp = ev.competitions && ev.competitions[0];
+      const evDate = roDateStr(new Date((comp && comp.date) || ev.date));
+      if (evDate !== iso) return;
       const m = analyzeMatch(ev, r.l);
-      if (m && m.date === iso) { seenIds.add(eid); list.push(m); }
+      if (m) { seenIds.add(eid); list.push(m); }
     } catch (e) {}
   }));
+
   list.sort((a, b) => a.time.localeCompare(b.time));
   if (list.length > 0) {
     cacheByDate[iso] = list;
@@ -1287,18 +1318,37 @@ async function loadMatchesForDate(iso, forceRefresh = false) {
   autoSettleProjectBets(cacheByDate[iso]);
   renderViewport();
 }
-
 async function loadEuropaMatches(forceRefresh = false) {
   renderSubBars();
-  if (!forceRefresh && europaMatches.length && europaMatches[0].ver === MODEL_VERSION) { renderViewport(); return; }
+  if (!forceRefresh && europaMatches.length && europaMatches[0].ver === MODEL_VERSION) {
+    renderViewport();
+    return;
+  }
   const vp = document.getElementById("viewport");
-  if(vp && currentNav === "europa") vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene și UEFA Nations League...</div>`;
-  const now = new Date(), s = roDateStr(new Date(now.getTime() - 2*86400000)).replace(/-/g, ""), e = roDateStr(new Date(now.getTime() + 18*86400000)).replace(/-/g, "");
-  const res = await Promise.all(LEAGUES.filter(l => l.cat === "eu").map(l =>
-    fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${s}-${e}`)
-      .then(d => ({ l, evs: (d && d.events) || [] }))
-      .catch(() => ({ l, evs: [] }))
-  ));
+  if (vp && currentNav === "europa") {
+    vp.innerHTML = `<div class="cyber-card" style="text-align:center;padding:28px;color:var(--neon-gold);">🏆 Joe analizează cupele europene și UEFA Nations League...</div>`;
+  }
+
+  const euLeagues = LEAGUES.filter(l => l.cat === "eu");
+  const nextDays = getDatesList().slice(1, 5).map(d => d.ymd); // Azi + următoarele 3 zile (date individuale, fără cratimă)
+
+  const res = await Promise.all(euLeagues.map(async l => {
+    const evs = [];
+    // 1) Scoreboard implicit (întoarce automat etapa curentă / următoare fără parametrul dates)
+    try {
+      const def = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard`);
+      if (def && Array.isArray(def.events)) evs.push(...def.events);
+    } catch (_) {}
+    // 2) Zilele apropiate ca cereri individuale
+    await Promise.all(nextDays.map(async ymd => {
+      try {
+        const d = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${l.slug}/scoreboard?dates=${ymd}`);
+        if (d && Array.isArray(d.events)) evs.push(...d.events);
+      } catch (_) {}
+    }));
+    return { l, evs };
+  }));
+
   const list = [], seenIds = new Set();
   res.forEach(r => r.evs.forEach(ev => {
     try {
@@ -1308,6 +1358,7 @@ async function loadEuropaMatches(forceRefresh = false) {
       list.push(analyzeMatch(ev, r.l));
     } catch (err) {}
   }));
+
   list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   europaMatches = list;
   logAndSettle(europaMatches);
