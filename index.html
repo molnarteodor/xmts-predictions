@@ -850,8 +850,8 @@ function analyzeMatch(ev, lg) {
       status: curStatus,
       hScore: hSc, aScore: aSc, hScore90, aScore90, isAET, score90Valid,
       hHT: hHT !== null ? hHT : locked.hHT, aHT: aHT !== null ? aHT : locked.aHT,
-      actualCorners: (hc !== null && ac !== null) ? hc + ac : locked.actualCorners,
-      actualCards: (hy !== null && ay !== null) ? hy + ay + hr + ar : locked.actualCards
+      actualCorners: (curStatus !== "NS" && hc !== null && ac !== null) ? hc + ac : null,
+    actualCards: (curStatus !== "NS" && hy !== null && ay !== null) ? hy + ay + hr + ar : null,
     };
   }
 
@@ -1042,7 +1042,115 @@ function buildOptimalTicket(pool, targetOdd) {
   return { picks, totalOdd: tot };
 }
 
-// ===== CORNERE & CARTONAȘE DIN DATE REALE ESPN (/summary) — ZERO PREDICȚII FAKE =====
+// ===== CORNERE & CARTONAȘE DIN ULTIMELE 5 MECIURI REALE ESPN (/summary) =====
+const pastEventStatsCache = {};
+
+function extractBoxscoreStat(teamObj, names) {
+  const list = (teamObj && teamObj.statistics) || [];
+  for (const n of names) {
+    const low = n.toLowerCase();
+    const f = list.find(s =>
+      s.name === n ||
+      s.abbreviation === n ||
+      (s.label && s.label.toLowerCase() === low)
+    );
+    if (f && f.displayValue !== undefined) {
+      const v = parseFloat(f.displayValue);
+      if (!isNaN(v)) return v;
+    }
+  }
+  return null;
+}
+
+function extractCardsFromKeyEvents(data) {
+  const evs = (data && Array.isArray(data.keyEvents) && data.keyEvents.length >= 2) ? data.keyEvents : null;
+  if (!evs) return null;
+  let count = 0;
+  evs.forEach(e => {
+    const txt = String((e.type && e.type.text) || "").toLowerCase();
+    if (e.yellowCard || e.redCard || txt.includes("yellow card") || txt.includes("red card")) count++;
+  });
+  return count;
+}
+
+function parseSingleMatchTotals(data) {
+  const teams = (data && data.boxscore && Array.isArray(data.boxscore.teams)) ? data.boxscore.teams : [];
+  let corners = null, cards = null, shots = null, possession = null;
+
+  if (teams.length >= 2) {
+    const hc = extractBoxscoreStat(teams[0], ["wonCorners","cornerKicks","corners","corner kicks"]);
+    const ac = extractBoxscoreStat(teams[1], ["wonCorners","cornerKicks","corners","corner kicks"]);
+    // În fotbal 0 cornere total în 90 min indică de regulă statistici lipsă (placeholder 0)
+    if (hc !== null && ac !== null && (hc + ac) > 0) corners = hc + ac;
+
+    const hs = extractBoxscoreStat(teams[0], ["shotsOnTarget","shots on target"]);
+    const as = extractBoxscoreStat(teams[1], ["shotsOnTarget","shots on target"]);
+    if (hs !== null && as !== null) shots = `${hs} - ${as}`;
+
+    const hp = extractBoxscoreStat(teams[0], ["possessionPct","possession"]);
+    const ap = extractBoxscoreStat(teams[1], ["possessionPct","possession"]);
+    if (hp !== null && ap !== null) possession = `${hp}% - ${ap}%`;
+
+    const hTotSh = extractBoxscoreStat(teams[0], ["totalShots","shots"]);
+    const aTotSh = extractBoxscoreStat(teams[1], ["totalShots","shots"]);
+    const hFouls = extractBoxscoreStat(teams[0], ["foulsCommitted","fouls"]);
+    const aFouls = extractBoxscoreStat(teams[1], ["foulsCommitted","fouls"]);
+    const hasRealBoxscore = (corners !== null) ||
+      (hTotSh !== null && aTotSh !== null && (hTotSh + aTotSh) > 0) ||
+      (hFouls !== null && aFouls !== null && (hFouls + aFouls) > 0);
+
+    const hy = extractBoxscoreStat(teams[0], ["yellowCards","yellow cards"]);
+    const ay = extractBoxscoreStat(teams[1], ["yellowCards","yellow cards"]);
+    const hr = extractBoxscoreStat(teams[0], ["redCards","red cards"]) || 0;
+    const ar = extractBoxscoreStat(teams[1], ["redCards","red cards"]) || 0;
+
+    if (hy !== null && ay !== null && ((hy + ay + hr + ar) > 0 || hasRealBoxscore)) {
+      cards = hy + ay + hr + ar;
+    }
+  }
+
+  // Fallback pentru cartonașe din keyEvents (ESPN omite uneori yellowCards din boxscore, dar le pune în keyEvents)
+  if (cards === null) {
+    const keCards = extractCardsFromKeyEvents(data);
+    if (keCards !== null) cards = keCards;
+  }
+
+  return { corners, cards, shots, possession };
+}
+
+async function fetchPastEventStats(evId, fallbackSlug) {
+  const key = String(evId);
+  if (pastEventStatsCache[key]) return pastEventStatsCache[key];
+  let data = null;
+  try {
+    data = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=${key}`, 6000);
+  } catch (_) {
+    if (fallbackSlug) {
+      try {
+        data = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${fallbackSlug}/summary?event=${key}`, 6000);
+      } catch (__) {}
+    }
+  }
+  const parsed = data ? parseSingleMatchTotals(data) : { corners: null, cards: null };
+  pastEventStatsCache[key] = parsed;
+  return parsed;
+}
+
+function pickBestStatLine(expVal, lines) {
+  let best = null;
+  lines.forEach(l => {
+    const pOver = poissonOverProb(l, expVal);
+    const pUnder = 1 - pOver;
+    if (pOver >= 0.65 && pOver <= 0.82 && (!best || pOver > best.p)) {
+      best = { label: `Peste ${l}`, p: pOver, odd: calcRealisticOdd(pOver, null, "GOALS") };
+    }
+    if (pUnder >= 0.65 && pUnder <= 0.82 && (!best || pUnder > best.p)) {
+      best = { label: `Sub ${l}`, p: pUnder, odd: calcRealisticOdd(pUnder, null, "GOALS") };
+    }
+  });
+  return best;
+}
+
 async function loadMatchSummaryStats(matchId) {
   const all = [...(cacheByDate[selectedDate] || []), ...europaMatches];
   const m = all.find(x => String(x.id) === String(matchId));
@@ -1055,125 +1163,102 @@ async function loadMatchSummaryStats(matchId) {
     return;
   }
 
-  box.innerHTML = `<div style="color:var(--neon-cyan);font-size:10.5px;">⏳ Se verifică statisticile reale ESPN pentru cornere & cartonașe...</div>`;
+  box.innerHTML = `<div style="color:var(--neon-cyan);font-size:10.5px;">⏳ Se extrag cornerele și cartonașele reale din ultimele 5 meciuri ale echipelor...</div>`;
   try {
-    const data = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.slug}/summary?event=${m.id}`, 7000);
-    const parsed = parseRealSummaryStats(data, m);
+    const data = await fetchWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.slug}/summary?event=${m.id}`, 8000);
+    const parsed = await parseRealSummaryStats(data, m);
     summaryCache[m.id] = parsed;
-    if (parsed.actualCorners !== null) m.actualCorners = parsed.actualCorners;
-    if (parsed.actualCards !== null) m.actualCards = parsed.actualCards;
+    if (m.status !== "NS") {
+      if (parsed.actualCorners !== null) m.actualCorners = parsed.actualCorners;
+      if (parsed.actualCards !== null) m.actualCards = parsed.actualCards;
+    }
     box.innerHTML = renderRealStatsBlock(m, parsed);
   } catch (e) {
-    const fallback = { referee: null, actualCorners: m.actualCorners, actualCards: m.actualCards, shots: null, possession: null, cornerPred: null, cardPred: null };
+    const fallback = { referee: null, actualCorners: null, actualCards: null, shots: null, possession: null, cornerPred: null, cardPred: null, cornerMeta: "", cardMeta: "" };
     box.innerHTML = renderRealStatsBlock(m, fallback);
   }
 }
 
-function parseRealSummaryStats(data, m) {
-  let referee = null, actualCorners = m.actualCorners, actualCards = m.actualCards, shots = null, possession = null;
-  let cornerPred = null, cardPred = null;
+async function parseRealSummaryStats(data, m) {
+  let referee = null, actualCorners = null, actualCards = null, shots = null, possession = null;
+  let cornerPred = null, cardPred = null, cornerMeta = "", cardMeta = "";
 
   if (data && data.gameInfo && Array.isArray(data.gameInfo.officials) && data.gameInfo.officials.length) {
     referee = data.gameInfo.officials[0].fullName || data.gameInfo.officials[0].displayName || null;
   }
 
-  // Extragem statistici LIVE / FT reale din boxscore
-  if (data && data.boxscore && Array.isArray(data.boxscore.teams) && data.boxscore.teams.length >= 2) {
-    const teams = data.boxscore.teams;
-    const getSt = (t, names) => {
-      const list = t.statistics || [];
-      for (const n of names) {
-        const f = list.find(s => s.name === n || s.abbreviation === n || (s.label && s.label.toLowerCase().includes(n.toLowerCase())));
-        if (f && f.displayValue !== undefined) {
-          const v = parseFloat(f.displayValue);
-          if (!isNaN(v)) return v;
-        }
+  // Statisticile din meciul curent se iau DOAR dacă meciul a început (LIVE sau FT)
+  if (m.status !== "NS") {
+    const liveTotals = parseSingleMatchTotals(data);
+    actualCorners = liveTotals.corners !== null ? liveTotals.corners : m.actualCorners;
+    actualCards = liveTotals.cards !== null ? liveTotals.cards : m.actualCards;
+    shots = liveTotals.shots;
+    possession = liveTotals.possession;
+  }
+
+  // Extragem ID-urile ultimelor 5 meciuri ale fiecărei echipe din form
+  const formList = (data && data.boxscore && Array.isArray(data.boxscore.form) && data.boxscore.form.length >= 2)
+    ? data.boxscore.form
+    : ((data && Array.isArray(data.form) && data.form.length >= 2) ? data.form : []);
+
+  if (formList.length >= 2) {
+    const getEventIds = entry => ((entry && Array.isArray(entry.events)) ? entry.events : [])
+      .map(e => String(e.id || ""))
+      .filter(id => id && id !== String(m.id))
+      .slice(0, 5);
+
+    const hIds = getEventIds(formList[0]);
+    const aIds = getEventIds(formList[1]);
+    const uniqueIds = [...new Set([...hIds, ...aIds])];
+
+    if (uniqueIds.length >= 4) {
+      await Promise.all(uniqueIds.map(id => fetchPastEventStats(id, m.slug)));
+
+      const hCorn = hIds.map(id => pastEventStatsCache[id]?.corners).filter(v => v !== null && v !== undefined);
+      const aCorn = aIds.map(id => pastEventStatsCache[id]?.corners).filter(v => v !== null && v !== undefined);
+      if (hCorn.length >= 3 && aCorn.length >= 3) {
+        const avgH = hCorn.reduce((a, b) => a + b, 0) / hCorn.length;
+        const avgA = aCorn.reduce((a, b) => a + b, 0) / aCorn.length;
+        const expC = (avgH + avgA) / 2;
+        cornerMeta = `medie reală ${expC.toFixed(1)} din ${hCorn.length}+${aCorn.length} meciuri`;
+        const bestC = pickBestStatLine(expC, [7.5, 8.5, 9.5, 10.5, 11.5]);
+        if (bestC) cornerPred = `${bestC.label} (${Math.round(bestC.p * 100)}%, est. @${bestC.odd.toFixed(2)}) · ${cornerMeta}`;
       }
-      return null;
-    };
-    const hc = getSt(teams[0], ["wonCorners","cornerKicks","corners"]);
-    const ac = getSt(teams[1], ["wonCorners","cornerKicks","corners"]);
-    if (hc !== null && ac !== null) actualCorners = hc + ac;
 
-    const hy = getSt(teams[0], ["yellowCards"]), ay = getSt(teams[1], ["yellowCards"]);
-    const hr = getSt(teams[0], ["redCards"]) || 0, ar = getSt(teams[1], ["redCards"]) || 0;
-    if (hy !== null && ay !== null) actualCards = hy + ay + hr + ar;
-
-    const hs = getSt(teams[0], ["shotsOnTarget"]), as = getSt(teams[1], ["shotsOnTarget"]);
-    if (hs !== null && as !== null) shots = `${hs} - ${as}`;
-
-    const hp = getSt(teams[0], ["possessionPct"]), ap = getSt(teams[1], ["possessionPct"]);
-    if (hp !== null && ap !== null) possession = `${hp}% - ${ap}%`;
-  }
-
-  // Verificăm dacă ESPN furnizează medii REALE pre-meci pe echipe (nu inventăm niciodată din medii de ligă!)
-  if (data && data.boxscore && Array.isArray(data.boxscore.form) && data.boxscore.form.length >= 2) {
-    // Dacă în viitor ESPN include statistici de cornere/cartonașe per meci în ultimele 5 partide, le calculăm strict dacă avem >= 3 meciuri reale per echipă
-    const extractAvgFromEvents = (formEntry, fieldNames) => {
-      const evs = (formEntry && formEntry.events) || [];
-      const vals = [];
-      evs.forEach(ev => {
-        const st = ev.statistics || [];
-        for (const n of fieldNames) {
-          const f = st.find(x => x.name === n || x.abbreviation === n);
-          if (f && !isNaN(parseFloat(f.displayValue))) { vals.push(parseFloat(f.displayValue)); break; }
-        }
-      });
-      return vals.length >= 3 ? (vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-    };
-    const hCornAvg = extractAvgFromEvents(data.boxscore.form[0], ["wonCorners","cornerKicks","corners"]);
-    const aCornAvg = extractAvgFromEvents(data.boxscore.form[1], ["wonCorners","cornerKicks","corners"]);
-    if (hCornAvg !== null && aCornAvg !== null) {
-      const expC = hCornAvg + aCornAvg;
-      const lines = [7.5, 8.5, 9.5, 10.5];
-      let bestC = null;
-      lines.forEach(l => {
-        const pOver = poissonOverProb(l, expC);
-        const pUnder = 1 - pOver;
-        if (pOver >= 0.65 && (!bestC || pOver > bestC.p)) bestC = { label: `Peste ${l}`, p: pOver, exp: expC };
-        if (pUnder >= 0.65 && (!bestC || pUnder > bestC.p)) bestC = { label: `Sub ${l}`, p: pUnder, exp: expC };
-      });
-      if (bestC) cornerPred = `${bestC.label} (${Math.round(bestC.p * 100)}%, medie reală ${bestC.exp.toFixed(1)})`;
-    }
-
-    const hCardAvg = extractAvgFromEvents(data.boxscore.form[0], ["yellowCards"]);
-    const aCardAvg = extractAvgFromEvents(data.boxscore.form[1], ["yellowCards"]);
-    if (hCardAvg !== null && aCardAvg !== null) {
-      const expK = hCardAvg + aCardAvg;
-      const lines = [3.5, 4.5, 5.5];
-      let bestK = null;
-      lines.forEach(l => {
-        const pOver = poissonOverProb(l, expK);
-        const pUnder = 1 - pOver;
-        if (pOver >= 0.65 && (!bestK || pOver > bestK.p)) bestK = { label: `Peste ${l}`, p: pOver, exp: expK };
-        if (pUnder >= 0.65 && (!bestK || pUnder > bestK.p)) bestK = { label: `Sub ${l}`, p: pUnder, exp: expK };
-      });
-      if (bestK) cardPred = `${bestK.label} (${Math.round(bestK.p * 100)}%, medie reală ${bestK.exp.toFixed(1)})`;
+      const hCard = hIds.map(id => pastEventStatsCache[id]?.cards).filter(v => v !== null && v !== undefined);
+      const aCard = aIds.map(id => pastEventStatsCache[id]?.cards).filter(v => v !== null && v !== undefined);
+      if (hCard.length >= 3 && aCard.length >= 3) {
+        const avgH = hCard.reduce((a, b) => a + b, 0) / hCard.length;
+        const avgA = aCard.reduce((a, b) => a + b, 0) / aCard.length;
+        const expK = (avgH + avgA) / 2;
+        cardMeta = `medie reală ${expK.toFixed(1)} din ${hCard.length}+${aCard.length} meciuri`;
+        const bestK = pickBestStatLine(expK, [2.5, 3.5, 4.5, 5.5]);
+        if (bestK) cardPred = `${bestK.label} (${Math.round(bestK.p * 100)}%, est. @${bestK.odd.toFixed(2)}) · ${cardMeta}`;
+      }
     }
   }
 
-  return { referee, actualCorners, actualCards, shots, possession, cornerPred, cardPred };
+  return { referee, actualCorners, actualCards, shots, possession, cornerPred, cardPred, cornerMeta, cardMeta };
 }
 
 function renderRealStatsBlock(m, st) {
   const cornerLine = st.cornerPred
     ? `<b style="color:var(--neon-cyan);">${esc(st.cornerPred)}</b>`
-    : `<span style="color:var(--text-muted);">Nu există pronostic disponibil (fără date reale pe echipe)</span>`;
+    : `<span style="color:var(--text-muted);">Nu există pronostic disponibil${st.cornerMeta ? ` (${esc(st.cornerMeta)})` : " (fără date reale pe echipe)"}</span>`;
   const cardLine = st.cardPred
     ? `<b style="color:var(--neon-gold);">${esc(st.cardPred)}</b>`
-    : `<span style="color:var(--text-muted);">Nu există pronostic disponibil (fără date reale pe echipe / arbitru)</span>`;
+    : `<span style="color:var(--text-muted);">Nu există pronostic disponibil${st.cardMeta ? ` (${esc(st.cardMeta)})` : " (fără date reale pe echipe)"}</span>`;
 
-  const liveCorn = st.actualCorners !== null ? ` · <b style="color:var(--neon-green);">În meci: ${st.actualCorners}</b>` : "";
-  const liveCard = st.actualCards !== null ? ` · <b style="color:var(--neon-green);">În meci: ${st.actualCards}</b>` : "";
+  const liveCorn = (m.status !== "NS" && st.actualCorners !== null) ? ` · <b style="color:var(--neon-green);">În meci: ${st.actualCorners}</b>` : "";
+  const liveCard = (m.status !== "NS" && st.actualCards !== null) ? ` · <b style="color:var(--neon-green);">În meci: ${st.actualCards}</b>` : "";
   const extraBits = [
     st.referee ? `🧑‍⚖️ Arbitru: <b>${esc(st.referee)}</b>` : "",
-    st.shots ? `🎯 Șuturi pe poartă: <b>${esc(st.shots)}</b>` : "",
-    st.possession ? `📊 Posesie: <b>${esc(st.possession)}</b>` : ""
+    (m.status !== "NS" && st.shots) ? `🎯 Șuturi pe poartă: <b>${esc(st.shots)}</b>` : "",
+    (m.status !== "NS" && st.possession) ? `📊 Posesie: <b>${esc(st.possession)}</b>` : ""
   ].filter(Boolean).join("<br>");
 
   return `🚩 Cornere: ${cornerLine}${liveCorn}<br>🟨 Cartonașe: ${cardLine}${liveCard}${extraBits ? `<br>${extraBits}` : ""}`;
 }
-
 // ===== JURNAL DE CALIBRARE MODEL (STRICT v9) =====
 const LOG_KEY = "joe_pred_log_v9";
 const getLog = () => { try { return JSON.parse(localStorage.getItem(LOG_KEY) || "{}"); } catch(e) { return {}; } };
@@ -1518,10 +1603,9 @@ function renderMatchCard(m) {
     ${modeNote}
   </div>` : "";
   
-  const initStatsHtml = summaryCache[m.id]
+ const initStatsHtml = summaryCache[m.id]
     ? renderRealStatsBlock(m, summaryCache[m.id])
-    : `🚩 Cornere: <span style="color:var(--text-muted);">Nu există pronostic disponibil (fără date reale pe echipe)</span>${m.actualCorners !== null ? ` · <b style="color:var(--neon-green);">În meci: ${m.actualCorners}</b>` : ""}<br>🟨 Cartonașe: <span style="color:var(--text-muted);">Nu există pronostic disponibil (fără date reale pe echipe / arbitru)</span>${m.actualCards !== null ? ` · <b style="color:var(--neon-green);">În meci: ${m.actualCards}</b>` : ""}`;
-
+    : `🚩 Cornere: <span style="color:var(--text-muted);">Se încarcă din ultimele 5 meciuri...</span>${(m.status !== "NS" && m.actualCorners !== null) ? ` · <b style="color:var(--neon-green);">În meci: ${m.actualCorners}</b>` : ""}<br>🟨 Cartonașe: <span style="color:var(--text-muted);">Se încarcă din ultimele 5 meciuri...</span>${(m.status !== "NS" && m.actualCards !== null) ? ` · <b style="color:var(--neon-green);">În meci: ${m.actualCards}</b>` : ""}`;
   return `<div class="cyber-card ${cls}">
     <div class="card-top"><span>${m.icon} ${esc(m.league)} · ${m.date}${derbyB}</span><span class="status-badge ${stc}">${stT}</span></div>
     <div class="teams-container"><div class="team-name">${esc(m.home)}</div><div class="score-display">${mid}</div><div class="team-name away">${esc(m.away)}</div></div>
